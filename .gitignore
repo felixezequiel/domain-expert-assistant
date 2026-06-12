@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build output (this template runs TS on-the-fly via SWC, but keep these for safety)
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local databases (SQLite default)
+data/*.sqlite
+data/*.sqlite-journal
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Tooling
+.claude/settings.local.json
+.claude/.state/
+.playwright-mcp/
+
+# MikroORM v7 local schema snapshot (regenerated on migrations:up)
+src/migrations/.snapshot-*.json

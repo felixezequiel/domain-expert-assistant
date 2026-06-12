@@ -1,0 +1,11 @@
+# Architecture Decision Records
+
+| #                                                 | Title                               | Decision (one-liner)                                                                                                                                                |
+| ------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [001](001-native-type-stripping.md)               | Native Type Stripping               | Use SWC (`@swc-node/register`) instead of Node's native type stripping — needed to support legacy TS decorators required by MikroORM.                               |
+| [002](002-tc39-decorators.md)                     | TC39 Decorators                     | Stay on legacy (experimental) decorators while MikroORM doesn't support TC39 stage-3 decorators.                                                                    |
+| [003](003-domain-event-dispatch.md)               | Domain Event Dispatch               | Aggregates emit events; `ApplicationService` drains, dispatches in-process via `DomainEventManager`, then publishes externally — no pub/sub from inside the domain. |
+| [004](004-unit-of-work-pattern.md)                | Unit of Work Pattern                | `TrackedUnitOfWork` + `AggregateTracker` (AsyncLocalStorage) — aggregates auto-track on first event, no manual `repository.save()` calls.                           |
+| [005](005-application-service-orchestration.md)   | Application Service Orchestration   | Fixed orchestration order: `begin → execute → drain → dispatch → publish → saveAll(eventStore) → commit`.                                                           |
+| [006](006-event-store-and-real-world-patterns.md) | Event Store and Real-World Patterns | All domain events persisted to `system_events` inside the aggregate transaction (no dual-write divergence) for audit trail and event-sourcing-readiness.            |
+| [007](007-multi-assistant-rules-strategy.md)      | Multi-Assistant Rules Strategy      | `.claude/skills/` is the single source of truth; `scripts/sync-rules.mjs` generates adapters for Cursor, Windsurf, Cline, Continue, Aider — pre-commit is the safety net. |

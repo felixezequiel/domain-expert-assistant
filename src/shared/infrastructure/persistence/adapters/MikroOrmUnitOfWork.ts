@@ -1,0 +1,59 @@
+import type { AggregateRoot } from "../../../domain/aggregates/AggregateRoot.ts";
+import type { Identifier } from "../../../domain/identifiers/Identifier.ts";
+import type { AggregatePersister } from "../AggregatePersister.ts";
+import type { EntityManagerProvider } from "./EntityManagerProvider.ts";
+import { TrackedUnitOfWork } from "../TrackedUnitOfWork.ts";
+import { getCurrentCompanyId } from "../../http/context/TenantContext.ts";
+import { COMPANY_TENANT_FILTER_NAME } from "../filters/CompanyFilter.ts";
+
+export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
+  private readonly entityManagerProvider: EntityManagerProvider;
+  private readonly persisters: ReadonlyArray<AggregatePersister>;
+
+  constructor(
+    entityManagerProvider: EntityManagerProvider,
+    persisters: ReadonlyArray<AggregatePersister>,
+  ) {
+    super();
+    this.entityManagerProvider = entityManagerProvider;
+    this.persisters = persisters;
+  }
+
+  protected async onBegin(): Promise<void> {
+    const currentEntityManager = this.entityManagerProvider.getEntityManager();
+    const forkedEntityManager = currentEntityManager.fork();
+
+    const companyId = getCurrentCompanyId();
+    if (companyId !== null) {
+      forkedEntityManager.setFilterParams(COMPANY_TENANT_FILTER_NAME, { companyId });
+    }
+
+    this.entityManagerProvider.setEntityManager(forkedEntityManager);
+  }
+
+  protected async onCommit(
+    trackedAggregates: ReadonlyArray<AggregateRoot<Identifier, object>>,
+  ): Promise<void> {
+    const entityManager = this.entityManagerProvider.getEntityManager();
+
+    await entityManager.transactional(async (txEm) => {
+      for (const aggregate of trackedAggregates) {
+        for (const persister of this.persisters) {
+          if (persister.supports(aggregate)) {
+            if (aggregate.isMarkedForDeletion()) {
+              await persister.delete(aggregate, txEm);
+            } else {
+              await persister.persist(aggregate, txEm);
+            }
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  protected async onRollback(): Promise<void> {
+    const entityManager = this.entityManagerProvider.getEntityManager();
+    entityManager.clear();
+  }
+}

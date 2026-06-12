@@ -1,0 +1,68 @@
+{
+  "name": "ddd-template",
+  "version": "1.2.1",
+  "description": "TypeScript DDD/Hexagonal template — production-ready building blocks (event store, transactional UoW, multi-tenancy, SSE, observability) with a User reference module.",
+  "type": "module",
+  "scripts": {
+    "start": "node --import @swc-node/register/esm-register src/main.ts",
+    "test": "node --import @swc-node/register/esm-register --test src/**/*.test.ts",
+    "test:unit": "node scripts/test-unit.mjs",
+    "test:changed": "node scripts/test-changed.mjs",
+    "test:watch": "node --import @swc-node/register/esm-register --test --watch src/**/*.test.ts",
+    "typecheck": "tsc",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "bench": "node --import @swc-node/register/esm-register scripts/bench.ts",
+    "migration:create": "node --import @swc-node/register/esm-register node_modules/.bin/mikro-orm migration:create",
+    "migration:up": "node --import @swc-node/register/esm-register node_modules/.bin/mikro-orm migration:up",
+    "hooks:test": "node scripts/test-hooks.mjs",
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "precommit": "node scripts/precommit.mjs",
+    "sync:rules": "node scripts/sync-rules.mjs",
+    "setup:ai": "node scripts/setup-ai.mjs",
+    "prepare": "node scripts/install-git-hooks.mjs && node scripts/sync-rules.mjs"
+  },
+  "mikro-orm": {
+    "useTsNode": false,
+    "configPaths": [
+      "./src/mikro-orm.config.ts"
+    ]
+  },
+  "keywords": [
+    "ddd",
+    "hexagonal-architecture",
+    "ports-and-adapters",
+    "typescript",
+    "template",
+    "event-sourcing",
+    "mikro-orm",
+    "multi-tenancy"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@mikro-orm/cli": "^7.0.14",
+    "@swc-node/register": "^1.11.1",
+    "@swc/core": "^1.15.11",
+    "@types/node": "^25.2.3",
+    "@types/nodemailer": "^8.0.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "tinybench": "^6.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "dependencies": {
+    "@mikro-orm/core": "^7.0.14",
+    "@mikro-orm/migrations": "^7.0.14",
+    "@mikro-orm/sqlite": "^7.0.14",
+    "graphql": "^16.12.0",
+    "nodemailer": "^8.0.7"
+  }
+}

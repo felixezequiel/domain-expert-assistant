@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "DDD Template · User Bounded Context",
+    "description": "Automated collection that simulates the full User bounded context lifecycle:\n\n1. Create a user\n2. Get the created user\n3. Add a home address\n4. Add a work address\n5. Get user with all addresses\n6. Error scenarios (duplicate email, user not found, validation errors)\n\nRun with Postman Runner for the full automated flow — each request captures response data and passes it to the next.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userName",
+      "value": "John Doe",
+      "type": "string"
+    },
+    {
+      "key": "userEmail",
+      "value": "john.doe@example.com",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Happy Path",
+      "description": "Full lifecycle: create user → get user → add addresses → verify addresses",
+      "item": [
+        {
+          "name": "1. Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has user id, name and email', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('name');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json.name).to.eql(pm.collectionVariables.get('userName'));",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('userEmail'));",
+                  "});",
+                  "",
+                  "pm.test('Save userId for next requests', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', json.id);",
+                  "    console.log('Created user with ID: ' + json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"{{userName}}\",\n    \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Creates a new user. The server generates a UUID and returns the created user with id, name and email."
+          }
+        },
+        {
+          "name": "2. Get Created User (no addresses)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User matches created user', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.collectionVariables.get('userId'));",
+                  "    pm.expect(json.name).to.eql(pm.collectionVariables.get('userName'));",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('userEmail'));",
+                  "});",
+                  "",
+                  "pm.test('User has empty addresses list', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.addresses).to.be.an('array');",
+                  "    pm.expect(json.addresses).to.have.lengthOf(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Retrieves the user by ID. At this point the user should have no addresses."
+          }
+        },
+        {
+          "name": "3. Add Home Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms address creation', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('userId');",
+                  "    pm.expect(json).to.have.property('addressId');",
+                  "    pm.expect(json).to.have.property('street');",
+                  "    pm.expect(json.userId).to.eql(pm.collectionVariables.get('userId'));",
+                  "    pm.expect(json.street).to.eql('Rua das Flores');",
+                  "    console.log('Added home address with ID: ' + json.addressId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"street\": \"Rua das Flores\",\n    \"number\": \"123\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01001-000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "addresses"]
+            },
+            "description": "Adds a home address to the user. The server generates a UUID for the address."
+          }
+        },
+        {
+          "name": "4. Add Work Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms address creation', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('addressId');",
+                  "    pm.expect(json.street).to.eql('Avenida Paulista');",
+                  "    console.log('Added work address with ID: ' + json.addressId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"street\": \"Avenida Paulista\",\n    \"number\": \"1000\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01310-100\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "addresses"]
+            },
+            "description": "Adds a second (work) address to the same user."
+          }
+        },
+        {
+          "name": "5. Get User with Addresses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User has 2 addresses', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.addresses).to.be.an('array');",
+                  "    pm.expect(json.addresses).to.have.lengthOf(2);",
+                  "});",
+                  "",
+                  "pm.test('Addresses have all fields', function () {",
+                  "    var json = pm.response.json();",
+                  "    var addresses = json.addresses;",
+                  "",
+                  "    for (var i = 0; i < addresses.length; i++) {",
+                  "        var addr = addresses[i];",
+                  "        pm.expect(addr).to.have.property('id');",
+                  "        pm.expect(addr).to.have.property('street');",
+                  "        pm.expect(addr).to.have.property('number');",
+                  "        pm.expect(addr).to.have.property('city');",
+                  "        pm.expect(addr).to.have.property('state');",
+                  "        pm.expect(addr).to.have.property('zipCode');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Home address is present', function () {",
+                  "    var json = pm.response.json();",
+                  "    var homeAddress = json.addresses.find(function (a) { return a.street === 'Rua das Flores'; });",
+                  "    pm.expect(homeAddress).to.not.be.undefined;",
+                  "    pm.expect(homeAddress.number).to.eql('123');",
+                  "    pm.expect(homeAddress.city).to.eql('São Paulo');",
+                  "    pm.expect(homeAddress.state).to.eql('SP');",
+                  "    pm.expect(homeAddress.zipCode).to.eql('01001-000');",
+                  "});",
+                  "",
+                  "pm.test('Work address is present', function () {",
+                  "    var json = pm.response.json();",
+                  "    var workAddress = json.addresses.find(function (a) { return a.street === 'Avenida Paulista'; });",
+                  "    pm.expect(workAddress).to.not.be.undefined;",
+                  "    pm.expect(workAddress.number).to.eql('1000');",
+                  "    pm.expect(workAddress.zipCode).to.eql('01310-100');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Retrieves the user again. Now should have both home and work addresses."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "description": "Validation errors, conflicts and not found cases",
+      "item": [
+        {
+          "name": "Create User — missing name (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message says name is required', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql('Name is required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"no-name@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create User — missing email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message says email is required', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql('Email is required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"No Email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create User — invalid email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions invalid email', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('Invalid email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Bad Email\",\n    \"email\": \"not-an-email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create User — duplicate email (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions email already exists', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('User with email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Another John\",\n    \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Tries to create a user with the same email as the previously created user. Should return 409 Conflict."
+          }
+        },
+        {
+          "name": "Get User — not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message says user not found', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('User not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Tries to get a user with an ID that does not exist."
+          }
+        },
+        {
+          "name": "Add Address — user not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message says user not found', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('User not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"street\": \"Rua Fantasma\",\n    \"number\": \"999\",\n    \"city\": \"Nowhere\",\n    \"state\": \"XX\",\n    \"zipCode\": \"00000-000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "00000000-0000-0000-0000-000000000000", "addresses"]
+            },
+            "description": "Tries to add an address to a user that does not exist."
+          }
+        },
+        {
+          "name": "Add Address — missing street (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message says street is required', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql('Street is required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"number\": \"123\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01001-000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "addresses"]
+            },
+            "description": "Tries to add an address without the required street field."
+          }
+        }
+      ]
+    }
+  ]
+}
