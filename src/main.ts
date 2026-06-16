@@ -8,6 +8,7 @@ import { RetrievalModuleFactory } from "./modules/retrieval/factories/index.ts";
 import { ConsumptionModuleFactory } from "./modules/consumption/factories/index.ts";
 import { AuditModuleFactory } from "./modules/audit/factories/index.ts";
 import { TransformersEmbedder } from "./modules/retrieval/infrastructure/embedding/TransformersEmbedder.ts";
+import { SpaController } from "./shared/infrastructure/http/SpaController.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -80,6 +81,11 @@ async function main(): Promise<void> {
   const healthCheckController = new HealthCheckController(entityManagerProvider);
   infrastructure.httpServer.get("/health/live", () => healthCheckController.handleLive());
   infrastructure.httpServer.get("/health/ready", () => healthCheckController.handleReady());
+
+  // --- Curation & Admin SPA (PRD-6, ADR-023) ---
+  // Registered LAST so it cannot shadow API routes; it only serves "/", "/index.html", and
+  // "/assets/*" (the SPA uses a HashRouter, so no history fallback is needed).
+  new SpaController().register(infrastructure.httpServer);
 
   // --- Start ---
   const restPort = await infrastructure.httpServer.start(REST_PORT);
