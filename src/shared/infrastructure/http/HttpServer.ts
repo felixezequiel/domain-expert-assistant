@@ -98,6 +98,35 @@ export class HttpServer {
     this.rawRoutes.push({ method: "POST", path, rawHandler: handler });
   }
 
+  public rawPut(path: string, handler: RawRouteHandler): void {
+    this.rawRoutes.push({ method: "PUT", path, rawHandler: handler });
+  }
+
+  public rawDelete(path: string, handler: RawRouteHandler): void {
+    this.rawRoutes.push({ method: "DELETE", path, rawHandler: handler });
+  }
+
+  /** Reads and JSON-parses a request body; shared by the framed handlers and raw routes. */
+  public static readJsonBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+    return new Promise((resolve, reject) => {
+      let data = "";
+      request.on("data", (chunk: Buffer) => {
+        data = data + chunk.toString();
+      });
+      request.on("end", () => {
+        if (data.length === 0) {
+          resolve({});
+          return;
+        }
+        try {
+          resolve(JSON.parse(data) as Record<string, unknown>);
+        } catch {
+          reject(new Error("Invalid JSON body"));
+        }
+      });
+    });
+  }
+
   public serveStatic(urlPrefix: string, directoryPath: string): void {
     this.staticRoutes.push({ urlPrefix, directoryPath });
   }
@@ -293,27 +322,7 @@ export class HttpServer {
   }
 
   private readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
-    return new Promise((resolve, reject) => {
-      let data = "";
-
-      request.on("data", (chunk: Buffer) => {
-        data = data + chunk.toString();
-      });
-
-      request.on("end", () => {
-        if (data.length === 0) {
-          resolve({});
-          return;
-        }
-
-        try {
-          const parsed = JSON.parse(data) as Record<string, unknown>;
-          resolve(parsed);
-        } catch {
-          reject(new Error("Invalid JSON body"));
-        }
-      });
-    });
+    return HttpServer.readJsonBody(request);
   }
 
   private sendJson(response: ServerResponse, statusCode: number, body: unknown): void {

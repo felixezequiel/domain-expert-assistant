@@ -1,6 +1,7 @@
 import { ConsoleLogger } from "./shared/infrastructure/logging/ConsoleLogger.ts";
 import { DatabaseFactory, InfrastructureFactory } from "./shared/factories/index.ts";
 import { HealthCheckController } from "./shared/infrastructure/http/HealthCheckController.ts";
+import { IdentityModuleFactory } from "./modules/identity/factories/index.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -27,10 +28,16 @@ async function main(): Promise<void> {
   // --- Database initialization ---
   const entityManagerProvider = await DatabaseFactory.create(logger);
 
+  // --- Module factories (vertical slices) ---
+  const identityModule = IdentityModuleFactory.create(entityManagerProvider);
+
   // --- Shared infrastructure ---
-  // Bounded-context modules (Identity, …) register their persisters and adapters here as
-  // each is wired. Persistence + domain land first; the HTTP/bootstrap wiring follows.
-  const infrastructure = InfrastructureFactory.create(entityManagerProvider, []);
+  const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
+    ...identityModule.persisters,
+  ]);
+
+  // --- Module registration ---
+  identityModule.register(infrastructure, logger);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);
