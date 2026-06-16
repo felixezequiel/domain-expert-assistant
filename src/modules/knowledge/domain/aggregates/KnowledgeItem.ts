@@ -92,6 +92,10 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     return this.props.lastEditorId;
   }
 
+  public get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
   /** Served to consumers when there is a published version and it has not been archived (ADR-013). */
   public isServed(): boolean {
     return this.props.publishedVersionNumber !== null && this.props.status !== "archived";

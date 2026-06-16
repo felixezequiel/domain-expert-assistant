@@ -4,6 +4,10 @@ import { OrganizationEntitySchema } from "./modules/identity/infrastructure/pers
 import { UserEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/UserEntitySchema.ts";
 import { ConsumerCredentialEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/ConsumerCredentialEntitySchema.ts";
 import { SessionEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/SessionEntitySchema.ts";
+import { CollectionEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/CollectionEntitySchema.ts";
+import { TagEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/TagEntitySchema.ts";
+import { KnowledgeItemEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeItemEntitySchema.ts";
+import { KnowledgeVersionEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeVersionEntitySchema.ts";
 import { SystemEventEntitySchema } from "./shared/infrastructure/persistence/adapters/eventStore/SystemEventEntitySchema.ts";
 
 /**
@@ -26,6 +30,10 @@ export default defineConfig({
     UserEntitySchema,
     ConsumerCredentialEntitySchema,
     SessionEntitySchema,
+    CollectionEntitySchema,
+    TagEntitySchema,
+    KnowledgeItemEntitySchema,
+    KnowledgeVersionEntitySchema,
     SystemEventEntitySchema,
   ],
   extensions: [Migrator],
