@@ -2,6 +2,8 @@ import type { Organization } from "../domain/aggregates/Organization.ts";
 import type { OrganizationId } from "../domain/identifiers/OrganizationId.ts";
 import type { User } from "../domain/aggregates/User.ts";
 import type { UserId } from "../domain/identifiers/UserId.ts";
+import type { ConsumerCredential } from "../domain/aggregates/ConsumerCredential.ts";
+import type { CredentialId } from "../domain/identifiers/CredentialId.ts";
 import type { Session } from "../domain/entities/Session.ts";
 import type { Role } from "../../../shared/domain/Role.ts";
 
@@ -30,6 +32,27 @@ export interface UserRepositoryPort {
   findByInvitationTokenHash(tokenHash: string): Promise<User | null>;
   // Backs the cross-aggregate "cannot remove/disable the last admin" rule (ADR-011).
   countActiveAdmins(companyId: string): Promise<number>;
+}
+
+export interface ConsumerCredentialRepositoryPort {
+  save(credential: ConsumerCredential): Promise<void>;
+  findById(id: CredentialId): Promise<ConsumerCredential | null>;
+  // Consumer auth hashes the presented key and looks it up by the indexed secret hash;
+  // keyPrefix is kept only as a non-secret display label (ADR-010).
+  findBySecretHash(secretHash: string): Promise<ConsumerCredential | null>;
+  listByCompany(companyId: string): Promise<ReadonlyArray<ConsumerCredential>>;
+}
+
+/** Credential listing for admins — never includes the secret or its hash. */
+export interface ConsumerCredentialView {
+  readonly id: string;
+  readonly name: string;
+  readonly keyPrefix: string;
+  readonly collectionIds: ReadonlyArray<string>;
+  readonly sensitivityCeiling: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly lastUsedAt: string | null;
 }
 
 export interface SessionRepositoryPort {

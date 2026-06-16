@@ -1,6 +1,7 @@
 import type {
   OrganizationRepositoryPort,
   UserRepositoryPort,
+  ConsumerCredentialRepositoryPort,
   SessionRepositoryPort,
   PasswordHasherPort,
   OpaqueSecretPort,
@@ -10,6 +11,8 @@ import type { Organization } from "../../domain/aggregates/Organization.ts";
 import type { OrganizationId } from "../../domain/identifiers/OrganizationId.ts";
 import type { User } from "../../domain/aggregates/User.ts";
 import type { UserId } from "../../domain/identifiers/UserId.ts";
+import type { ConsumerCredential } from "../../domain/aggregates/ConsumerCredential.ts";
+import type { CredentialId } from "../../domain/identifiers/CredentialId.ts";
 import type { Session } from "../../domain/entities/Session.ts";
 
 /**
@@ -81,6 +84,37 @@ export class FakeUserRepository implements UserRepositoryPort {
       }
     }
     return count;
+  }
+}
+
+export class FakeConsumerCredentialRepository implements ConsumerCredentialRepositoryPort {
+  private readonly credentials = new Map<string, ConsumerCredential>();
+
+  public async save(credential: ConsumerCredential): Promise<void> {
+    this.credentials.set(credential.id.value, credential);
+  }
+
+  public async findById(id: CredentialId): Promise<ConsumerCredential | null> {
+    return this.credentials.get(id.value) ?? null;
+  }
+
+  public async findBySecretHash(secretHash: string): Promise<ConsumerCredential | null> {
+    for (const credential of this.credentials.values()) {
+      if (credential.secretHash === secretHash) {
+        return credential;
+      }
+    }
+    return null;
+  }
+
+  public async listByCompany(companyId: string): Promise<ReadonlyArray<ConsumerCredential>> {
+    const result: Array<ConsumerCredential> = [];
+    for (const credential of this.credentials.values()) {
+      if (credential.companyId === companyId) {
+        result.push(credential);
+      }
+    }
+    return result;
   }
 }
 
