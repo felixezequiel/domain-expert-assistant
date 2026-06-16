@@ -4,6 +4,7 @@ import { HealthCheckController } from "./shared/infrastructure/http/HealthCheckC
 import { IdentityModuleFactory } from "./modules/identity/factories/index.ts";
 import { KnowledgeModuleFactory } from "./modules/knowledge/factories/index.ts";
 import { IngestionModuleFactory } from "./modules/ingestion/factories/index.ts";
+import { RetrievalModuleFactory } from "./modules/retrieval/factories/index.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -39,6 +40,10 @@ async function main(): Promise<void> {
   const ingestionModule = IngestionModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
   });
+  // Retrieval & Indexing (PRD-4): derived read-model, so it owns no aggregate/persister.
+  const retrievalModule = RetrievalModuleFactory.create(entityManagerProvider, {
+    resolveSession: identityModule.resolveSession,
+  });
 
   // --- Shared infrastructure ---
   const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
@@ -51,6 +56,8 @@ async function main(): Promise<void> {
   identityModule.register(infrastructure, logger);
   knowledgeModule.register(infrastructure, logger);
   ingestionModule.register(infrastructure, logger);
+  // Subscribes to Knowledge's publish/deprecate/archive events and starts the projection worker.
+  retrievalModule.register(infrastructure, logger);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);

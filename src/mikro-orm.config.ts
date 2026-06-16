@@ -9,6 +9,7 @@ import { TagEntitySchema } from "./modules/knowledge/infrastructure/persistence/
 import { KnowledgeItemEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeItemEntitySchema.ts";
 import { KnowledgeVersionEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeVersionEntitySchema.ts";
 import { IngestionJobEntitySchema } from "./modules/ingestion/infrastructure/persistence/mikro-orm/schemas/IngestionJobEntitySchema.ts";
+import { ChunkEntitySchema } from "./modules/retrieval/infrastructure/persistence/mikro-orm/schemas/ChunkEntitySchema.ts";
 import { SystemEventEntitySchema } from "./shared/infrastructure/persistence/adapters/eventStore/SystemEventEntitySchema.ts";
 
 /**
@@ -36,6 +37,7 @@ export default defineConfig({
     KnowledgeItemEntitySchema,
     KnowledgeVersionEntitySchema,
     IngestionJobEntitySchema,
+    ChunkEntitySchema,
     SystemEventEntitySchema,
   ],
   extensions: [Migrator],

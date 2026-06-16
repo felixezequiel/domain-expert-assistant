@@ -35,3 +35,8 @@ src/migrations/.snapshot-*.json
 
 # Ingestion file storage (ADR-016)
 data/ingestion/
+
+# Local embedding model cache (BGE-M3 via @huggingface/transformers, ADR-017)
+.cache/
+models/
+data/models/
