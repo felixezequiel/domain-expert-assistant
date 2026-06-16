@@ -6,6 +6,7 @@ import { KnowledgeModuleFactory } from "./modules/knowledge/factories/index.ts";
 import { IngestionModuleFactory } from "./modules/ingestion/factories/index.ts";
 import { RetrievalModuleFactory } from "./modules/retrieval/factories/index.ts";
 import { ConsumptionModuleFactory } from "./modules/consumption/factories/index.ts";
+import { AuditModuleFactory } from "./modules/audit/factories/index.ts";
 import { TransformersEmbedder } from "./modules/retrieval/infrastructure/embedding/TransformersEmbedder.ts";
 
 /**
@@ -52,6 +53,10 @@ async function main(): Promise<void> {
   });
   // Consumption Gateway (PRD-5): consumer-facing REST + MCP, owns no aggregate/persister.
   const consumptionModule = ConsumptionModuleFactory.create(entityManagerProvider, { embedder });
+  // Audit trail (PRD-6, Auditor): read-only window onto the tenant's domain-event stream.
+  const auditModule = AuditModuleFactory.create(entityManagerProvider, {
+    resolveSession: identityModule.resolveSession,
+  });
 
   // --- Shared infrastructure ---
   const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
@@ -68,6 +73,8 @@ async function main(): Promise<void> {
   retrievalModule.register(infrastructure, logger);
   // Registers the consumer REST API (/v1/*) and the MCP server (/mcp).
   consumptionModule.register(infrastructure, logger);
+  // Registers the read-only audit trail API (GET /audit/events).
+  auditModule.register(infrastructure, logger);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);
