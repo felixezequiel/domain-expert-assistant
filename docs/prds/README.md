@@ -30,15 +30,14 @@ PRD-1  Identity           (depende de: 0)
 PRD-2  Knowledge (CORE)   (depende de: 0, 1)
   ↓
 PRD-3  Ingestion          (depende de: 0, 1, 2)
-  ↓
-PRD-4  Retrieval          (depende de: 0, 2, 3)
+PRD-4  Retrieval          (depende de: 0, 2)      ← irmã da PRD-3, não filha
   ↓
 PRD-5  Consumption        (depende de: 0, 1, 2, 4)
   ↓
 PRD-6  UI                 (depende de: 1, 2, 3, 5)
 ```
 
-Ordem topológica de implementação. As setas mostram a cadeia principal; cada nó anota o conjunto **completo** de dependências diretas (idêntico ao cabeçalho "Depende de" de cada PRD). PRD-0 é pré-requisito de todos; PRD-1 e PRD-2 (CORE) sustentam o resto. PRD-3 → PRD-4 formam o pipeline conteúdo → chunks → busca. PRD-5 amarra o lado de leitura para consumidores e PRD-6 é a interface humana sobre todos.
+Ordem topológica de implementação. As setas mostram a cadeia principal; cada nó anota o conjunto **completo** de dependências diretas (idêntico ao cabeçalho "Depende de" de cada PRD). PRD-0 é pré-requisito de todos; PRD-1 e PRD-2 (CORE) sustentam o resto. PRD-3 (ingestão) e PRD-4 (indexação) são **irmãs** sobre o PRD-2 — o chunking mora na PRD-4 e reage à publicação, então a PRD-4 indexa qualquer item publicado, venha de upload ou de autoria manual. PRD-5 amarra o lado de leitura para consumidores e PRD-6 é a interface humana sobre todos.
 
 ## Decisões transversais (já fechadas na descoberta)
 

@@ -18,9 +18,10 @@ Tornar o conhecimento **recuperável de forma inteligente**. É aqui que mora a 
 **Inclui:**
 - `EmbedderPort` + adapter **local TS-native** (ex.: Transformers.js/ONNX, modelo multilingual). Sem API paga.
 - `VectorIndexPort` + adapter (vector store decidido em ADR) — indexa **chunks** de itens `Published`.
-- Sincronização por eventos: `KnowledgeItemPublished`/`ItemChunked` → (re)indexa; `Deprecated`/`Archived` → remove/marca.
-- **Busca híbrida** (vetorial + palavra-chave/full-text) com fusão de scores.
-- **Reranking** dos candidatos.
+- Chunking dos itens publicados (movido da PRD-3): estratégia acoplada ao modelo de embedding → ADR-017.
+- Sincronização por eventos (modelo → ADR-020): ponteiro de versão publicada definido/movido → (re)indexa; `Deprecated` → mantém indexado com flag stale; `Archived` → remove.
+- **Busca híbrida** (vetorial + full-text) com fusão por **RRF** (ADR-019).
+- **Reranking**: abstração (`RerankerPort`) pronta mas **desligada na v1** — ligável sob medição (ADR-019).
 - **Atribuição de fonte**: cada trecho retornado referencia o `KnowledgeItem` (id, título, coleção, versão).
 - **Frescor/confiança**: idade, status, score normalizado por resultado.
 - Reindexação completa (rebuild) sob demanda.
@@ -57,7 +58,7 @@ Este contexto é majoritariamente **infra/serviço de leitura** (read side / CQR
 - `SearchService.search(queryText, scope, options)`:
   1. embed da query (local) + tokenização léxica,
   2. busca vetorial + busca full-text (FTS), filtradas pelo `scope`,
-  3. fusão (ex.: Reciprocal Rank Fusion) + rerank,
+  3. fusão por RRF (rerank é porta opcional, desligada na v1 — ADR-019),
   4. monta resultados com **atribuição** + **frescor**.
 - `StructuredLookupService` — lookup determinístico por título/tag/coleção (não usa vetor).
 
@@ -69,14 +70,14 @@ Este contexto é majoritariamente **infra/serviço de leitura** (read side / CQR
 - Resultado sempre carrega atribuição (nunca um trecho "anônimo").
 
 ## 6. Domain Events
-Consome: `KnowledgeItemPublished`, `ItemChunked`, `KnowledgeItemDeprecated`, `KnowledgeItemArchived`, `KnowledgeItemRolledBack`.
+Consome (do event store, assíncrono — ADR-020): `KnowledgeItemPublished`, `KnowledgeItemDeprecated`, `KnowledgeItemArchived`, `KnowledgeItemRolledBack` (quando o rollback vira publicado).
 Emite (opcional/operacional): `IndexUpdated`, `IndexRebuildCompleted`.
 
 ## 7. Casos de uso / queries
 | Operação | Descrição |
 |---|---|
-| `ProjectItemToIndex` | (event handler) (re)indexa chunks de item publicado. |
-| `RemoveItemFromIndex` | (event handler) remove ao depreciar/arquivar. |
+| `ProjectItemToIndex` | (worker async) (re)indexa chunks da versão publicada; ao depreciar, marca flag stale. |
+| `RemoveItemFromIndex` | (worker async) remove ao **arquivar** (depreciar não remove). |
 | `RebuildIndex(companyId?)` | Reconstrói índice a partir dos itens publicados. |
 | `SemanticSearch(query, scope, k, options)` | Busca híbrida + rerank + atribuição + frescor. |
 | `StructuredLookup(criteria, scope)` | Determinístico por metadados. |
@@ -94,12 +95,12 @@ SearchResult {
 ```
 
 ## 9. Persistência / infra
-- Vector store: **decisão de ADR** (candidatos: `sqlite-vec` para manter um banco só; ou vector DB dedicado). O `VectorIndexPort` isola a escolha.
-- Full-text: SQLite FTS5 (mesmo banco) na v1.
-- Modelo de embedding: baixado/empacotado localmente; `EmbedderPort` permite trocar.
+- Persistência: **Postgres** (mudança fundacional — ADR-018), com `pgvector` para o índice vetorial e full-text nativo do Postgres para o léxico. `VectorIndexPort` isola a escolha.
+- Modelo de embedding: local via Transformers.js/ONNX (ADR-017); `EmbedderPort` permite trocar; a dimensão do vetor é fixada pelo modelo, dentro do limite de índice do pgvector.
 
 ## 10. Critérios de aceite
-- [ ] Publicar um item indexa seus chunks; depreciar/arquivar os remove (verificável via busca).
+- [ ] Publicar um item indexa seus chunks (após a janela assíncrona); `Archived` remove; `Deprecated` permanece buscável com sinal de desatualizado (verificável via busca).
+- [ ] Publicar não bloqueia nem falha por causa do embedding (indexação é assíncrona).
 - [ ] `RebuildIndex` reconstrói tudo a partir do zero e a busca volta idêntica (índice é derivado).
 - [ ] Busca sem `scope`/tenant retorna vazio (nunca vaza entre coleções/tenants/sensibilidade).
 - [ ] Resultado respeita `sensitivityCeiling` e `collectionIds` do escopo.
@@ -108,10 +109,11 @@ SearchResult {
 - [ ] Embedding roda **offline, sem chave/custo** (teste sem rede).
 
 ## 11. Dependências e ordem
-- Depende de PRD-0 (tenancy/eventos), PRD-2 (itens/eventos) e PRD-3 (chunks). É consumido por PRD-5. A infra de embedding/índice e a busca podem ser **prototipadas cedo com fixtures**, mas a indexação real consome os chunks produzidos pelo PRD-3 — logo, o caminho ponta-a-ponta depende do PRD-3 (não roda em paralelo a ele).
+- Depende de PRD-0 (tenancy/eventos) e **PRD-2** (itens publicados + eventos). Como o chunking agora mora aqui, a PRD-4 **não depende mais da PRD-3**: ela indexa qualquer `KnowledgeItem` publicado, tenha vindo de upload (PRD-3) ou de autoria manual (PRD-2). PRD-3 e PRD-4 passam a ser irmãs (ambas sobre PRD-2). É consumido por PRD-5. Embedding/índice/busca podem ser prototipados cedo com fixtures.
 
 ## 12. Riscos & ADRs
-- **ADR:** "Local Embedding Model & Library" — qual modelo multilingual, lib (Transformers.js vs alternativa), tamanho/latência, empacotamento. Recuperar aprendizados do antigo `n3-vector` (não versionado).
-- **ADR:** "Vector Store Choice" — `sqlite-vec` vs vector DB dedicado; trade-offs de operação.
-- **ADR:** "Hybrid Search & Reranking" — algoritmo de fusão e reranker.
+- **ADR-017 — Local Embedding & Chunking** (escrita): BGE-M3 fp16 via `@huggingface/transformers` v3 (1024-dim, janela 8192, MIT, sem prefixo); fallback gte; chunking structure-aware + ~512 tokens + overlap.
+- **ADR-018 — Persistence Engine & Vector Store** (escrita): Postgres para tudo + `pgvector` + full-text do Postgres; mudança fundacional, destrava RLS (ADR-009).
+- **ADR-019 — Hybrid Search & Reranking** (escrita): RRF in-DB (pgvector + full-text do Postgres); reranking atrás de `RerankerPort` desligado na v1, ligável sob golden-set.
+- **ADR-020 — Index Projection** (escrita): projeção assíncrona eventual, event store como fila, idempotente, reconstruível.
 - **Risco:** custo de CPU/latência do embedding local em multilíngue → medir; permitir warm-up do modelo.

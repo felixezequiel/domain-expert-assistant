@@ -17,7 +17,7 @@ Expor o conhecimento aos **consumidores** (IAs, agentes, integrações, devs) de
 
 **Inclui:**
 - **Autenticação de consumidor por API key** (resolve credencial + escopo — PRD-1).
-- **Enforcement de escopo** em toda leitura: `RetrievalScope = {collectionIds da credencial} ∩ filtro do pedido`, `sensitivity ≤ ceiling`.
+- **Enforcement de escopo** em toda leitura: `RetrievalScope = {collectionIds da credencial} ∩ filtro do pedido`, `sensitivity ≤ ceiling`. Como é aplicado (pré-filtro + RLS, fail-closed) → **ADR-022**.
 - **API REST** de consumo: busca semântica, lookup estruturado, navegação de catálogo, get item.
 - **Servidor MCP sobre HTTP (Streamable/SSE)** expondo:
   - **Tools** — ações de busca/lookup/navegação.
@@ -62,7 +62,7 @@ Camada de **adaptadores primários** sobre PRD-4 (busca) e PRD-2 (leitura), com 
 - `get_knowledge_item(itemId)` → item publicado completo (se no escopo).
 
 **Resources:**
-- `knowledge://{collection}/{itemId}` — itens publicados navegáveis pelo cliente MCP, listados conforme escopo.
+- `knowledge://{collection}/{itemId}` — itens publicados endereçáveis pelo cliente MCP, listagem **escopada e paginada** (sem enumerar a base inteira); busca/lookup (tools) são a descoberta primária. Detalhe → ADR-021.
 
 ## 7. Casos de uso / endpoints REST
 ```
@@ -96,7 +96,7 @@ Resposta de busca = lista de `SearchResult` (PRD-4) + eco do `effectiveScope` ap
 - Depende de PRD-0 (tenancy/ator/auditoria), PRD-1 (auth/escopo), PRD-2 (itens) e PRD-4 (busca). É a entrega que "liga o produto" para consumidores. Pré-requisito funcional do PRD-6 (a UI de consumo humano usa estes endpoints).
 
 ## 12. Riscos & ADRs
-- **ADR:** "MCP Transport & Auth over HTTP" — Streamable HTTP/SSE, autenticação por API key, multi-tenant por header.
-- **ADR:** "Scope Enforcement" — onde e como o filtro é aplicado de forma inescapável (defesa em profundidade: também no PRD-4).
-- **Risco:** paridade REST↔MCP — extrair um `KnowledgeQueryFacade` único para evitar divergência.
+- **ADR-021 — MCP Server: Transport, Auth & Tool/Resource Model** (escrita): Streamable HTTP, API key como Bearer (v1; OAuth = Fase 2, ChatGPT fora da v1), binding sessão↔credencial, tools = ações / resources via template escopado, `KnowledgeQueryFacade` único.
+- **ADR-022 — Consumer Scope Enforcement** (escrita): pré-filtro fail-closed; RLS no piso de tenant + pré-filtro de aplicação no escopo por-credencial; alerta do *filtered ANN* do pgvector.
+- **Risco:** paridade REST↔MCP — o `KnowledgeQueryFacade` único é a defesa contra divergência.
 - **Decisão em aberto:** política de rate limit (limites default por credencial).

@@ -16,9 +16,9 @@ Definir **quem existe** no sistema e **o que cada um pode fazer**. Sustenta o mu
 **Inclui:**
 - Agregado `Organization` (tenant) provisionado pelo operador, com política de governança (`requireSeparateReviewer`).
 - Agregado `User` (humano) com papéis: **Admin, Curator, Reviewer, Auditor, Consumer (humano)**. Papéis aditivos.
-- Convite de usuário + ativação + **login email+senha** (hash seguro, ex.: argon2/bcrypt) + sessão/JWT.
+- Convite de usuário + ativação + **login email+senha** + sessão revogável (mecanismo → ADR-010).
 - Agregado `ConsumerCredential` (API key de máquina) com escopo `{collectionIds[], sensitivityCeiling}`, emissão, rotação e revogação.
-- Autorização: middleware/guards que resolvem ator → permissões (RBAC) para rotas humanas e escopo para rotas de consumidor.
+- Autorização: papéis (humanos) e escopo (consumidores) governam o que cada um pode fazer (modelo → ADR-011).
 
 **Não inclui (fora da v1):**
 - SSO/OAuth corporativo.
@@ -110,6 +110,8 @@ Provisionamento de organização: endpoint/CLI **interno** do operador (fora da 
 - Depende de **PRD-0**. É pré-requisito de PRD-2 (papéis/RBAC dos casos de uso), PRD-5 (auth de consumidor) e PRD-6 (UI). Obs.: o **escopo de credencial referencia as coleções do PRD-2** — dependência suave na direção oposta, resolvida por validação de id em runtime (ver §12).
 
 ## 12. Riscos & ADRs
-- **ADR:** "Authentication & Session Strategy" (JWT vs sessão; hashing de senha; formato/lookup da API key — prefixo + hash).
-- **Decisão em aberto:** TTL/expiração opcional de API keys (provavelmente fase posterior).
-- **Risco:** escopo de credencial referencia coleções — ordem de criação (coleções vêm no PRD-2). Resolver com referência por id validada em runtime.
+- **ADR-010 — Authentication & Credential Strategy** (escrita): sessão server-side opaca e revogável; senha em `argon2id`; API key opaca (`keyPrefix` + `secretHash`, segredo exibido 1x).
+- **ADR-011 — Authorization Model** (escrita): autz grosseira por papel na fronteira de aplicação (`AuthorizerPort`), `Role` no shared kernel, invariantes de negócio no domínio, escopo do consumidor forçado no consumo (PRD-5).
+- **Decisão adiada:** autenticação do operador → addendum à ADR-010 ou à ADR-009 (Confronto pendente).
+- **Decisão adiada:** TTL/expiração opcional de API keys → fase posterior.
+- **Risco/decisão:** escopo de credencial referencia coleções (PRD-2) → referência por id validada em runtime, sem FK nem import de tipo cross-context.

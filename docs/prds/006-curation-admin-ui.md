@@ -58,6 +58,5 @@ Admin, Curator, Reviewer, Auditor, Consumidor humano (as 5 da descoberta).
 - Depende das APIs dos PRD-1/2/3/5 (e indiretamente PRD-4 via busca). Última a "fechar" a v1, mas pode evoluir em paralelo conforme cada API estabiliza.
 
 ## 8. Riscos & ADRs
-- **ADR:** "Frontend Stack & Repo Boundary" — framework, repo separado vs monorepo, autenticação humana (sessão/JWT), build/deploy. (Backend é Node/TS; UI provavelmente repo próprio consumindo a API.)
+- **ADR-023 — Frontend Stack & Repo Boundary** (escrita): SPA React+Vite em `/web` (monorepo), servida estática pelo monólito na mesma origem; auth por cookie `httpOnly`; REST only (GraphQL adiado); editor markdown; visibilidade por papel é UX, autz é server-side.
 - **Risco:** escopo de UI é grande — priorizar por persona (Admin + Curator + Reviewer primeiro; Auditor e Consumo humano em seguida) dentro da v1.
-- **Decisão em aberto:** editor de conteúdo (markdown puro vs rich text) — alinhar com "corpo livre" do PRD-2.

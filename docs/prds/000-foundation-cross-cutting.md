@@ -39,62 +39,39 @@ Três entregas centrais:
 ## 4. Linguagem ubíqua (novos termos)
 | Termo | Significado |
 |---|---|
-| **Actor** | Quem originou uma ação: um `User` (humano) ou uma `ConsumerCredential` (máquina). Identificado por `actorId` + `actorType`. |
-| **Actor Context** | Contexto assíncrono (AsyncLocalStorage) que carrega o ator atual durante a execução de um caso de uso. |
-| **Audit Trail** | Visão de leitura sobre `system_events`, isolada por tenant. |
+| **Actor** | Quem originou uma ação: um `User` (humano) ou uma `ConsumerCredential` (máquina). |
+| **Audit Trail** | Visão de leitura, isolada por tenant, de tudo que aconteceu: quem fez o quê, quando, em qual organização. |
 
 ## 5. Modelo de domínio
 
-Este PRD mexe em **infraestrutura compartilhada**, não cria agregado novo. Alterações:
+Este PRD não cria agregado de negócio — ele garante uma propriedade transversal: **todo registro de evento responde quem fez e em qual tenant**, e nenhum evento sai carimbado com o tenant errado.
 
-### `DomainEvent` (contrato)
-```
-DomainEvent {
-  eventId: string
-  eventName: string
-  occurredAt: Date
-  aggregateId: string
-  causationId: string | null
-  companyId: string | null      // NOVO — tenant que originou
-  actorId: string | null        // NOVO — quem originou
-  actorType: 'user' | 'consumer' | 'system' | null   // NOVO
-}
-```
-> `null` permitido para ações de sistema/migração e rotas públicas (ex.: provisionamento de tenant pelo operador).
-
-### `SystemEventEntity` / `system_events`
-Acrescentar colunas `company_id`, `actor_id`, `actor_type`. Aplicar `companyTenantFilterDefinition` no `SystemEventEntitySchema`. Índices em `(company_id, occurred_at)` e `(company_id, aggregate_id)`.
-
-### Invariantes
-- Todo evento emitido **dentro de um Actor Context** preenche `companyId` e `actorId` automaticamente (preenchidos no momento do drain, não pelo agregado).
-- Em produção, eventos de agregados tenant-scoped **devem** ter `companyId` não-nulo (validação no `ApplicationService`/event store em modo estrito).
+> O contrato do envelope de evento e a regra de preenchimento (incluindo a trava fail-closed que impede carimbo cross-tenant) são decididos na **ADR-008**. A persistência desses campos e o filtro por tenant no log são decididos na **ADR-009**.
 
 ## 6. Domain Events
 Nenhum evento de negócio novo. O que muda é o **envelope** de todos os eventos.
 
-## 7. Casos de uso / mudanças de orquestração
-- **Enriquecimento no drain:** `ApplicationService.executeInScope`, ao drenar os eventos, carimba `companyId` (de `getCurrentCompanyId()`) e `actorId`/`actorType` (de um novo `getCurrentActor()`) nos eventos que ainda não os têm.
-- **Query de auditoria:** `ListAuditEventsQuery(companyId, { aggregateId?, actorId?, from?, to?, eventName?, page })` → página de eventos. Read-only, sempre filtrado por tenant.
+## 7. Capacidades
+- **Enriquecimento automático:** toda ação registrada já sai com quem a originou e em qual tenant, sem o autor de cada feature precisar se preocupar com isso (mecanismo → ADR-008).
+- **Consulta de auditoria:** o Auditor lista o que aconteceu na sua organização, filtrando por agregado, ator, intervalo de tempo e tipo de evento — sempre restrito ao seu tenant.
 
 ## 8. Contratos
-- (REST/MCP de auditoria detalhados no PRD-5/PRD-6.) Aqui definimos só o **query model** interno `AuditTrailQueryService`.
+- A superfície REST/MCP da auditoria é detalhada no PRD-5/PRD-6. Aqui fica apenas a promessa: existe uma leitura de auditoria isolada por tenant.
 
 ## 9. Persistência
-- Migração MikroORM: `ALTER TABLE system_events ADD company_id, actor_id, actor_type` + índices.
-- Helper `tenantScopedSchema(...)` ou checklist documentado: toda nova schema tenant-scoped inclui `company_id` + filtro.
+- Decisões de persistência (colunas do log de eventos, índices, filtro por tenant e convenção para novas schemas tenant-scoped) → **ADR-009**.
 
 ## 10. Critérios de aceite
-- [ ] Um evento emitido por um caso de uso dentro de um `runWithTenant` + `runWithActor` chega ao `system_events` com `company_id` e `actor_id` corretos.
-- [ ] Query de auditoria de um tenant **nunca** retorna eventos de outro tenant (teste de isolamento com 2 tenants).
-- [ ] Tentar persistir um agregado tenant-scoped fora de um Actor/Tenant context falha (ou loga aviso em modo não-estrito) — comportamento definido e testado.
-- [ ] `CompanyFilter` aplicado em `system_events` (query sem tenant retorna vazio/erro conforme política).
-- [ ] Testes de integração in-memory cobrindo enriquecimento de evento e isolamento.
+- [ ] Toda ação registrada identifica quem a originou e em qual organização.
+- [ ] Um auditor **nunca** vê eventos de outra organização (teste de isolamento com 2 tenants).
+- [ ] Ler ou gravar dado de um tenant sem um tenant ativo (e fora de escopo privilegiado) **falha de forma barulhenta** — nunca retorna vazio nem dado de outro tenant.
+- [ ] Uma gravação que tente cruzar tenant (agregado de um tenant sob contexto de outro) é abortada antes de persistir.
+- [ ] Ações de operador são registradas e ficam fora da visão de auditoria de tenant.
 
 ## 11. Dependências e ordem
 - **Pré-requisito de PRD-1..6.** Deve ser o primeiro a entrar.
 
-## 12. Riscos & ADRs a criar
-- **ADR:** "Actor Context & Event Envelope Enrichment" — como propagamos ator e por que carimbamos no drain (e não no agregado).
-- **ADR:** "Tenancy Isolation Guarantees" — onde o filtro é aplicado e o que acontece em contextos sem tenant.
-- **Risco:** crescimento de `system_events` (archival) — registrar como dívida com ADR futuro.
-- **Decisão em aberto:** `actorType` enum final (incluir `'system'` para jobs/migrações).
+## 12. Riscos & ADRs
+- **ADR-008 — Actor Context & Event Envelope Enrichment** (escrita): como propagamos o ator e por que carimbamos a partir do contexto com cross-check fail-closed contra o agregado.
+- **ADR-009 — Tenancy Isolation Guarantees** (escrita): onde o filtro é aplicado, o que acontece em contexto sem tenant, e o buraco do caminho de escrita do MikroORM. Resolve também o enum final de `actorType` e o tratamento do operador.
+- **Risco:** crescimento de `system_events` (archival/retenção) — dívida registrada para ADR futura, fora da v1.
