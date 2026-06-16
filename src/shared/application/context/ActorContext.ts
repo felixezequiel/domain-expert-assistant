@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { ActorType } from "../../domain/events/ActorType.ts";
+import type { Role } from "../../domain/Role.ts";
 
 /**
  * The principal that originated the current unit of work (ADR-008).
@@ -17,6 +18,9 @@ export interface Actor {
   readonly companyId: string | null;
   readonly actorId: string | null;
   readonly actorType: ActorType | null;
+  // Fresh roles for the human principal (ADR-010/011), used by the authorize step.
+  // Absent for machine/system/operator actors.
+  readonly roles?: ReadonlyArray<Role>;
 }
 
 const actorStorage = new AsyncLocalStorage<Actor>();

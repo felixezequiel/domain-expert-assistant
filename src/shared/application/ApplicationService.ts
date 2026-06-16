@@ -8,6 +8,8 @@ import type { EventStorePort } from "../ports/EventStorePort.ts";
 import type { SseBroadcasterPort } from "../ports/SseBroadcasterPort.ts";
 import { getCurrentActor } from "./context/ActorContext.ts";
 import { enrichDomainEvents } from "./events/EventEnricher.ts";
+import type { AuthorizerPort } from "../ports/AuthorizerPort.ts";
+import { RoleBasedAuthorizer, isRoleRestricted } from "./authorization/RoleBasedAuthorizer.ts";
 
 /**
  * Application-layer default so the orchestrator stays free of infrastructure imports
@@ -26,6 +28,7 @@ export class ApplicationService {
   private readonly eventStore: EventStorePort;
   private readonly sseBroadcaster: SseBroadcasterPort;
   private readonly scopeWrapper: <T>(fn: () => Promise<T>) => Promise<T>;
+  private readonly authorizer: AuthorizerPort;
 
   constructor(
     unitOfWork: UnitOfWork,
@@ -34,6 +37,7 @@ export class ApplicationService {
     eventStore: EventStorePort,
     sseBroadcaster: SseBroadcasterPort = new NoOpSseBroadcaster(),
     scopeWrapper: <T>(fn: () => Promise<T>) => Promise<T> = (fn) => fn(),
+    authorizer: AuthorizerPort = new RoleBasedAuthorizer(),
   ) {
     this.unitOfWork = unitOfWork;
     this.domainEventManager = domainEventManager;
@@ -41,6 +45,7 @@ export class ApplicationService {
     this.eventStore = eventStore;
     this.sseBroadcaster = sseBroadcaster;
     this.scopeWrapper = scopeWrapper;
+    this.authorizer = authorizer;
   }
 
   public execute<Command, Result>(
@@ -56,6 +61,14 @@ export class ApplicationService {
   ): Promise<Result> {
     let allEvents: Array<DomainEvent> = [];
     let result: Result;
+
+    // Authorize before opening the unit of work (ADR-011): a use case declares the
+    // roles it requires; the authorizer checks them against the actor context. Not
+    // bypassable by any adapter since both HTTP and MCP go through here.
+    const candidate = useCase as object;
+    if (isRoleRestricted(candidate)) {
+      this.authorizer.authorize(candidate.requiredRoles);
+    }
 
     await this.unitOfWork.begin();
 
