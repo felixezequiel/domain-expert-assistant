@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
-import { ApplicationService } from "../../../shared/application/ApplicationService.ts";
+import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
 import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
 import {
   readSessionToken,

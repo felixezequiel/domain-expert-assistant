@@ -1,7 +1,7 @@
 import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { UserRepositoryPort, PasswordHasherPort, OpaqueSecretPort } from "../types.ts";
 import type { AcceptInvitationCommand } from "../command/AcceptInvitationCommand.ts";
-import { User } from "../../domain/aggregates/User.ts";
+import type { User } from "../../domain/aggregates/User.ts";
 import { PasswordHash } from "../../domain/valueObjects/PasswordHash.ts";
 import { InvalidInvitationError } from "../errors.ts";
 

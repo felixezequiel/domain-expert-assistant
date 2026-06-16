@@ -2,7 +2,7 @@ import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import type { UserRepositoryPort, SessionRepositoryPort } from "../types.ts";
 import type { DisableUserCommand } from "../command/DisableUserCommand.ts";
-import { User } from "../../domain/aggregates/User.ts";
+import type { User } from "../../domain/aggregates/User.ts";
 import { LastAdminError } from "../errors.ts";
 
 /**

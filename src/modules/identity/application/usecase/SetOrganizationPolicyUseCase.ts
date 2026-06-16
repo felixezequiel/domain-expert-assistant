@@ -2,7 +2,7 @@ import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import type { OrganizationRepositoryPort } from "../types.ts";
 import type { SetOrganizationPolicyCommand } from "../command/SetOrganizationPolicyCommand.ts";
-import { Organization } from "../../domain/aggregates/Organization.ts";
+import type { Organization } from "../../domain/aggregates/Organization.ts";
 import { OrganizationId } from "../../domain/identifiers/OrganizationId.ts";
 import { OrganizationPolicy } from "../../domain/valueObjects/OrganizationPolicy.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
