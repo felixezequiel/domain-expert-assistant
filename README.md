@@ -32,27 +32,27 @@ npm start                   # boots REST :3000 and GraphQL :4000
 curl http://localhost:3000/health/live
 # → {"status":"ok"}
 
-curl -X POST http://localhost:3000/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Alice","email":"alice@example.com"}'
-# → {"id":"...","name":"Alice","email":"alice@example.com"}
+curl http://localhost:3000/health/ready
+# → {"status":"ready"}   (verifies the Postgres connection)
 ```
 
 That's it — Postgres comes up via `docker-compose.yml` (connection defaults via
 `POSTGRES_*`, see [`.env.example`](.env.example)), migrations run automatically on boot,
-and you have a working DDD service with event store, correlation IDs, health checks
-and a domain event handler firing the welcome-email side effect.
+and you have a working DDD service with event store, correlation IDs and health checks.
+
+> This repository builds the **Domain Expert Assistant** product on top of the DDD/hexagonal
+> template. The template's demo `user` module has been removed in favour of the real
+> **Identity & Access** bounded context (`src/modules/identity`); REST endpoints are wired
+> incrementally per PRD.
 
 ## Add your first bounded context
 
-The template includes a complete `User` module as reference. To add a `Product`
-(or whatever your domain is), follow the step-by-step:
+To add a bounded context, follow the step-by-step (domain → application → in-memory repo →
+MikroORM repo → module bootstrap → `main.ts` wiring → migration → smoke test):
 
 **👉 [docs/adding-a-bounded-context.md](docs/adding-a-bounded-context.md)**
 
-The walkthrough covers domain → application → in-memory repo → MikroORM repo →
-module bootstrap → `main.ts` wiring → migration → smoke test, with every snippet
-ready to copy.
+The `audit` and `identity` modules under `src/modules/` are concrete references.
 
 ## Commands
 
