@@ -35,6 +35,7 @@ export default defineConfig({
     TagEntitySchema,
     KnowledgeItemEntitySchema,
     KnowledgeVersionEntitySchema,
+    IngestionJobEntitySchema,
     SystemEventEntitySchema,
   ],
   extensions: [Migrator],
