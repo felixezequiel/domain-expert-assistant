@@ -1,7 +1,6 @@
 import { ConsoleLogger } from "./shared/infrastructure/logging/ConsoleLogger.ts";
 import { DatabaseFactory, InfrastructureFactory } from "./shared/factories/index.ts";
 import { HealthCheckController } from "./shared/infrastructure/http/HealthCheckController.ts";
-import { UserModuleFactory } from "./modules/user/factories/index.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -28,18 +27,10 @@ async function main(): Promise<void> {
   // --- Database initialization ---
   const entityManagerProvider = await DatabaseFactory.create(logger);
 
-  // --- Module factories ---
-  const userModule = UserModuleFactory.create(entityManagerProvider);
-
   // --- Shared infrastructure ---
-  const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
-    ...userModule.persisters,
-  ]);
-
-  // --- Module registration (vertical slices) ---
-  // Each module creates its persistence internally and registers adapters.
-  // To add a new bounded context, create a ModuleFactory and register it here.
-  userModule.register(infrastructure, logger);
+  // Bounded-context modules (Identity, …) register their persisters and adapters here as
+  // each is wired. Persistence + domain land first; the HTTP/bootstrap wiring follows.
+  const infrastructure = InfrastructureFactory.create(entityManagerProvider, []);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);
@@ -56,8 +47,8 @@ async function main(): Promise<void> {
     url: "http://localhost:" + graphqlPort + "/graphql",
   });
   logger.info("Available endpoints:", {
-    "POST /users": "REST - Create a new user",
-    "POST /graphql": "GraphQL - mutation createUser(input: CreateUserInput!)",
+    "POST /auth/login": "REST - authenticate a user (email + password)",
+    "GET /health/ready": "REST - readiness probe",
   });
 }
 

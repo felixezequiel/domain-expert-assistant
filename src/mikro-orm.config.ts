@@ -1,9 +1,9 @@
 import { defineConfig } from "@mikro-orm/postgresql";
 import { Migrator } from "@mikro-orm/migrations";
-import {
-  UserEntitySchema,
-  AddressEntitySchema,
-} from "./modules/user/infrastructure/persistence/mikro-orm/schemas/UserEntitySchema.ts";
+import { OrganizationEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/OrganizationEntitySchema.ts";
+import { UserEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/UserEntitySchema.ts";
+import { ConsumerCredentialEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/ConsumerCredentialEntitySchema.ts";
+import { SessionEntitySchema } from "./modules/identity/infrastructure/persistence/mikro-orm/schemas/SessionEntitySchema.ts";
 import { SystemEventEntitySchema } from "./shared/infrastructure/persistence/adapters/eventStore/SystemEventEntitySchema.ts";
 
 /**
@@ -21,7 +21,13 @@ export default defineConfig({
   user: process.env.POSTGRES_USER ?? "domain_expert",
   password: process.env.POSTGRES_PASSWORD ?? "domain_expert",
   dbName: process.env.POSTGRES_DB ?? "domain_expert",
-  entities: [UserEntitySchema, AddressEntitySchema, SystemEventEntitySchema],
+  entities: [
+    OrganizationEntitySchema,
+    UserEntitySchema,
+    ConsumerCredentialEntitySchema,
+    SessionEntitySchema,
+    SystemEventEntitySchema,
+  ],
   extensions: [Migrator],
   migrations: {
     path: "./src/migrations",
