@@ -32,3 +32,6 @@ Thumbs.db
 
 # MikroORM v7 local schema snapshot (regenerated on migrations:up)
 src/migrations/.snapshot-*.json
+
+# Ingestion file storage (ADR-016)
+data/ingestion/
