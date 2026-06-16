@@ -20,6 +20,7 @@ import { MikroOrmConsumerCredentialRepository } from "../infrastructure/persiste
 import { MikroOrmSessionRepository } from "../infrastructure/persistence/mikro-orm/repositories/MikroOrmSessionRepository.ts";
 import { Argon2idPasswordHasher } from "../infrastructure/auth/Argon2idPasswordHasher.ts";
 import { Sha256OpaqueSecret } from "../infrastructure/auth/Sha256OpaqueSecret.ts";
+import { OrganizationPolicyAdapter } from "../infrastructure/knowledge/OrganizationPolicyAdapter.ts";
 
 import { ProvisionOrganizationUseCase } from "../application/usecase/ProvisionOrganizationUseCase.ts";
 import { AuthenticateUseCase } from "../application/usecase/AuthenticateUseCase.ts";
@@ -40,6 +41,11 @@ const MILLISECONDS_PER_SECOND = 1000;
 
 export interface IdentityModuleSetup {
   readonly persisters: ReadonlyArray<AggregatePersister>;
+  // Cross-module dependencies consumed by the Knowledge slice (ADR-008/010 session
+  // resolution; ADR-013 org governance policy). Exposed so the composition root can wire
+  // Knowledge without Knowledge importing Identity's aggregates.
+  readonly resolveSession: ResolveSessionUseCase;
+  readonly organizationPolicy: OrganizationPolicyAdapter;
   register(infrastructure: InfrastructureResult, logger: LoggerPort): void;
 }
 
@@ -52,6 +58,9 @@ export class IdentityModuleFactory {
 
     const passwordHasher = new Argon2idPasswordHasher();
     const opaqueSecret = new Sha256OpaqueSecret();
+
+    const resolveSession = new ResolveSessionUseCase(sessionRepository, userRepository, opaqueSecret);
+    const organizationPolicy = new OrganizationPolicyAdapter(organizationRepository);
 
     const persisters: ReadonlyArray<AggregatePersister> = [
       new MikroOrmAggregatePersister({
@@ -77,6 +86,8 @@ export class IdentityModuleFactory {
 
     return {
       persisters,
+      resolveSession,
+      organizationPolicy,
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const identityModule = new IdentityModule({
           applicationService: infrastructure.applicationService,
@@ -93,7 +104,7 @@ export class IdentityModuleFactory {
             opaqueSecret,
             SESSION_TTL_SECONDS * MILLISECONDS_PER_SECOND,
           ),
-          resolveSession: new ResolveSessionUseCase(sessionRepository, userRepository, opaqueSecret),
+          resolveSession,
           inviteUser: new InviteUserUseCase(userRepository, opaqueSecret),
           acceptInvitation: new AcceptInvitationUseCase(userRepository, passwordHasher, opaqueSecret),
           changeUserRoles: new ChangeUserRolesUseCase(userRepository),
