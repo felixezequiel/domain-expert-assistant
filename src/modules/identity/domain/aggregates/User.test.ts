@@ -47,6 +47,21 @@ describe("User", () => {
     assert.equal(user.getDomainEvents()[0]!.eventName, "UserActivated");
   });
 
+  it("stores the invitation token hash and clears it on activation", () => {
+    const user = User.invite(
+      new UserId("user-1"),
+      "company-1",
+      new Email("ada@acme.com"),
+      new DisplayName("Ada"),
+      ["curator"],
+      "token-hash",
+    );
+    assert.equal(user.invitationTokenHash, "token-hash");
+
+    user.activate(new PasswordHash("$argon2id$hash"));
+    assert.equal(user.invitationTokenHash, null);
+  });
+
   it("refuses to activate a user that is not invited", () => {
     const user = invite();
     user.activate(new PasswordHash("$argon2id$hash"));

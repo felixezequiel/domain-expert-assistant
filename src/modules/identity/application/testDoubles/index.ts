@@ -63,6 +63,25 @@ export class FakeUserRepository implements UserRepositoryPort {
   public async existsByEmail(email: string): Promise<boolean> {
     return (await this.findByEmail(email)) !== null;
   }
+
+  public async findByInvitationTokenHash(tokenHash: string): Promise<User | null> {
+    for (const user of this.users.values()) {
+      if (user.invitationTokenHash === tokenHash) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  public async countActiveAdmins(companyId: string): Promise<number> {
+    let count = 0;
+    for (const user of this.users.values()) {
+      if (user.companyId === companyId && user.status === "active" && user.isAdmin()) {
+        count += 1;
+      }
+    }
+    return count;
+  }
 }
 
 export class FakeSessionRepository implements SessionRepositoryPort {

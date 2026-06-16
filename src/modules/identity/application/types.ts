@@ -26,6 +26,10 @@ export interface UserRepositoryPort {
   // Email is globally unique, so login resolves a user with no tenant hint.
   findByEmail(email: string): Promise<User | null>;
   existsByEmail(email: string): Promise<boolean>;
+  // AcceptInvitation looks up the invited user by the hashed one-time token.
+  findByInvitationTokenHash(tokenHash: string): Promise<User | null>;
+  // Backs the cross-aggregate "cannot remove/disable the last admin" rule (ADR-011).
+  countActiveAdmins(companyId: string): Promise<number>;
 }
 
 export interface SessionRepositoryPort {

@@ -19,6 +19,9 @@ interface UserProps {
   passwordHash: PasswordHash | null;
   roles: ReadonlyArray<Role>;
   status: UserStatus;
+  // Hash of the one-time invitation token (the plaintext is shown once at invite time).
+  // Cleared on activation. Null for users not created via the invitation flow.
+  invitationTokenHash: string | null;
 }
 
 /**
@@ -54,6 +57,10 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
     return this.props.status;
   }
 
+  public get invitationTokenHash(): string | null {
+    return this.props.invitationTokenHash;
+  }
+
   public isAdmin(): boolean {
     return this.props.roles.includes("admin");
   }
@@ -64,6 +71,7 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
     email: Email,
     displayName: DisplayName,
     roles: ReadonlyArray<Role>,
+    invitationTokenHash: string | null = null,
   ): User {
     const dedupedRoles = User.requireAtLeastOneRole(roles);
     const user = new User(id, {
@@ -73,6 +81,7 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
       passwordHash: null,
       roles: dedupedRoles,
       status: "invited",
+      invitationTokenHash,
     });
     user.addDomainEvent(new UserInvitedEvent(id.value, email.value, dedupedRoles));
     return user;
@@ -86,6 +95,7 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
     passwordHash: PasswordHash | null,
     roles: ReadonlyArray<Role>,
     status: UserStatus,
+    invitationTokenHash: string | null = null,
   ): User {
     return new User(id, {
       companyId,
@@ -94,6 +104,7 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
       passwordHash,
       roles: User.dedupe(roles),
       status,
+      invitationTokenHash,
     });
   }
 
@@ -103,6 +114,7 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
     }
     this.props.passwordHash = passwordHash;
     this.props.status = "active";
+    this.props.invitationTokenHash = null;
     this.addDomainEvent(new UserActivatedEvent(this.id.value));
   }
 
