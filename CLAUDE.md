@@ -145,4 +145,5 @@ POST /users/:userId/addresses   # Add address to user
 - **Performance benchmarks** in `<module>/performanceTests/`.
 - **Framework:** `node:test` (`describe`/`it`) + `node:assert/strict`.
 - **UnitOfWork in tests:** use `InMemoryUnitOfWork` with `InMemoryRepositoryAdapter`. Set up `AggregateRoot.setOnTrack()` + `AggregateTracker.track()` in `beforeEach`, reset with `setOnTrack(null)` in `afterEach`.
-- Fakes/spies use in-memory implementations (e.g., `InMemoryUserRepository`).
+- Fakes/spies use in-memory implementations.
+- **Application unit tests depend on ports, not infra.** Co-located application tests (e.g. `application/usecase/*.test.ts`) must NOT import a concrete infrastructure adapter — the hexagonal pre-commit check forbids `application/ → infrastructure/`. Put a module's in-memory port fakes in `modules/<context>/application/testDoubles/index.ts` (the `index.ts` name is also exempt from the co-located-test gate) and import those. The MikroORM adapters stay the production path; integration tests under `integrationTests/` may import infra freely.
