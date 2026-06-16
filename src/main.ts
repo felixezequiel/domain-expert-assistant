@@ -5,6 +5,8 @@ import { IdentityModuleFactory } from "./modules/identity/factories/index.ts";
 import { KnowledgeModuleFactory } from "./modules/knowledge/factories/index.ts";
 import { IngestionModuleFactory } from "./modules/ingestion/factories/index.ts";
 import { RetrievalModuleFactory } from "./modules/retrieval/factories/index.ts";
+import { ConsumptionModuleFactory } from "./modules/consumption/factories/index.ts";
+import { TransformersEmbedder } from "./modules/retrieval/infrastructure/embedding/TransformersEmbedder.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -40,10 +42,16 @@ async function main(): Promise<void> {
   const ingestionModule = IngestionModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
   });
+  // One local BGE-M3 embedder, shared by Retrieval (projection) and Consumption (search), so
+  // the multi-hundred-MB model is loaded once (ADR-017).
+  const embedder = new TransformersEmbedder();
   // Retrieval & Indexing (PRD-4): derived read-model, so it owns no aggregate/persister.
   const retrievalModule = RetrievalModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
+    embedder,
   });
+  // Consumption Gateway (PRD-5): consumer-facing REST + MCP, owns no aggregate/persister.
+  const consumptionModule = ConsumptionModuleFactory.create(entityManagerProvider, { embedder });
 
   // --- Shared infrastructure ---
   const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
@@ -58,6 +66,8 @@ async function main(): Promise<void> {
   ingestionModule.register(infrastructure, logger);
   // Subscribes to Knowledge's publish/deprecate/archive events and starts the projection worker.
   retrievalModule.register(infrastructure, logger);
+  // Registers the consumer REST API (/v1/*) and the MCP server (/mcp).
+  consumptionModule.register(infrastructure, logger);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);
