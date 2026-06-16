@@ -21,6 +21,9 @@ export class MikroOrmEventStore implements EventStorePort {
       entity.occurredAt = event.occurredAt.toISOString();
       entity.payload = JSON.stringify(event);
       entity.causationId = event.causationId;
+      entity.companyId = event.companyId ?? null;
+      entity.actorId = event.actorId ?? null;
+      entity.actorType = event.actorType ?? null;
 
       entityManager.persist(entity);
     }

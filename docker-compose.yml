@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: domain-expert-postgres
+    environment:
+      POSTGRES_USER: domain_expert
+      POSTGRES_PASSWORD: domain_expert
+      POSTGRES_DB: domain_expert
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domain_expert -d domain_expert"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

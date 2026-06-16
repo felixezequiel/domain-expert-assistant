@@ -1,4 +1,4 @@
-import { MikroORM } from "@mikro-orm/sqlite";
+import { MikroORM } from "@mikro-orm/postgresql";
 import type { LoggerPort } from "../ports/LoggerPort.ts";
 import type { AggregatePersister } from "../infrastructure/persistence/AggregatePersister.ts";
 import type { EntityManagerProvider } from "../infrastructure/persistence/adapters/EntityManagerProvider.ts";

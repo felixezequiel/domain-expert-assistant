@@ -5,10 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm test                    # Run all tests (230 tests, node:test via SWC)
+docker compose up -d        # Start Postgres + pgvector (required — no SQLite anywhere, ADR-018)
+npm test                    # Run all tests (node:test via SWC)
 npm run test:watch          # Run tests in watch mode
 npm run typecheck           # Type check only (tsc, no emit)
-npm start                   # Start HTTP + GraphQL servers (MikroORM + SQLite)
+npm start                   # Start HTTP + GraphQL servers (MikroORM + Postgres)
 npm run migration:create    # Create a new MikroORM migration
 npm run migration:up        # Run pending migrations
 
@@ -20,7 +21,7 @@ node --import @swc-node/register/esm-register --test src/shared/domain/valueObje
 
 DDD template using Hexagonal Architecture (Ports & Adapters) with TypeScript.
 
-**Stack:** TypeScript 5.9 | Node.js 24 | node:test | ESM | SWC on-the-fly (no build step) | MikroORM + SQLite
+**Stack:** TypeScript 5.9 | Node.js 24 | node:test | ESM | SWC on-the-fly (no build step) | MikroORM + Postgres + pgvector
 
 ### Layer Structure
 
@@ -52,7 +53,7 @@ src/
 │   └── integrationTests/
 │
 ├── migrations/          # MikroORM migration files
-├── mikro-orm.config.ts  # MikroORM configuration (SQLite)
+├── mikro-orm.config.ts  # MikroORM configuration (Postgres + pgvector)
 ├── main.ts              # Composition root (monolith entry point)
 └── context/docs/        # Architecture Decision Records (ADRs)
 ```
@@ -117,7 +118,7 @@ POST /users/:userId/addresses   # Add address to user
 - **Mappers** convert between domain aggregates and ORM entities (`toDomain()` / `toOrmEntity()`)
 - **AggregatePersister** interface: each module provides a persister that `supports()` its aggregate type and `persist()`s it
 - Domain `reconstitute()` factories hydrate aggregates from persistence without emitting domain events
-- SQLite database stored in `data/database.sqlite` (gitignored)
+- Postgres is the single engine (domain + event store + derived vector index, ADR-018); connection via `POSTGRES_*` env vars (defaults match `docker-compose.yml`). pgvector extension lives in the same database. No SQLite in any environment.
 
 ## TypeScript Constraints
 

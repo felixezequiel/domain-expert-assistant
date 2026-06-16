@@ -61,8 +61,9 @@
   "dependencies": {
     "@mikro-orm/core": "^7.0.14",
     "@mikro-orm/migrations": "^7.0.14",
-    "@mikro-orm/sqlite": "^7.0.14",
+    "@mikro-orm/postgresql": "^7.0.14",
     "graphql": "^16.12.0",
-    "nodemailer": "^8.0.7"
+    "nodemailer": "^8.0.7",
+    "pg": "^8.21.0"
   }
 }
