@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposto
+Aceito — implementado (defesa de aplicação na v1; piso de RLS ligado em 2026-06-16, ver emenda)
 
 ## Data
 
@@ -58,7 +58,14 @@ O escopo privilegiado é aberto explicitamente (ex.: provisionamento de tenant p
 
 **Emenda (2026-06-13, ADR-014):** `company_id = null` numa tabela tenant-scoped tem **dois sentidos explícitos**: (1) **dado operacional** de escopo privilegiado (operador/sistema), invisível em escopo normal; e (2) **dado de referência compartilhado, imutável e read-only** (ex.: tags de sistema), que é deliberadamente legível por todos os tenants via um filtro de tabela que inclui `scope = 'system'`. O segundo sentido não enfraquece o isolamento porque vocabulário compartilhado não-confidencial não é dado privado de tenant. Qualquer tabela que use o sentido (2) deve declará-lo explicitamente no seu filtro e documentá-lo.
 
-**Emenda (2026-06-16, ADR-018/ADR-022):** agora que a persistência é Postgres (ADR-018), o **buraco do caminho de escrita/SQL cru** descrito acima é fechado na v1 ligando **Row-Level Security (RLS)** como **piso de tenant** em todas as tabelas tenant-scoped. Política por tabela: linha visível/alterável só quando `company_id = current_setting('app.current_tenant')`; o `MikroOrmUnitOfWork` faz `SET app.current_tenant` por transação a partir do Actor Context (e o desliga em escopo privilegiado de operador/sistema). O filtro de aplicação (`CompanyFilter`) **permanece** como camada primária/ergonômica; o RLS é a rede inescapável **abaixo** dele, que pega até a query crua do `pgvector` que não passa pelo ORM. Isso transforma a consequência negativa "isolamento forçado só na aplicação" desta ADR em defesa em profundidade real.
+**Emenda (2026-06-16, ADR-018/ADR-022) — IMPLEMENTADA:** agora que a persistência é Postgres (ADR-018), o **buraco do caminho de escrita/SQL cru** descrito acima foi fechado ligando **Row-Level Security (RLS)** como **piso de tenant**. Como ficou (commit `b99d7f3`):
+
+- **Transação por request** — o `MikroOrmUnitOfWork` abre uma transação por request (refactor de flush-ownership, ADR-004) e, dentro dela, publica o escopo em GUCs **transaction-local** via `set_config`: `app.current_company` (escopo de tenant) ou `app.bypass_rls = 'on'` (escopo privilegiado operador/sistema). Sendo transaction-local, nunca vazam entre conexões do pool.
+- **Downgrade de role** — em seguida faz `SET LOCAL ROLE app_runtime` (role sem privilégio, criado pela migração). É **essencial**: o usuário da conexão é dono das tabelas e superuser, e **ambos ignoram RLS** — só um role comum fica sujeito à política. As migrações continuam rodando como o dono/superuser (ex.: `CREATE EXTENSION` exige).
+- **Políticas fail-closed** — `FORCE ROW LEVEL SECURITY` + política `company_id = current_setting('app.current_company', true)` (ou `OR app.bypass_rls = 'on'`) nas **7 tabelas de dados**: `chunks`, `collections`, `knowledge_items`, `knowledge_versions`, `ingestion_jobs`, `tags` (que também expõe linhas `scope='system'` na leitura, ADR-014) e `system_events`. Sem GUC ⇒ `current_setting` é NULL ⇒ nenhuma linha casa: contexto esquecido devolve zero, nunca tudo.
+- **Escopo** — as tabelas de **identidade/auth** (`organizations`, `users`, `sessions`, `consumer_credentials`) ficam **fora** do RLS forçado: a resolução de sessão e de API key as lê **pré-autenticação** (antes de existir contexto de tenant), por hash de segredo de alta entropia, e seguem guardadas pelo `CompanyFilter` da aplicação uma vez no contexto. Estendê-las exige rotear os lookups pré-auth por um escopo de bypass — follow-up de baixa prioridade.
+
+O filtro de aplicação (`CompanyFilter`) **permanece** como camada primária/ergonômica; o RLS é a rede inescapável **abaixo** dele. Validado contra Postgres real: a **query crua do `pgvector` (ANN) como tenant errado devolve 0 linhas** — exatamente o furo que a ADR-022 apontava. Isso transforma a consequência negativa "isolamento forçado só na aplicação" desta ADR em defesa em profundidade real.
 
 ## Consequências
 
@@ -73,7 +80,7 @@ O escopo privilegiado é aberto explicitamente (ex.: provisionamento de tenant p
 - O escopo privilegiado é um bypass real de isolamento; vira superfície de segurança que precisa ser blindada contra alcance indevido.
 - Toda nova schema tenant-scoped **precisa** declarar filtro + coluna; esquecer torna a entidade globalmente visível (mitigado por convenção, helper e teste de isolamento com dois tenants).
 - Ações de operador são capturadas mas **não visíveis** na v1 (sem plano de auditoria de operador) — ponto cego conhecido até esse plano existir.
-- Isolamento forçado na aplicação: acesso que contorne a camada de aplicação (SQL cru, acesso direto ao SQLite) não é protegido — o banco não tem row-level security.
+- ~~Isolamento forçado só na aplicação: acesso que contorne a camada de aplicação (SQL cru) não é protegido.~~ **Resolvido pela emenda de 2026-06-16:** o RLS do Postgres é o piso inescapável, que pega até o SQL cru/`pgvector`. Resíduo: as tabelas de auth ainda dependem só do filtro de aplicação (lidas pré-auth por hash de segredo) até o RLS ser estendido a elas.
 
 **Neutras:**
 
@@ -86,3 +93,4 @@ O escopo privilegiado é aberto explicitamente (ex.: provisionamento de tenant p
 - Acesso a repositório tenant-scoped fora de um contexto de tenant e fora de escopo privilegiado é erro — nunca silêncio.
 - Escopo privilegiado (operador/sistema) é aberto explicitamente na borda/composição e jamais exposto a caminhos de consumidor ou UI de tenant.
 - Ao persistir, o `companyId` da entidade ORM é derivado do agregado, não do contexto.
+- O piso de RLS é forçado pela transação por request: `set_config('app.current_company' | 'app.bypass_rls')` + `SET LOCAL ROLE app_runtime` no `onBegin` (ambos transaction-local). Toda tabela de dados tenant-scoped roda `FORCE ROW LEVEL SECURITY` com política fail-closed; o role de runtime nunca é dono nem superuser. Tabela de auth lida pré-autenticação fica fora do RLS forçado até o lookup pré-auth ser roteado por bypass.

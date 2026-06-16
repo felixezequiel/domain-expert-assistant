@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposto
+Aceito — implementado (pré-filtro de aplicação + piso de RLS, 2026-06-16)
 
 ## Data
 
@@ -39,7 +39,7 @@ Escopo por-credencial é pré-filtro de aplicação; o piso de tenant é RLS no 
 
 Escolhida a **alternativa 3**. O escopo é **pré-filtro na query** (nunca pós-filtro), **fail-closed** (sem escopo ⇒ resultado vazio), em duas camadas:
 
-- **Piso de tenant (`companyId`) → Postgres RLS** (emenda à ADR-009): inescapável, vale até para a query crua do `pgvector` que não passa pelo filtro de aplicação.
+- **Piso de tenant (`companyId`) → Postgres RLS** (emenda à ADR-009): inescapável, vale até para a query crua do `pgvector` que não passa pelo filtro de aplicação. **Implementado (commit `b99d7f3`):** a transação por request faz `set_config('app.current_company', …, true)` + `SET LOCAL ROLE app_runtime` (o role de conexão é superuser/dono e ignoraria o RLS; só um role comum fica sujeito à política), e `FORCE ROW LEVEL SECURITY` na tabela `chunks` (entre outras). Provado contra Postgres real: como tenant errado, a busca ANN (`embedding <=> …`) devolve **0 linhas**.
 - **Escopo por-credencial → pré-filtro de aplicação** no `WHERE`: `collectionId ∈ escopo da credencial`, `sensitivity ≤ teto`, e só itens **servíveis** (ponteiro publicado; `Deprecated` aparece sinalizado como desatualizado, `Archived` não aparece — ADR-013/020). Resolvido pelo `ScopeResolver` a partir da credencial.
 
 **Escopo efetivo = escopo da credencial ∩ filtros do pedido.** O pedido só pode **estreitar** dentro do que a credencial permite; pedir explicitamente uma coleção fora do escopo retorna **403**, nunca "alarga".
