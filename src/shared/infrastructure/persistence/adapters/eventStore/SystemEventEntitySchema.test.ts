@@ -11,7 +11,13 @@ describe("SystemEventEntitySchema", () => {
   });
 
   it("maps the actor envelope columns to their snake_case names", () => {
-    const properties = SystemEventEntitySchema.meta.properties;
+    // Pre-init the schema definition exposes `fieldName` (singular); the typed view only
+    // declares the post-init `fieldNames` array, so read the raw definition via a cast.
+    const properties = SystemEventEntitySchema.meta.properties as unknown as {
+      companyId: { fieldName?: string };
+      actorId: { fieldName?: string };
+      actorType: { fieldName?: string };
+    };
 
     assert.equal(properties.companyId.fieldName, "company_id");
     assert.equal(properties.actorId.fieldName, "actor_id");

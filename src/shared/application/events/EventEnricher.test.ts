@@ -96,6 +96,16 @@ describe("enrichDomainEvents", () => {
     assert.equal(event.companyId, "company-1");
   });
 
+  it("does not cross-check a privileged actor acting across tenants, stamping from context", () => {
+    const operator: Actor = { companyId: null, actorId: "op-1", actorType: "operator" };
+    const aggregate = TenantAggregate.make("agg-1", "company-A");
+    const event = new SampleEvent("agg-1");
+
+    assert.doesNotThrow(() => enrichDomainEvents([event], operator, [aggregate]));
+    assert.equal(event.companyId, null);
+    assert.equal(event.actorType, "operator");
+  });
+
   it("stamps events with no matching tracked aggregate (adapter events) from context only", () => {
     const aggregate = TenantAggregate.make("agg-1", "company-1");
     const adapterEvent = new SampleEvent("adapter-99");

@@ -3,7 +3,7 @@ import type { ActorType } from "../../domain/events/ActorType.ts";
 import type { AggregateRoot } from "../../domain/aggregates/AggregateRoot.ts";
 import type { Identifier } from "../../domain/identifiers/Identifier.ts";
 import { isTenantScoped } from "../../domain/TenantScoped.ts";
-import type { Actor } from "../context/ActorContext.ts";
+import { isPrivilegedActorType, type Actor } from "../context/ActorContext.ts";
 
 /**
  * Raised when an event originated from a tenant-scoped aggregate whose `companyId`
@@ -51,9 +51,18 @@ export function enrichDomainEvents(
   const actorId = actor?.actorId ?? null;
   const actorType = actor?.actorType ?? null;
 
+  // Privileged actors (operator/system) act across tenants by design (ADR-009), so the
+  // cross-check only guards non-privileged actors against accidental cross-tenant writes.
+  const privileged = isPrivilegedActorType(actorType);
+
   for (const event of events) {
     const aggregate = aggregatesById.get(event.aggregateId);
-    if (aggregate !== undefined && isTenantScoped(aggregate) && aggregate.companyId !== companyId) {
+    if (
+      !privileged &&
+      aggregate !== undefined &&
+      isTenantScoped(aggregate) &&
+      aggregate.companyId !== companyId
+    ) {
       throw new EnvelopeTenantMismatchError(event.aggregateId, aggregate.companyId, companyId);
     }
 
