@@ -51,11 +51,12 @@ describe("IngestionJob", () => {
     assert.equal(lastEvent(job), "IngestionFailed");
   });
 
-  it("requeues a stuck processing job for recovery", () => {
+  it("requeues a stuck processing job for recovery, emitting IngestionRequeued", () => {
     const job = uploaded();
     job.startProcessing();
     job.markForRetry();
     assert.equal(job.status, "pending");
+    assert.equal(lastEvent(job), "IngestionRequeued");
   });
 
   it("rejects invalid transitions", () => {

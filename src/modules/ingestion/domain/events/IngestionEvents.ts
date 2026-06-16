@@ -36,3 +36,11 @@ export class IngestionFailedEvent extends BaseDomainEvent {
     super(aggregateId, causationId);
   }
 }
+
+/** Emitted by stuck-job recovery (ADR-015): a job left `processing` is returned to the queue. */
+export class IngestionRequeuedEvent extends BaseDomainEvent {
+  public readonly eventName = "IngestionRequeued";
+  constructor(aggregateId: string, causationId: string | null = null) {
+    super(aggregateId, causationId);
+  }
+}

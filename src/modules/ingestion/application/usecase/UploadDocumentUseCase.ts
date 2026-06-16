@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
-import type { IngestionJobRepositoryPort, FileStoragePort } from "../types.ts";
+import type { FileStoragePort } from "../types.ts";
 import type { UploadDocumentCommand } from "../command/IngestionCommands.ts";
 import { IngestionJob } from "../../domain/aggregates/IngestionJob.ts";
 import { IngestionJobId } from "../../domain/identifiers/IngestionJobId.ts";

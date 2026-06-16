@@ -3,6 +3,7 @@ import { DatabaseFactory, InfrastructureFactory } from "./shared/factories/index
 import { HealthCheckController } from "./shared/infrastructure/http/HealthCheckController.ts";
 import { IdentityModuleFactory } from "./modules/identity/factories/index.ts";
 import { KnowledgeModuleFactory } from "./modules/knowledge/factories/index.ts";
+import { IngestionModuleFactory } from "./modules/ingestion/factories/index.ts";
 
 /**
  * Composition Root — Monolith entry point.
@@ -35,16 +36,21 @@ async function main(): Promise<void> {
     resolveSession: identityModule.resolveSession,
     organizationPolicy: identityModule.organizationPolicy,
   });
+  const ingestionModule = IngestionModuleFactory.create(entityManagerProvider, {
+    resolveSession: identityModule.resolveSession,
+  });
 
   // --- Shared infrastructure ---
   const infrastructure = InfrastructureFactory.create(entityManagerProvider, [
     ...identityModule.persisters,
     ...knowledgeModule.persisters,
+    ...ingestionModule.persisters,
   ]);
 
   // --- Module registration ---
   identityModule.register(infrastructure, logger);
   knowledgeModule.register(infrastructure, logger);
+  ingestionModule.register(infrastructure, logger);
 
   // --- Health checks (cross-cutting) ---
   const healthCheckController = new HealthCheckController(entityManagerProvider);

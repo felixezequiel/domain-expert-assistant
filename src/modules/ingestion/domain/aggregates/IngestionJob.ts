@@ -8,6 +8,7 @@ import {
   IngestionStartedEvent,
   IngestionCompletedEvent,
   IngestionFailedEvent,
+  IngestionRequeuedEvent,
 } from "../events/IngestionEvents.ts";
 
 interface IngestionJobProps {
@@ -152,6 +153,7 @@ export class IngestionJob extends AggregateRoot<IngestionJobId, IngestionJobProp
   public markForRetry(): void {
     this.assertStatus("processing", "requeue");
     this.props.status = "pending";
+    this.addDomainEvent(new IngestionRequeuedEvent(this.id.value));
   }
 
   private assertStatus(expected: IngestionStatus, action: string): void {

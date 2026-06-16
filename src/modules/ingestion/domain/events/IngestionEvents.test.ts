@@ -5,6 +5,7 @@ import {
   IngestionStartedEvent,
   IngestionCompletedEvent,
   IngestionFailedEvent,
+  IngestionRequeuedEvent,
 } from "./IngestionEvents.ts";
 
 describe("IngestionEvents", () => {
@@ -17,5 +18,6 @@ describe("IngestionEvents", () => {
     assert.equal(new IngestionStartedEvent("j1").eventName, "IngestionStarted");
     assert.equal(new IngestionCompletedEvent("j1", "item-1").createdItemId, "item-1");
     assert.equal(new IngestionFailedEvent("j1", "boom").reason, "boom");
+    assert.equal(new IngestionRequeuedEvent("j1").eventName, "IngestionRequeued");
   });
 });
