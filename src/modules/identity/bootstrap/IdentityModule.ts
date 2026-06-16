@@ -163,8 +163,16 @@ export class IdentityModule {
   private async handleLogin(request: IncomingMessage, response: ServerResponse): Promise<void> {
     await this.runAndRespond(response, async () => {
       const body = await HttpServer.readJsonBody(request);
-      const result = await this.deps.authenticate.execute(
-        AuthenticateCommand.of(IdentityModule.requireString(body, "email"), IdentityModule.requireString(body, "password")),
+      // Login is a pre-tenant system operation: there is no actor yet. It must run through the
+      // UnitOfWork (in a system scope) so the new session is flushed — repositories no longer
+      // flush themselves (ADR-004). The system scope opens the transaction the session write
+      // and its events commit in.
+      const loginScope: Actor = { companyId: null, actorId: null, actorType: "system" };
+      const result = await runWithActor(loginScope, () =>
+        this.deps.applicationService.execute(
+          this.deps.authenticate,
+          AuthenticateCommand.of(IdentityModule.requireString(body, "email"), IdentityModule.requireString(body, "password")),
+        ),
       );
       return {
         statusCode: HTTP_OK,

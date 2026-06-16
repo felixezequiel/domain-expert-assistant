@@ -41,8 +41,33 @@ export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
 
     // One transaction spans the whole use case (ADR-004 amendment): every read and write runs
     // inside it and commits atomically; queries opt into READ ONLY. This is also the seam RLS
-    // needs — a transaction to SET LOCAL the tenant id (task #8).
+    // needs — a transaction to set the tenant id for the policy (ADR-009/022, task #8).
     await forkedEntityManager.begin({ readOnly });
+
+    // RLS tenant floor (ADR-022): publish the scope into transaction-local GUCs the row-level
+    // policies read. `local = true` scopes them to this transaction, so they can never leak
+    // across pooled connections. A filtered scope sets the company and disables bypass; a
+    // privileged (operator/system) scope sets bypass and clears the company. The policy is
+    // fail-closed: if this ever did not run, current_setting returns NULL and no rows match.
+    // (`execute` lives on the SQL EntityManager — the postgresql driver's concrete type — but
+    // not on the base EntityManager the provider is typed as, hence the structural cast.)
+    const sqlExecutor = forkedEntityManager as unknown as {
+      execute(query: string, params?: ReadonlyArray<unknown>): Promise<unknown>;
+    };
+    if (decision.kind === "filtered") {
+      await sqlExecutor.execute(
+        "select set_config('app.current_company', ?, true), set_config('app.bypass_rls', 'off', true)",
+        [decision.companyId],
+      );
+    } else {
+      await sqlExecutor.execute(
+        "select set_config('app.current_company', '', true), set_config('app.bypass_rls', 'on', true)",
+      );
+    }
+    // Downgrade to the unprivileged runtime role for the rest of the transaction so the RLS
+    // policies actually apply — the connection role owns the tables and is a superuser, both of
+    // which bypass RLS. SET LOCAL resets at commit/rollback, so it never leaks across the pool.
+    await sqlExecutor.execute("set local role app_runtime");
 
     this.entityManagerProvider.setEntityManager(forkedEntityManager);
   }

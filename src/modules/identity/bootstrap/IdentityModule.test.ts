@@ -114,7 +114,13 @@ describe("IdentityModule routes", () => {
         expiresAt: new Date("2026-06-16T13:00:00.000Z"),
       }),
     } as unknown as IdentityModuleDeps["authenticate"];
-    new IdentityModule(baseDeps({ authenticate })).registerRoutes(httpServer as never);
+    // Login now runs through the UnitOfWork via applicationService.execute (so the session is
+    // flushed, ADR-004); the stub delegates to the use case to keep the edge behaviour observable.
+    const applicationService = {
+      execute: async (useCase: { execute: (command: unknown) => Promise<unknown> }, command: unknown) =>
+        useCase.execute(command),
+    } as unknown as IdentityModuleDeps["applicationService"];
+    new IdentityModule(baseDeps({ authenticate, applicationService })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("POST /auth/login")!,

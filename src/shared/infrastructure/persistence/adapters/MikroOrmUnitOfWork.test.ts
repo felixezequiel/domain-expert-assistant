@@ -73,12 +73,18 @@ class FakeEntityManager {
   public commitCalled = false;
   public rollbackCalled = false;
   public clearCalled = false;
+  public readonly executeCalls: Array<{ query: string; params: ReadonlyArray<unknown> | undefined }> = [];
   private inTransaction = false;
 
   public fork(): FakeEntityManager {
     const forked = new FakeEntityManager();
     forked.forkCalled = true;
     return forked;
+  }
+
+  public async execute(query: string, params?: ReadonlyArray<unknown>): Promise<unknown> {
+    this.executeCalls.push({ query, params });
+    return [];
   }
 
   public async begin(options?: { readOnly?: boolean }): Promise<void> {
@@ -142,6 +148,34 @@ describe("MikroOrmUnitOfWork", () => {
     assert.ok(currentEm.forkCalled);
     assert.ok(currentEm.beginCalled);
     assert.equal(currentEm.beginReadOnly, false);
+  });
+
+  it("should set the RLS company GUC for a filtered (tenant) scope", async () => {
+    const fakeEm = new FakeEntityManager();
+    const provider = createFakeProvider(fakeEm);
+    const unitOfWork = new MikroOrmUnitOfWork(provider, [new FakePersister()]);
+
+    const tenant: Actor = { companyId: "company-1", actorId: "u1", actorType: "user", roles: [] };
+    await runWithActor(tenant, () => unitOfWork.begin());
+
+    const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
+    const guc = currentEm.executeCalls.find((call) => call.query.includes("app.current_company"));
+    assert.ok(guc, "expected a set_config for app.current_company");
+    assert.deepEqual(guc.params, ["company-1"]);
+    assert.match(guc.query, /set_config\('app\.bypass_rls', 'off', true\)/);
+  });
+
+  it("should set the RLS bypass GUC for a privileged (system) scope", async () => {
+    const fakeEm = new FakeEntityManager();
+    const provider = createFakeProvider(fakeEm);
+    const unitOfWork = new MikroOrmUnitOfWork(provider, [new FakePersister()]);
+
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin());
+
+    const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
+    const guc = currentEm.executeCalls.find((call) => call.query.includes("app.bypass_rls"));
+    assert.ok(guc, "expected a set_config for app.bypass_rls");
+    assert.match(guc.query, /set_config\('app\.bypass_rls', 'on', true\)/);
   });
 
   it("should open a READ ONLY transaction when begin is asked to", async () => {
