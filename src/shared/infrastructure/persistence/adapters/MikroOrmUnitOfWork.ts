@@ -6,6 +6,7 @@ import { TrackedUnitOfWork } from "../TrackedUnitOfWork.ts";
 import { getCurrentActor } from "../../../application/context/ActorContext.ts";
 import { resolveTenantScope } from "../../../application/tenancy/TenantScopeResolution.ts";
 import { COMPANY_TENANT_FILTER_NAME } from "../filters/CompanyFilter.ts";
+import { COMPANY_OR_SYSTEM_FILTER_NAME } from "../filters/CompanyOrSystemFilter.ts";
 
 export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
   private readonly entityManagerProvider: EntityManagerProvider;
@@ -30,6 +31,10 @@ export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
     const decision = resolveTenantScope(getCurrentActor());
     if (decision.kind === "filtered") {
       forkedEntityManager.setFilterParams(COMPANY_TENANT_FILTER_NAME, {
+        companyId: decision.companyId,
+      });
+      // Shared-reference tables (tags) see this tenant's rows plus system rows (ADR-014).
+      forkedEntityManager.setFilterParams(COMPANY_OR_SYSTEM_FILTER_NAME, {
         companyId: decision.companyId,
       });
     }
