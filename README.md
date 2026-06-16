@@ -15,7 +15,7 @@
 - **Node.js 24+** with native test runner (`node:test`) — no Jest, no Vitest
 - **SWC** on-the-fly transpilation — no build step
 - **ESM** modules
-- **MikroORM 7** + **SQLite** (default) — switch to Postgres in 4 lines (see [Switching databases](#switching-databases))
+- **MikroORM 7** + **Postgres + pgvector** (required — ADR-018; no SQLite in any environment)
 - **GraphQL** built in alongside REST
 - **ESLint 9** flat config + **Prettier** + GitHub Actions CI
 
@@ -25,6 +25,7 @@
 git clone <your-fork> my-service && cd my-service
 nvm use                     # or ensure Node 24+
 npm install
+docker compose up -d        # Postgres + pgvector (required — ADR-018)
 npm start                   # boots REST :3000 and GraphQL :4000
 
 # in another terminal
@@ -37,7 +38,8 @@ curl -X POST http://localhost:3000/users \
 # → {"id":"...","name":"Alice","email":"alice@example.com"}
 ```
 
-That's it — migrations run automatically on boot, the SQLite file is created under `data/`,
+That's it — Postgres comes up via `docker-compose.yml` (connection defaults via
+`POSTGRES_*`, see [`.env.example`](.env.example)), migrations run automatically on boot,
 and you have a working DDD service with event store, correlation IDs, health checks
 and a domain event handler firing the welcome-email side effect.
 
@@ -313,22 +315,24 @@ curl -H "X-Correlation-Id: req-abc" http://localhost:3000/users -d '...'
 # logs: {"level":"info","message":"...","correlationId":"req-abc",...}
 ```
 
-## Switching databases
+## Database (Postgres + pgvector)
 
-Default is SQLite for zero-friction local dev. To switch to Postgres:
+Postgres is the single persistence engine for every bounded context — domain, event
+store and the derived vector index (ADR-018). There is **no SQLite** in any environment;
+`pgvector` lives in the same database so hybrid search can fuse vector + full-text in one
+query.
 
-1. `npm i @mikro-orm/postgresql && npm un @mikro-orm/sqlite`
-2. In `src/mikro-orm.config.ts`: `import { defineConfig } from "@mikro-orm/postgresql"`
-3. In `src/shared/factories/index.ts`: `import { MikroORM } from "@mikro-orm/postgresql"`
-4. Set DB env vars and update `defineConfig({ host, port, dbName, user, password })`
-
-Migrations are portable — they use `this.addSql()` and MikroORM's QB.
+- `docker compose up -d` starts `pgvector/pgvector:pg16` with the defaults the app expects.
+- Connection is configured via `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` /
+  `POSTGRES_PASSWORD` / `POSTGRES_DB` (defaults match `docker-compose.yml`; see
+  [`.env.example`](.env.example)).
+- Migrations run on boot and target the Postgres dialect (`npm run migration:up`).
 
 ## Production checklist
 
 Before deploying:
 
-- [ ] Configure database via env (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`) and the appropriate driver
+- [ ] Configure Postgres via env (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) with the `pgvector` extension available
 - [ ] Add your auth layer — this template intentionally has none (BYO JWT/Auth0/Cognito)
 - [ ] Configure SMTP via `SmtpEmailAdapter.createFromEnv` or replace with your provider
 - [ ] Wire `ErrorHandler` in `main.ts` to capture `uncaughtException` / `unhandledRejection`
@@ -347,7 +351,6 @@ These are deliberate omissions to keep the template focused. Drop in your prefer
 - **Rate limiting** — handle at the gateway/proxy layer or add `express-rate-limit`-equivalent middleware.
 - **OpenTelemetry** — `correlationId` is the foundation; wire OTel exporters in `ConsoleLogger` if needed.
 - **Validation library** (Zod / Valibot) — VO constructors do invariant validation by design. Add a schema lib only at the HTTP edge if you want.
-- **Postgres by default** — SQLite keeps `npm install && npm start` working with zero infrastructure.
 
 ## Architecture deep-dive
 

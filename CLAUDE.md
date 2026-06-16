@@ -89,6 +89,16 @@ Aggregates auto-register themselves for persistence and event draining — use c
 | `InMemoryUnitOfWork` | Testing    | Routes aggregates to `InMemoryRepositoryAdapter`s                                |
 | `NoOpUnitOfWork`     | Benchmarks | All operations are no-ops                                                        |
 
+### Multi-tenancy, Actor Context & Authorization (ADR-008/009/011)
+
+Cross-cutting machinery the `ApplicationService` applies to every use case. When adding a tenant-scoped aggregate or a guarded use case, follow these conventions:
+
+- **Actor context** — `ActorContext` (`shared/application/context`) is the single source of `{ companyId, actorId, actorType, roles }`, opened only at the edge from the authenticated principal (never client input). `TenantContext.getCurrentCompanyId()` derives from it. `actorType` is `user | consumer | system | operator`; `system`/`operator` are **privileged** (see below).
+- **Events extend `BaseDomainEvent`** — it carries the envelope (`companyId/actorId/actorType`), initialised null. The domain never sets the envelope; the `ApplicationService` **stamps** it between drain and dispatch (`EventEnricher`). Co-locate a small test per event (the TDD gate requires it).
+- **Tenant-scoped aggregates implement `TenantScoped`** (expose `get companyId(): string`). On drain the enricher runs a **fail-closed cross-check** `aggregate.companyId === context` and aborts cross-tenant writes (privileged actors are exempt — they act cross-tenant by design).
+- **Fail-closed reads** — `MikroOrmUnitOfWork.onBegin` calls `resolveTenantScope(actor)`: a tenant scope enables the `CompanyFilter`; a privileged scope runs unfiltered; no tenant + not privileged **throws**. Every tenant-scoped `EntitySchema` must declare the `CompanyFilter` + a `company_id` column. (Postgres RLS as a second layer is tracked, not yet enabled — see ADR-009 amendment.)
+- **Authorization** — a use case opts into role gating by exposing a `requiredRoles: ReadonlyArray<Role>` property (`RoleRestricted`). The `ApplicationService` authorizes via `AuthorizerPort` **before** `execute` (not bypassable by any adapter). `Role` lives in the shared kernel. Business invariants that mention the actor (reviewer ≠ author, last admin) are **domain rules**, not authorization — keep them in the aggregate/use case.
+
 ### Command Factory Pattern
 
 Commands use a private constructor + static `of()` factory that receives primitives and constructs VOs internally:
