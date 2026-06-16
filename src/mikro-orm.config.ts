@@ -8,6 +8,7 @@ import { CollectionEntitySchema } from "./modules/knowledge/infrastructure/persi
 import { TagEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/TagEntitySchema.ts";
 import { KnowledgeItemEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeItemEntitySchema.ts";
 import { KnowledgeVersionEntitySchema } from "./modules/knowledge/infrastructure/persistence/mikro-orm/schemas/KnowledgeVersionEntitySchema.ts";
+import { IngestionJobEntitySchema } from "./modules/ingestion/infrastructure/persistence/mikro-orm/schemas/IngestionJobEntitySchema.ts";
 import { SystemEventEntitySchema } from "./shared/infrastructure/persistence/adapters/eventStore/SystemEventEntitySchema.ts";
 
 /**
