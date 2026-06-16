@@ -54,3 +54,44 @@ export interface KnowledgeVersionRepositoryPort {
 export interface OrganizationPolicyPort {
   requireSeparateReviewer(companyId: string): Promise<boolean>;
 }
+
+// --- Read views (curation UI; consumer-facing read is PRD-5) ---
+
+export interface KnowledgeItemView {
+  readonly id: string;
+  readonly collectionId: string;
+  readonly title: string;
+  readonly body: string;
+  readonly tagIds: ReadonlyArray<string>;
+  readonly sensitivity: string;
+  readonly status: string;
+  readonly currentVersionNumber: number;
+  readonly publishedVersionNumber: number | null;
+  readonly isServed: boolean;
+  readonly isStale: boolean;
+}
+
+export interface KnowledgeVersionView {
+  readonly itemId: string;
+  readonly versionNumber: number;
+  readonly title: string;
+  readonly body: string;
+  readonly tagIds: ReadonlyArray<string>;
+  readonly sensitivity: string;
+  readonly createdBy: string;
+  readonly createdAt: string;
+}
+
+export interface CollectionView {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly createdBy: string;
+}
+
+export interface TagView {
+  readonly id: string;
+  readonly slug: string;
+  readonly label: string;
+  readonly scope: string;
+}
