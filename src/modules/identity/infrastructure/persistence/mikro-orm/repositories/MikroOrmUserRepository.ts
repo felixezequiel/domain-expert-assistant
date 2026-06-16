@@ -15,7 +15,6 @@ export class MikroOrmUserRepository implements UserRepositoryPort {
   public async save(user: User): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     await entityManager.upsert(UserEntity, UserMapper.toOrmEntity(user));
-    await entityManager.flush();
   }
 
   public async findById(id: UserId): Promise<User | null> {

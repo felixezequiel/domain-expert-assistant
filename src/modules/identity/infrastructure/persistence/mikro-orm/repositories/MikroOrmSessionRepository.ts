@@ -5,9 +5,11 @@ import { SessionEntity } from "../entities/SessionEntity.ts";
 import { SessionMapper } from "../mappers/SessionMapper.ts";
 
 /**
- * Sessions are an auth artifact, not an event-sourced aggregate, so this repository writes
- * them directly. Revocation uses nativeUpdate rather than load-mutate-flush because
- * SessionEntity extends PlainObject (no MikroORM dirty-tracking).
+ * Sessions are an auth artifact, not an event-sourced aggregate, so this repository stages the
+ * write itself instead of routing through a persister. It never flushes: the UnitOfWork commit
+ * owns the single flush and commits the session in the same transaction as the event store
+ * (ADR-004). Revocation uses nativeUpdate rather than load-mutate-flush because SessionEntity
+ * extends PlainObject (no MikroORM dirty-tracking).
  */
 export class MikroOrmSessionRepository implements SessionRepositoryPort {
   private readonly entityManagerProvider: EntityManagerProvider;
@@ -18,8 +20,7 @@ export class MikroOrmSessionRepository implements SessionRepositoryPort {
 
   public async save(session: Session): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
-    await entityManager.upsert(SessionEntity, SessionMapper.toOrmEntity(session));
-    await entityManager.flush();
+    entityManager.persist(SessionMapper.toOrmEntity(session));
   }
 
   public async findByTokenHash(tokenHash: string): Promise<Session | null> {

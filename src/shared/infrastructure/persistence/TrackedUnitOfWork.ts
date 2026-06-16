@@ -5,9 +5,9 @@ import type { UnitOfWork } from "../../application/UnitOfWork.ts";
 import { AggregateTracker } from "./AggregateTracker.ts";
 
 export abstract class TrackedUnitOfWork implements UnitOfWork {
-  public async begin(): Promise<void> {
+  public async begin(readOnly = false): Promise<void> {
     AggregateTracker.begin();
-    await this.onBegin();
+    await this.onBegin(readOnly);
   }
 
   public async commit(): Promise<void> {
@@ -45,7 +45,7 @@ export abstract class TrackedUnitOfWork implements UnitOfWork {
     return AggregateTracker.peek();
   }
 
-  protected abstract onBegin(): Promise<void>;
+  protected abstract onBegin(readOnly: boolean): Promise<void>;
 
   protected abstract onCommit(
     trackedAggregates: ReadonlyArray<AggregateRoot<Identifier, object>>,

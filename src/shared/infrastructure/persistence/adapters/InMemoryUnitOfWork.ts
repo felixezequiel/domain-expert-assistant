@@ -16,8 +16,8 @@ export class InMemoryUnitOfWork extends TrackedUnitOfWork {
     this.repositoryAdapters = repositoryAdapters;
   }
 
-  protected async onBegin(): Promise<void> {
-    // no-op for in-memory
+  protected async onBegin(_readOnly: boolean): Promise<void> {
+    // no-op for in-memory (no real transaction to open)
   }
 
   protected async onCommit(

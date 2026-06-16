@@ -18,7 +18,6 @@ export class MikroOrmConsumerCredentialRepository implements ConsumerCredentialR
       ConsumerCredentialEntity,
       ConsumerCredentialMapper.toOrmEntity(credential),
     );
-    await entityManager.flush();
   }
 
   public async findById(id: CredentialId): Promise<ConsumerCredential | null> {

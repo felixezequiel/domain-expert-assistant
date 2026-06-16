@@ -13,7 +13,7 @@ import type { DomainEvent } from "../../../domain/events/DomainEvent.ts";
 import { runWithActor, type Actor } from "../../../application/context/ActorContext.ts";
 
 // The UoW is fail-closed (ADR-009): begin() requires a tenant or privileged scope.
-// These mechanics tests exercise fork/commit/rollback under a privileged system scope.
+// These mechanics tests exercise fork/transaction/commit/rollback under a privileged system scope.
 const SYSTEM_SCOPE: Actor = { companyId: null, actorId: "system", actorType: "system" };
 
 class FakeId extends IdentifierClass {}
@@ -67,8 +67,13 @@ class FakePersister implements AggregatePersister {
 
 class FakeEntityManager {
   public forkCalled = false;
+  public beginCalled = false;
+  public beginReadOnly: boolean | undefined = undefined;
+  public flushCalled = false;
+  public commitCalled = false;
+  public rollbackCalled = false;
   public clearCalled = false;
-  public transactionalCalled = false;
+  private inTransaction = false;
 
   public fork(): FakeEntityManager {
     const forked = new FakeEntityManager();
@@ -76,9 +81,28 @@ class FakeEntityManager {
     return forked;
   }
 
-  public async transactional<T>(callback: (em: FakeEntityManager) => Promise<T>): Promise<T> {
-    this.transactionalCalled = true;
-    return callback(this);
+  public async begin(options?: { readOnly?: boolean }): Promise<void> {
+    this.beginCalled = true;
+    this.beginReadOnly = options?.readOnly ?? false;
+    this.inTransaction = true;
+  }
+
+  public async flush(): Promise<void> {
+    this.flushCalled = true;
+  }
+
+  public async commit(): Promise<void> {
+    this.commitCalled = true;
+    this.inTransaction = false;
+  }
+
+  public async rollback(): Promise<void> {
+    this.rollbackCalled = true;
+    this.inTransaction = false;
+  }
+
+  public isInTransaction(): boolean {
+    return this.inTransaction;
   }
 
   public clear(): void {
@@ -106,7 +130,7 @@ function createFakeProvider(fakeEm: FakeEntityManager): EntityManagerProvider {
 }
 
 describe("MikroOrmUnitOfWork", () => {
-  it("should begin by initializing the aggregate tracker and forking the EM", async () => {
+  it("should begin by forking the EM and opening a read-write transaction", async () => {
     const fakeEm = new FakeEntityManager();
     const provider = createFakeProvider(fakeEm);
     const persister = new FakePersister();
@@ -116,9 +140,23 @@ describe("MikroOrmUnitOfWork", () => {
 
     const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
     assert.ok(currentEm.forkCalled);
+    assert.ok(currentEm.beginCalled);
+    assert.equal(currentEm.beginReadOnly, false);
   });
 
-  it("should commit by draining tracked aggregates and persisting inside a transaction", async () => {
+  it("should open a READ ONLY transaction when begin is asked to", async () => {
+    const fakeEm = new FakeEntityManager();
+    const provider = createFakeProvider(fakeEm);
+    const persister = new FakePersister();
+    const unitOfWork = new MikroOrmUnitOfWork(provider, [persister]);
+
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin(true));
+
+    const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
+    assert.equal(currentEm.beginReadOnly, true);
+  });
+
+  it("should commit by draining tracked aggregates, then flushing and committing", async () => {
     const fakeEm = new FakeEntityManager();
     const provider = createFakeProvider(fakeEm);
     const persister = new FakePersister();
@@ -135,7 +173,8 @@ describe("MikroOrmUnitOfWork", () => {
     assert.equal(persister.persistedAggregates[0], aggregate);
 
     const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
-    assert.ok(currentEm.transactionalCalled);
+    assert.ok(currentEm.flushCalled);
+    assert.ok(currentEm.commitCalled);
   });
 
   it("should route aggregates marked for deletion to persister.delete", async () => {
@@ -157,7 +196,7 @@ describe("MikroOrmUnitOfWork", () => {
     assert.equal(persister.persistedAggregates.length, 0);
   });
 
-  it("should rollback by clearing the tracker and the EM", async () => {
+  it("should rollback by clearing the tracker and rolling back the transaction", async () => {
     const fakeEm = new FakeEntityManager();
     const provider = createFakeProvider(fakeEm);
     const persister = new FakePersister();
@@ -174,6 +213,7 @@ describe("MikroOrmUnitOfWork", () => {
     assert.equal(drained.length, 0);
 
     const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
+    assert.ok(currentEm.rollbackCalled);
     assert.ok(currentEm.clearCalled);
   });
 });

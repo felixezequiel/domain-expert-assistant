@@ -85,7 +85,7 @@ Aggregates auto-register themselves for persistence and event draining — use c
 
 | Implementation       | Purpose    | Persistence                                                                      |
 | -------------------- | ---------- | -------------------------------------------------------------------------------- |
-| `MikroOrmUnitOfWork` | Production | Forks EM on begin, routes aggregates to `AggregatePersister`s, flushes on commit |
+| `MikroOrmUnitOfWork` | Production | Forks the EM and opens a transaction (read-write; `begin(readOnly)` is a seam for the edge) on begin; routes aggregates to `AggregatePersister`s, then flushes + commits on commit; rolls back on error |
 | `InMemoryUnitOfWork` | Testing    | Routes aggregates to `InMemoryRepositoryAdapter`s                                |
 | `NoOpUnitOfWork`     | Benchmarks | All operations are no-ops                                                        |
 
@@ -127,6 +127,7 @@ POST /users/:userId/addresses   # Add address to user
 - **EntitySchema** definitions in `persistence/mikro-orm/schemas/` (no decorators on entities)
 - **Mappers** convert between domain aggregates and ORM entities (`toDomain()` / `toOrmEntity()`)
 - **AggregatePersister** interface: each module provides a persister that `supports()` its aggregate type and `persist()`s it
+- **Flush ownership (ADR-004): no repository ever calls `em.flush()`.** The single flush/commit is owned by `MikroOrmUnitOfWork.onCommit`, whose `em.transactional()` flushes the whole EM unit of work — event store + aggregates + any staged `persist()` — in one transaction. **Mutable aggregates** are written by their `AggregatePersister` (`em.upsert()` _inside_ that transaction) via the tracking path — never via `repo.save()` during `execute()` (an `upsert` there runs immediately, outside the UoW). **Insert-only/append-only writes** (sessions, version snapshots) stage with `em.persist()` in the repository and are flushed by the same commit.
 - Domain `reconstitute()` factories hydrate aggregates from persistence without emitting domain events
 - Postgres is the single engine (domain + event store + derived vector index, ADR-018); connection via `POSTGRES_*` env vars (defaults match `docker-compose.yml`). pgvector extension lives in the same database. No SQLite in any environment.
 

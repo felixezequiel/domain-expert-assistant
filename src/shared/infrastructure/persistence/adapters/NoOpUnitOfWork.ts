@@ -3,7 +3,7 @@ import type { Identifier } from "../../../domain/identifiers/Identifier.ts";
 import { TrackedUnitOfWork } from "../TrackedUnitOfWork.ts";
 
 export class NoOpUnitOfWork extends TrackedUnitOfWork {
-  protected async onBegin(): Promise<void> {}
+  protected async onBegin(_readOnly: boolean): Promise<void> {}
 
   protected async onCommit(
     _trackedAggregates: ReadonlyArray<AggregateRoot<Identifier, object>>,

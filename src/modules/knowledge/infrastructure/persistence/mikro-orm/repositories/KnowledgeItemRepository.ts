@@ -18,7 +18,6 @@ export class KnowledgeItemRepository implements KnowledgeItemRepositoryPort {
   public async save(item: KnowledgeItem): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     await entityManager.upsert(KnowledgeItemEntity, KnowledgeItemMapper.toOrmEntity(item));
-    await entityManager.flush();
   }
 
   public async findById(id: KnowledgeItemId): Promise<KnowledgeItem | null> {

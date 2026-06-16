@@ -8,8 +8,11 @@ import type { KnowledgeVersion } from "../domain/entities/KnowledgeVersion.ts";
 
 /**
  * Secondary ports for the Knowledge context. Tenant isolation comes from the company
- * filter the unit of work sets per command; reads are filtered the same way. The version
- * store is append-only and written within the same transaction as the item (ADR-012).
+ * filter the unit of work sets per command; reads are filtered the same way. Aggregate
+ * `save` is invoked by the unit-of-work adapter at commit (aggregates auto-persist via
+ * tracking — each has a registered `AggregatePersister`); repositories never call `flush()`,
+ * which the UnitOfWork owns (ADR-004). The version store is append-only and staged with
+ * `em.persist()` within the same transaction as the item (ADR-012).
  */
 export interface KnowledgeItemRepositoryPort {
   save(item: KnowledgeItem): Promise<void>;

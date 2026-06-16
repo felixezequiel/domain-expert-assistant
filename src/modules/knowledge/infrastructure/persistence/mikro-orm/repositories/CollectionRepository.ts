@@ -15,7 +15,6 @@ export class CollectionRepository implements CollectionRepositoryPort {
   public async save(collection: Collection): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     await entityManager.upsert(CollectionEntity, CollectionMapper.toOrmEntity(collection));
-    await entityManager.flush();
   }
 
   public async findById(id: CollectionId): Promise<Collection | null> {

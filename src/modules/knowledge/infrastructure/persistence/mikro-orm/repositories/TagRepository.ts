@@ -15,7 +15,6 @@ export class TagRepository implements TagRepositoryPort {
   public async save(tag: Tag): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     await entityManager.upsert(TagEntity, TagMapper.toOrmEntity(tag));
-    await entityManager.flush();
   }
 
   public async findById(id: TagId): Promise<Tag | null> {

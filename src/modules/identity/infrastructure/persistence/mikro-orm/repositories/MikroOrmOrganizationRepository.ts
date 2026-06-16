@@ -15,7 +15,6 @@ export class MikroOrmOrganizationRepository implements OrganizationRepositoryPor
   public async save(organization: Organization): Promise<void> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     await entityManager.upsert(OrganizationEntity, OrganizationMapper.toOrmEntity(organization));
-    await entityManager.flush();
   }
 
   public async findById(id: OrganizationId): Promise<Organization | null> {
