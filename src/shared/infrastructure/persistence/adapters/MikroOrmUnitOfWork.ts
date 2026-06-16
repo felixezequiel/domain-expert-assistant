@@ -3,7 +3,8 @@ import type { Identifier } from "../../../domain/identifiers/Identifier.ts";
 import type { AggregatePersister } from "../AggregatePersister.ts";
 import type { EntityManagerProvider } from "./EntityManagerProvider.ts";
 import { TrackedUnitOfWork } from "../TrackedUnitOfWork.ts";
-import { getCurrentCompanyId } from "../../http/context/TenantContext.ts";
+import { getCurrentActor } from "../../../application/context/ActorContext.ts";
+import { resolveTenantScope } from "../../../application/tenancy/TenantScopeResolution.ts";
 import { COMPANY_TENANT_FILTER_NAME } from "../filters/CompanyFilter.ts";
 
 export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
@@ -23,9 +24,14 @@ export class MikroOrmUnitOfWork extends TrackedUnitOfWork {
     const currentEntityManager = this.entityManagerProvider.getEntityManager();
     const forkedEntityManager = currentEntityManager.fork();
 
-    const companyId = getCurrentCompanyId();
-    if (companyId !== null) {
-      forkedEntityManager.setFilterParams(COMPANY_TENANT_FILTER_NAME, { companyId });
+    // Fail-closed tenant isolation (ADR-009): a tenant scope enables the company
+    // filter; a privileged (operator/system) scope deliberately runs unfiltered;
+    // anything else throws rather than silently leaking or returning empty.
+    const decision = resolveTenantScope(getCurrentActor());
+    if (decision.kind === "filtered") {
+      forkedEntityManager.setFilterParams(COMPANY_TENANT_FILTER_NAME, {
+        companyId: decision.companyId,
+      });
     }
 
     this.entityManagerProvider.setEntityManager(forkedEntityManager);

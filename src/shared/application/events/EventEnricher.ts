@@ -1,0 +1,65 @@
+import type { DomainEvent } from "../../domain/events/DomainEvent.ts";
+import type { ActorType } from "../../domain/events/ActorType.ts";
+import type { AggregateRoot } from "../../domain/aggregates/AggregateRoot.ts";
+import type { Identifier } from "../../domain/identifiers/Identifier.ts";
+import { isTenantScoped } from "../../domain/TenantScoped.ts";
+import type { Actor } from "../context/ActorContext.ts";
+
+/**
+ * Raised when an event originated from a tenant-scoped aggregate whose `companyId`
+ * does not match the actor context tenant (ADR-008). This is the write-path defence
+ * the MikroORM read filter cannot provide: it turns a silent cross-tenant write into
+ * a deterministic abort before anything is persisted.
+ */
+export class EnvelopeTenantMismatchError extends Error {
+  constructor(aggregateId: string, aggregateCompanyId: string, contextCompanyId: string | null) {
+    super(
+      `Cross-tenant write blocked: aggregate ${aggregateId} belongs to company ` +
+        `${aggregateCompanyId} but the actor context tenant is ${contextCompanyId ?? "none"}.`,
+    );
+    this.name = "EnvelopeTenantMismatchError";
+  }
+}
+
+interface StampableEnvelope {
+  companyId: string | null;
+  actorId: string | null;
+  actorType: ActorType | null;
+}
+
+/**
+ * Enriches drained events with the actor envelope and runs the fail-closed cross-check
+ * (ADR-008). Runs in the application pipeline between drain and dispatch so in-process
+ * handlers and persisted events see the same complete envelope.
+ *
+ * For every event sourced from a tracked tenant-scoped aggregate, the aggregate's
+ * `companyId` must equal the context tenant before stamping; a mismatch (including a
+ * tenant aggregate touched with no tenant in context) aborts the transaction. Events
+ * with no matching aggregate (e.g. `EventEmittingAdapter`) are stamped from context only.
+ */
+export function enrichDomainEvents(
+  events: ReadonlyArray<DomainEvent>,
+  actor: Actor | null,
+  trackedAggregates: ReadonlyArray<AggregateRoot<Identifier, object>>,
+): void {
+  const aggregatesById = new Map<string, AggregateRoot<Identifier, object>>();
+  for (const aggregate of trackedAggregates) {
+    aggregatesById.set(aggregate.id.value, aggregate);
+  }
+
+  const companyId = actor?.companyId ?? null;
+  const actorId = actor?.actorId ?? null;
+  const actorType = actor?.actorType ?? null;
+
+  for (const event of events) {
+    const aggregate = aggregatesById.get(event.aggregateId);
+    if (aggregate !== undefined && isTenantScoped(aggregate) && aggregate.companyId !== companyId) {
+      throw new EnvelopeTenantMismatchError(event.aggregateId, aggregate.companyId, companyId);
+    }
+
+    const stampable = event as unknown as StampableEnvelope;
+    stampable.companyId = companyId;
+    stampable.actorId = actorId;
+    stampable.actorType = actorType;
+  }
+}

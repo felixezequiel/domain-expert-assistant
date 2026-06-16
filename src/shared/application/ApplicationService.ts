@@ -6,7 +6,18 @@ import type { DomainEventManager } from "./DomainEventManager.ts";
 import type { EventPublisherPort } from "../ports/EventPublisherPort.ts";
 import type { EventStorePort } from "../ports/EventStorePort.ts";
 import type { SseBroadcasterPort } from "../ports/SseBroadcasterPort.ts";
-import { NoOpSseBroadcaster } from "../infrastructure/sse/NoOpSseBroadcaster.ts";
+import { getCurrentActor } from "./context/ActorContext.ts";
+import { enrichDomainEvents } from "./events/EventEnricher.ts";
+
+/**
+ * Application-layer default so the orchestrator stays free of infrastructure imports
+ * (hexagonal dependency rule). Production injects a real SSE broadcaster adapter.
+ */
+class NoOpSseBroadcaster implements SseBroadcasterPort {
+  public broadcastAll(): void {
+    // intentionally does nothing
+  }
+}
 
 export class ApplicationService {
   private readonly unitOfWork: UnitOfWork;
@@ -53,6 +64,8 @@ export class ApplicationService {
 
       const trackedSources = this.unitOfWork.getTrackedEventSources();
       allEvents = this.drainEventsFromSources(trackedSources);
+
+      enrichDomainEvents(allEvents, getCurrentActor(), this.unitOfWork.getTrackedAggregates());
 
       await this.domainEventManager.dispatchAll(allEvents);
 

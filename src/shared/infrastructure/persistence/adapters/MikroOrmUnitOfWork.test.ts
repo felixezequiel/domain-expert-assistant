@@ -10,6 +10,11 @@ import type { Identifier } from "../../../domain/identifiers/Identifier.ts";
 import { AggregateRoot as AggregateRootClass } from "../../../domain/aggregates/AggregateRoot.ts";
 import { Identifier as IdentifierClass } from "../../../domain/identifiers/Identifier.ts";
 import type { DomainEvent } from "../../../domain/events/DomainEvent.ts";
+import { runWithActor, type Actor } from "../../../application/context/ActorContext.ts";
+
+// The UoW is fail-closed (ADR-009): begin() requires a tenant or privileged scope.
+// These mechanics tests exercise fork/commit/rollback under a privileged system scope.
+const SYSTEM_SCOPE: Actor = { companyId: null, actorId: "system", actorType: "system" };
 
 class FakeId extends IdentifierClass {}
 
@@ -107,7 +112,7 @@ describe("MikroOrmUnitOfWork", () => {
     const persister = new FakePersister();
     const unitOfWork = new MikroOrmUnitOfWork(provider, [persister]);
 
-    await unitOfWork.begin();
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin());
 
     const currentEm = provider.getEntityManager() as unknown as FakeEntityManager;
     assert.ok(currentEm.forkCalled);
@@ -119,7 +124,7 @@ describe("MikroOrmUnitOfWork", () => {
     const persister = new FakePersister();
     const unitOfWork = new MikroOrmUnitOfWork(provider, [persister]);
 
-    await unitOfWork.begin();
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin());
 
     const aggregate = FakeAggregate.create(new FakeId("agg-1"), "test");
     AggregateTracker.track(aggregate);
@@ -139,7 +144,7 @@ describe("MikroOrmUnitOfWork", () => {
     const persister = new FakePersister();
     const unitOfWork = new MikroOrmUnitOfWork(provider, [persister]);
 
-    await unitOfWork.begin();
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin());
 
     const aggregate = FakeAggregate.create(new FakeId("agg-2"), "test");
     aggregate.requestDeletion();
@@ -158,7 +163,7 @@ describe("MikroOrmUnitOfWork", () => {
     const persister = new FakePersister();
     const unitOfWork = new MikroOrmUnitOfWork(provider, [persister]);
 
-    await unitOfWork.begin();
+    await runWithActor(SYSTEM_SCOPE, () => unitOfWork.begin());
 
     const aggregate = FakeAggregate.create(new FakeId("agg-1"), "test");
     AggregateTracker.track(aggregate);
