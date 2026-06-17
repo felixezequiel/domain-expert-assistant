@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
+import { type DateRange } from "react-day-picker";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
 import type { AuditEventView } from "../../api/types.ts";
 import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
-import { DatePicker } from "../../components/DatePicker.tsx";
+import { DateRangePicker } from "../../components/DateRangePicker.tsx";
 import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { formatDateTime } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
@@ -31,8 +32,7 @@ export function AuditTrailPage(): JSX.Element {
   const [aggregateId, setAggregateId] = useState("");
   const [actorId, setActorId] = useState("");
   const [eventName, setEventName] = useState("");
-  const [from, setFrom] = useState<Date | null>(null);
-  const [to, setTo] = useState<Date | null>(null);
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
 
   const [events, setEvents] = useState<ReadonlyArray<AuditEventView>>([]);
   const [loading, setLoading] = useState(false);
@@ -52,13 +52,13 @@ export function AuditTrailPage(): JSX.Element {
     if (eventName !== "") {
       filter.eventName = eventName;
     }
-    if (from !== null) {
-      const start = new Date(from);
+    if (range?.from !== undefined) {
+      const start = new Date(range.from);
       start.setHours(0, 0, 0, 0);
       filter.from = start.toISOString();
     }
-    if (to !== null) {
-      const end = new Date(to);
+    if (range?.to !== undefined) {
+      const end = new Date(range.to);
       end.setHours(23, 59, 59, 999);
       filter.to = end.toISOString();
     }
@@ -139,13 +139,15 @@ export function AuditTrailPage(): JSX.Element {
               onChange={(event) => setEventName(event.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="audit-from">From</Label>
-            <DatePicker id="audit-from" ariaLabel="From" placeholder="From date" value={from} onChange={setFrom} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="audit-to">To</Label>
-            <DatePicker id="audit-to" ariaLabel="To" placeholder="To date" value={to} onChange={setTo} />
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="audit-range">Date range</Label>
+            <DateRangePicker
+              id="audit-range"
+              ariaLabel="Date range"
+              placeholder="Any date"
+              value={range}
+              onChange={setRange}
+            />
           </div>
           <div className="flex items-end">
             <Button type="button" onClick={() => void runSearch()} disabled={loading}>
