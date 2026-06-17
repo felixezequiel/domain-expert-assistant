@@ -1,7 +1,7 @@
 import type { EntityManagerProvider } from "../../../shared/infrastructure/persistence/adapters/EntityManagerProvider.ts";
 import type { InfrastructureResult } from "../../../shared/factories/index.ts";
 import type { LoggerPort } from "../../../shared/ports/LoggerPort.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 
 import { MikroOrmChunkIndexRepository } from "../infrastructure/persistence/mikro-orm/repositories/MikroOrmChunkIndexRepository.ts";
 import { TransformersEmbedder } from "../infrastructure/embedding/TransformersEmbedder.ts";
@@ -29,7 +29,7 @@ import { NullUserDirectory } from "../../../shared/application/NullUserDirectory
 const PROJECTION_INTERVAL_MS = 1000;
 
 export interface RetrievalModuleDependencies {
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
   // Lets tests/benchmarks inject a deterministic embedder; production uses the local BGE-M3 model.
   readonly embedder?: EmbedderPort;
 }
@@ -74,7 +74,7 @@ export class RetrievalModuleFactory {
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const retrievalModule = new RetrievalModule({
           applicationService: infrastructure.applicationService,
-          resolveSession: dependencies.resolveSession,
+          sessionResolver: dependencies.sessionResolver,
           semanticSearch,
           rebuildIndex,
         });

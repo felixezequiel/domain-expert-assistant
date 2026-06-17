@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { AuditModule, type AuditModuleDeps } from "./AuditModule.ts";
-import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
 import { UnauthorizedError } from "../../../shared/application/authorization/RoleBasedAuthorizer.ts";
 
@@ -40,14 +40,20 @@ function fakeRequest(options: { cookie?: string; url?: string }): EventEmitter &
   return emitter;
 }
 
+// A valid cookie resolves to an auditor actor (tests expect 200); no cookie resolves to null (401).
+const sessionResolver: SessionResolverPort = {
+  resolve: async (cookie) =>
+    cookie === undefined
+      ? null
+      : { companyId: "c1", actorId: "u1", actorType: "user", roles: ["auditor"] },
+};
+
 function deps(overrides: Partial<AuditModuleDeps>): AuditModuleDeps {
   return {
     applicationService: {
       execute: async () => [{ eventId: "e1", eventName: "X", aggregateId: "a1" }],
     } as unknown as AuditModuleDeps["applicationService"],
-    resolveSession: {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["auditor"] }),
-    } as unknown as AuditModuleDeps["resolveSession"],
+    sessionResolver,
     listAuditTrail: { execute: async () => [] } as unknown as AuditModuleDeps["listAuditTrail"],
     ...overrides,
   };
@@ -82,7 +88,7 @@ describe("AuditModule routes", () => {
     new AuditModule(deps({})).registerRoutes(httpServer as never);
     const response = await invoke(
       httpServer.routes.get("GET /audit/events")!,
-      fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", url: "/audit/events?eventName=X&limit=5" }),
+      fakeRequest({ cookie: "session=good", url: "/audit/events?eventName=X&limit=5" }),
     );
     assert.equal(response.statusCode, 200);
     const body = JSON.parse(response.payload);
@@ -98,7 +104,7 @@ describe("AuditModule routes", () => {
     new AuditModule(deps({ applicationService })).registerRoutes(httpServer as never);
     const response = await invoke(
       httpServer.routes.get("GET /audit/events")!,
-      fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good" }),
+      fakeRequest({ cookie: "session=good" }),
     );
     assert.equal(response.statusCode, 403);
     assert.equal(JSON.parse(response.payload).error, "common.forbiddenRole");

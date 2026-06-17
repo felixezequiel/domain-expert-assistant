@@ -71,3 +71,31 @@ export function authenticatedRoute(
     void runAuthenticatedRoute(sessionResolver, handler, request, response, params);
   };
 }
+
+/** Async core of {@link publicRoute}, exported for direct testing. */
+export async function runPublicRoute(
+  handler: (request: IncomingMessage, params: RouteParams) => Promise<RouteResult>,
+  request: IncomingMessage,
+  response: ServerResponse,
+  params: RouteParams,
+): Promise<void> {
+  try {
+    respondResult(response, await handler(request, params));
+  } catch (error) {
+    respondError(response, error);
+  }
+}
+
+/**
+ * Edge wrapper for routes that do NOT use cookie-session auth (login, invitation accept,
+ * operator provisioning). Same result/coded-error envelope as {@link authenticatedRoute} minus
+ * the principal resolution — any actor scope the handler needs (system/operator) is opened
+ * inside the handler itself.
+ */
+export function publicRoute(
+  handler: (request: IncomingMessage, params: RouteParams) => Promise<RouteResult>,
+): RawRouteHandler {
+  return (request, response, params) => {
+    void runPublicRoute(handler, request, response, params);
+  };
+}

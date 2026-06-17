@@ -11,7 +11,11 @@ import type { RecordCredentialUsageUseCase } from "../application/usecase/Record
 import type { FixedWindowRateLimiter } from "../infrastructure/http/RateLimiter.ts";
 import { ConsumptionMcpTools } from "../infrastructure/mcp/ConsumptionMcpTools.ts";
 import { buildConsumptionMcpServer } from "../infrastructure/mcp/buildConsumptionMcpServer.ts";
-import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
+import {
+  respondResult,
+  respondError,
+  type RouteResult,
+} from "../../../shared/infrastructure/http/authenticatedRoute.ts";
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
@@ -20,11 +24,6 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_TOO_MANY_REQUESTS = 429;
 
 const BEARER_PREFIX = "Bearer ";
-
-interface RouteResult {
-  readonly statusCode: number;
-  readonly body: unknown;
-}
 
 export interface ConsumptionModuleDeps {
   readonly applicationService: ApplicationService;
@@ -111,7 +110,7 @@ export class ConsumptionModule {
   ): Promise<void> {
     const credential = await this.authenticate(request);
     if (credential === null) {
-      this.respond(response, {
+      respondResult(response, {
         statusCode: HTTP_UNAUTHORIZED,
         body: { error: "common.unauthorized", message: "Invalid or revoked API key" },
       });
@@ -119,14 +118,14 @@ export class ConsumptionModule {
     }
     const limit = this.deps.rateLimiter.check(credential.id.value);
     if (!limit.allowed) {
-      response.setHeader("Retry-After", String(limit.retryAfterSeconds));
-      this.respond(response, {
+      respondResult(response, {
         statusCode: HTTP_TOO_MANY_REQUESTS,
         body: {
           error: "consumption.rateLimitExceeded",
           message: "Rate limit exceeded",
           params: { retryAfterSeconds: limit.retryAfterSeconds },
         },
+        headers: { "Retry-After": String(limit.retryAfterSeconds) },
       });
       return;
     }
@@ -135,9 +134,9 @@ export class ConsumptionModule {
         await this.recordUsage(credential);
         return run(credential);
       });
-      this.respond(response, result);
+      respondResult(response, result);
     } catch (error) {
-      this.respondError(response, error);
+      respondError(response, error);
     }
   }
 
@@ -286,14 +285,5 @@ export class ConsumptionModule {
       return undefined;
     }
     return parsed;
-  }
-
-  private respond(response: ServerResponse, result: RouteResult): void {
-    response.writeHead(result.statusCode, { "Content-Type": "application/json" });
-    response.end(JSON.stringify(result.body));
-  }
-
-  private respondError(response: ServerResponse, error: unknown): void {
-    this.respond(response, toErrorResponse(error));
   }
 }

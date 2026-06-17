@@ -75,3 +75,9 @@ A v1 é **checagem grosseira por papel** — sem motor de permissões/políticas
 - Invariantes de negócio que mencionam o ator (revisor ≠ autor, último Admin, etc.) são domínio — nunca entram no `Authorizer`.
 - Escopo do consumidor é autorização dependente de dado, forçada na fronteira de consumo (PRD-5).
 - O mecanismo de declaração do papel exigido não é fixado nesta ADR; é escolhido na implementação, consistente com o estilo declarativo do template.
+
+## Emenda (2026-06-17): autenticação na borda, autorização no use case
+
+A **autenticação** (resolver o cookie de sessão → `Actor` → abrir o `ActorContext`) estava copiada em cada bootstrap de módulo — um `authed`/`respond`/`respondError` duplicado, e os módulos não-Identity ainda importavam a infra de sessão da Identity (acoplamento). Isso foi hoistado para **um único wrapper de borda compartilhado**, `authenticatedRoute(sessionResolver, handler)` (`shared/infrastructure/http/`), que depende de um `SessionResolverPort` (shared kernel); a Identity fornece o adapter `CookieSessionResolver`. Rotas sem cookie usam `publicRoute(handler)`; o Consumption autentica por Bearer API-key (wrapper próprio).
+
+Isto **não muda** o modelo desta ADR: a autorização (RBAC grosseiro) continua **declarada no use case** (`requiredRoles`) e aplicada pelo `ApplicationService` via `AuthorizerPort` antes do `execute`. A regra é a separação de responsabilidades: **autenticação ("quem") vive no wrapper de borda; autorização ("o quê") vive no use case** — nenhum módulo reimplementa o `authed`. Verificado: um curador chamando a rota só-de-auditor recebe `403 common.forbiddenRole` (autz preservada), enquanto a resolução do principal acontece uma vez no wrapper.

@@ -56,7 +56,7 @@ function baseDeps(overrides: Partial<IdentityModuleDeps>): IdentityModuleDeps {
     sessionRepository: { revokeAllForUser: async () => {} } as unknown as IdentityModuleDeps["sessionRepository"],
     provisionOrganization: notUsed,
     authenticate: notUsed,
-    resolveSession: { execute: async () => null } as unknown as IdentityModuleDeps["resolveSession"],
+    sessionResolver: { resolve: async () => null } as unknown as IdentityModuleDeps["sessionResolver"],
     inviteUser: notUsed,
     acceptInvitation: notUsed,
     changeUserRoles: notUsed,
@@ -152,10 +152,10 @@ describe("IdentityModule routes", () => {
   });
 
   it("allows an authed route when the session resolves to a principal", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["admin"] }),
-    } as unknown as IdentityModuleDeps["resolveSession"];
-    new IdentityModule(baseDeps({ resolveSession })).registerRoutes(httpServer as never);
+    const sessionResolver = {
+      resolve: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["admin"] }),
+    } as unknown as IdentityModuleDeps["sessionResolver"];
+    new IdentityModule(baseDeps({ sessionResolver })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("GET /credentials")!,

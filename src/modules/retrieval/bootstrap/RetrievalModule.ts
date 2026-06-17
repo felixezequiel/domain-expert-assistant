@@ -1,27 +1,25 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
-import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
-import { readSessionToken } from "../../identity/infrastructure/http/SessionCookie.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { Actor } from "../../../shared/application/context/ActorContext.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
+import {
+  authenticatedRoute,
+  type RouteResult,
+} from "../../../shared/infrastructure/http/authenticatedRoute.ts";
 import type { SemanticSearchUseCase } from "../application/usecase/SemanticSearchUseCase.ts";
 import type { RebuildIndexUseCase } from "../application/usecase/IndexingUseCases.ts";
 import { SemanticSearchCommand, RebuildIndexCommand } from "../application/command/RetrievalCommands.ts";
 import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
-import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
-const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
-
-interface RouteResult {
-  readonly statusCode: number;
-  readonly body: unknown;
-}
 
 export interface RetrievalModuleDeps {
   readonly applicationService: ApplicationService;
-  readonly resolveSession: ResolveSessionUseCase;
+  // Resolves the session cookie to the authenticated Actor at the shared edge
+  // (`authenticatedRoute`); Retrieval no longer re-implements session lookup (ADR-011 amendment).
+  readonly sessionResolver: SessionResolverPort;
   readonly semanticSearch: SemanticSearchUseCase;
   readonly rebuildIndex: RebuildIndexUseCase;
 }
@@ -41,39 +39,18 @@ export class RetrievalModule {
   }
 
   public registerRoutes(httpServer: HttpServer): void {
-    httpServer.rawPost("/search", (request, response) => {
-      void this.authed(request, response, (actor) => this.handleSearch(request, actor));
-    });
-    httpServer.rawPost("/index/rebuild", (request, response) => {
-      void this.authed(request, response, (actor) => this.handleRebuild(actor));
-    });
-  }
-
-  private async authed(
-    request: IncomingMessage,
-    response: ServerResponse,
-    run: (actor: Actor) => Promise<RouteResult>,
-  ): Promise<void> {
-    const token = readSessionToken(request.headers.cookie);
-    const principal = token === null ? null : await this.deps.resolveSession.execute(token);
-    if (principal === null) {
-      this.respond(response, {
-        statusCode: HTTP_UNAUTHORIZED,
-        body: { error: "common.unauthorized", message: "Unauthorized" },
-      });
-      return;
-    }
-    const actor: Actor = {
-      companyId: principal.companyId,
-      actorId: principal.actorId,
-      actorType: principal.actorType,
-      roles: principal.roles,
-    };
-    try {
-      this.respond(response, await runWithActor(actor, () => run(actor)));
-    } catch (error) {
-      this.respondError(response, error);
-    }
+    httpServer.rawPost(
+      "/search",
+      authenticatedRoute(this.deps.sessionResolver, (request, _params, actor) =>
+        this.handleSearch(request, actor),
+      ),
+    );
+    httpServer.rawPost(
+      "/index/rebuild",
+      authenticatedRoute(this.deps.sessionResolver, (_request, _params, actor) =>
+        this.handleRebuild(actor),
+      ),
+    );
   }
 
   private async handleSearch(request: IncomingMessage, actor: Actor): Promise<RouteResult> {
@@ -114,15 +91,6 @@ export class RetrievalModule {
       RebuildIndexCommand.of(actor.companyId),
     );
     return { statusCode: HTTP_OK, body: { reprojected } };
-  }
-
-  private respond(response: ServerResponse, result: RouteResult): void {
-    response.writeHead(result.statusCode, { "Content-Type": "application/json" });
-    response.end(JSON.stringify(result.body));
-  }
-
-  private respondError(response: ServerResponse, error: unknown): void {
-    this.respond(response, toErrorResponse(error));
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {

@@ -2,9 +2,20 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { IngestionModule, type IngestionModuleDeps } from "./IngestionModule.ts";
-import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
+import type { Actor } from "../../../shared/application/context/ActorContext.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
 import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
+
+// A fake `SessionResolverPort` for the edge: it resolves to `actor` (or null → the wrapper
+// emits the 401). The Identity-owned cookie parsing is out of scope here.
+function fakeSessionResolver(actor: Actor | null): SessionResolverPort {
+  return { resolve: async () => actor };
+}
+
+const CURATOR: Actor = { companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] };
+const REVIEWER: Actor = { companyId: "c1", actorId: "u1", actorType: "user", roles: ["reviewer"] };
+const SOME_COOKIE = "des_session=good";
 
 class FakeHttpServer {
   public readonly routes = new Map<string, RawRouteHandler>();
@@ -46,7 +57,7 @@ function deps(overrides: Partial<IngestionModuleDeps>): IngestionModuleDeps {
   const notUsed = { execute: async () => null } as unknown as never;
   return {
     applicationService: { execute: async () => ({ id: { value: "job-1" }, status: "pending" }) } as unknown as IngestionModuleDeps["applicationService"],
-    resolveSession: { execute: async () => null } as unknown as IngestionModuleDeps["resolveSession"],
+    sessionResolver: fakeSessionResolver(null),
     uploadDocument: notUsed,
     getIngestionJob: notUsed,
     ...overrides,
@@ -83,15 +94,13 @@ describe("IngestionModule routes", () => {
   });
 
   it("accepts an upload (202) when the session resolves", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
-    } as unknown as IngestionModuleDeps["resolveSession"];
-    new IngestionModule(deps({ resolveSession })).registerRoutes(httpServer as never);
+    const sessionResolver = fakeSessionResolver(CURATOR);
+    new IngestionModule(deps({ sessionResolver })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("POST /ingestion/uploads")!,
       fakeRequest({
-        cookie: SESSION_COOKIE_NAME + "=good",
+        cookie: SOME_COOKIE,
         body: { collectionId: "c", filename: "f.md", mimeType: "text/markdown", contentBase64: "aGk=" },
       }),
     );
@@ -101,9 +110,7 @@ describe("IngestionModule routes", () => {
   });
 
   it("maps an authorization failure (forbidden) to 403 with a coded body", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["reviewer"] }),
-    } as unknown as IngestionModuleDeps["resolveSession"];
+    const sessionResolver = fakeSessionResolver(REVIEWER);
     const applicationService = {
       execute: async () => {
         throw new DomainError(
@@ -114,12 +121,12 @@ describe("IngestionModule routes", () => {
         );
       },
     } as unknown as IngestionModuleDeps["applicationService"];
-    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+    new IngestionModule(deps({ sessionResolver, applicationService })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("POST /ingestion/uploads")!,
       fakeRequest({
-        cookie: SESSION_COOKIE_NAME + "=good",
+        cookie: SOME_COOKIE,
         body: { collectionId: "c", filename: "f.md", mimeType: "text/markdown", contentBase64: "aGk=" },
       }),
     );
@@ -130,9 +137,7 @@ describe("IngestionModule routes", () => {
   });
 
   it("maps an oversize-upload rejection to 400 with a coded body", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
-    } as unknown as IngestionModuleDeps["resolveSession"];
+    const sessionResolver = fakeSessionResolver(CURATOR);
     const applicationService = {
       execute: async () => {
         throw new DomainError(
@@ -143,12 +148,12 @@ describe("IngestionModule routes", () => {
         );
       },
     } as unknown as IngestionModuleDeps["applicationService"];
-    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+    new IngestionModule(deps({ sessionResolver, applicationService })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("POST /ingestion/uploads")!,
       fakeRequest({
-        cookie: SESSION_COOKIE_NAME + "=good",
+        cookie: SOME_COOKIE,
         body: { collectionId: "c", filename: "f.md", mimeType: "text/markdown", contentBase64: "aGVsbG8gd29ybGQ=" },
       }),
     );
@@ -159,15 +164,13 @@ describe("IngestionModule routes", () => {
   });
 
   it("maps a missing required field to 400 with the shared fieldRequired code", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
-    } as unknown as IngestionModuleDeps["resolveSession"];
-    new IngestionModule(deps({ resolveSession })).registerRoutes(httpServer as never);
+    const sessionResolver = fakeSessionResolver(CURATOR);
+    new IngestionModule(deps({ sessionResolver })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("POST /ingestion/uploads")!,
       fakeRequest({
-        cookie: SESSION_COOKIE_NAME + "=good",
+        cookie: SOME_COOKIE,
         body: { filename: "f.md", mimeType: "text/markdown", contentBase64: "aGk=" },
       }),
     );
@@ -178,13 +181,11 @@ describe("IngestionModule routes", () => {
   });
 
   it("maps a missing job to 404 with a coded body", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
-    } as unknown as IngestionModuleDeps["resolveSession"];
+    const sessionResolver = fakeSessionResolver(CURATOR);
     const applicationService = { execute: async () => null } as unknown as IngestionModuleDeps["applicationService"];
-    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+    new IngestionModule(deps({ sessionResolver, applicationService })).registerRoutes(httpServer as never);
 
-    const response = await invoke(httpServer.routes.get("GET /ingestion/jobs/:id")!, fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good" }), {
+    const response = await invoke(httpServer.routes.get("GET /ingestion/jobs/:id")!, fakeRequest({ cookie: SOME_COOKIE }), {
       id: "missing",
     });
 

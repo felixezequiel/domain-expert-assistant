@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
-import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
 import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 import {
-  readSessionToken,
+  type RouteResult,
+  authenticatedRoute,
+  publicRoute,
+} from "../../../shared/infrastructure/http/authenticatedRoute.ts";
+import {
   buildSessionCookie,
   buildClearedSessionCookie,
 } from "../infrastructure/http/SessionCookie.ts";
@@ -26,7 +30,6 @@ import { RotateConsumerCredentialCommand } from "../application/command/RotateCo
 import { RevokeConsumerCredentialCommand } from "../application/command/RevokeConsumerCredentialCommand.ts";
 import type { ProvisionOrganizationUseCase } from "../application/usecase/ProvisionOrganizationUseCase.ts";
 import type { AuthenticateUseCase } from "../application/usecase/AuthenticateUseCase.ts";
-import type { ResolveSessionUseCase } from "../application/usecase/ResolveSessionUseCase.ts";
 import type { InviteUserUseCase } from "../application/usecase/InviteUserUseCase.ts";
 import type { AcceptInvitationUseCase } from "../application/usecase/AcceptInvitationUseCase.ts";
 import type { ChangeUserRolesUseCase } from "../application/usecase/ChangeUserRolesUseCase.ts";
@@ -43,20 +46,13 @@ import type { DescribeInvitationUseCase } from "../application/usecase/DescribeI
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
-const HTTP_UNAUTHORIZED = 401;
-
-interface RouteResult {
-  readonly statusCode: number;
-  readonly body: unknown;
-  readonly setCookie?: string;
-}
 
 export interface IdentityModuleDeps {
   readonly applicationService: ApplicationService;
   readonly sessionRepository: SessionRepositoryPort;
   readonly provisionOrganization: ProvisionOrganizationUseCase;
   readonly authenticate: AuthenticateUseCase;
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
   readonly inviteUser: InviteUserUseCase;
   readonly acceptInvitation: AcceptInvitationUseCase;
   readonly changeUserRoles: ChangeUserRolesUseCase;
@@ -91,198 +87,158 @@ export class IdentityModule {
   }
 
   public registerRoutes(httpServer: HttpServer): void {
-    httpServer.rawPost("/auth/login", (request, response) => {
-      void this.handleLogin(request, response);
-    });
-    httpServer.rawPost("/auth/logout", (request, response) => {
-      void this.authed(request, response, async (actor) => this.handleLogout(actor));
-    });
-    httpServer.rawGet("/auth/me", (request, response) => {
-      void this.authed(request, response, async () => this.handleMe());
-    });
-    httpServer.rawPost("/operator/organizations", (request, response) => {
-      void this.handleProvision(request, response);
-    });
-    httpServer.rawGet("/invitations/:token", (request, response, params) => {
-      void this.handleDescribeInvitation(response, params.token!);
-    });
-    httpServer.rawPost("/invitations/:token/accept", (request, response, params) => {
-      void this.handleAcceptInvitation(request, response, params.token!);
-    });
-    httpServer.rawGet("/organizations/:orgId/users", (request, response) => {
-      void this.authed(request, response, async () => this.handleListUsers());
-    });
-    httpServer.rawGet("/organizations/:orgId/policy", (request, response) => {
-      void this.authed(request, response, async () => this.handleReadPolicy());
-    });
-    httpServer.rawPost("/organizations/:orgId/users/invite", (request, response) => {
-      void this.authed(request, response, async (actor) => this.handleInvite(request, actor));
-    });
-    httpServer.rawPut("/users/:userId/roles", (request, response, params) => {
-      void this.authed(request, response, async (actor) =>
-        this.handleChangeRoles(request, params.userId!, actor),
-      );
-    });
-    httpServer.rawPost("/users/:userId/disable", (request, response, params) => {
-      void this.authed(request, response, async (actor) => this.handleDisable(params.userId!, actor));
-    });
-    httpServer.rawPut("/organizations/:orgId/policy", (request, response) => {
-      void this.authed(request, response, async (actor) => this.handleSetPolicy(request, actor));
-    });
-    httpServer.rawPost("/credentials", (request, response) => {
-      void this.authed(request, response, async (actor) => this.handleIssueCredential(request, actor));
-    });
-    httpServer.rawPost("/credentials/:id/rotate", (request, response, params) => {
-      void this.authed(request, response, async (actor) => this.handleRotate(params.id!, actor));
-    });
-    httpServer.rawDelete("/credentials/:id", (request, response, params) => {
-      void this.authed(request, response, async (actor) => this.handleRevoke(params.id!, actor));
-    });
-    httpServer.rawGet("/credentials", (request, response) => {
-      void this.authed(request, response, async (actor) => this.handleListCredentials(actor));
-    });
-  }
-
-  // --- auth wrappers ---
-
-  private async authed(
-    request: IncomingMessage,
-    response: ServerResponse,
-    run: (actor: Actor) => Promise<RouteResult>,
-  ): Promise<void> {
-    const token = readSessionToken(request.headers.cookie);
-    const principal = token === null ? null : await this.deps.resolveSession.execute(token);
-    if (principal === null) {
-      this.respond(response, {
-        statusCode: HTTP_UNAUTHORIZED,
-        body: { error: "common.unauthorized", message: "Unauthorized" },
-      });
-      return;
-    }
-    const actor: Actor = {
-      companyId: principal.companyId,
-      actorId: principal.actorId,
-      actorType: principal.actorType,
-      roles: principal.roles,
-    };
-    await this.runAndRespond(response, () => runWithActor(actor, () => run(actor)));
-  }
-
-  private async runAndRespond(
-    response: ServerResponse,
-    run: () => Promise<RouteResult>,
-  ): Promise<void> {
-    try {
-      this.respond(response, await run());
-    } catch (error) {
-      this.respondError(response, error);
-    }
+    const requireSession = this.deps.sessionResolver;
+    httpServer.rawPost("/auth/login", publicRoute((request) => this.handleLogin(request)));
+    httpServer.rawPost(
+      "/auth/logout",
+      authenticatedRoute(requireSession, (_request, _params, actor) => this.handleLogout(actor)),
+    );
+    httpServer.rawGet("/auth/me", authenticatedRoute(requireSession, () => this.handleMe()));
+    httpServer.rawPost("/operator/organizations", publicRoute((request) => this.handleProvision(request)));
+    httpServer.rawGet(
+      "/invitations/:token",
+      publicRoute((_request, params) => this.handleDescribeInvitation(params.token!)),
+    );
+    httpServer.rawPost(
+      "/invitations/:token/accept",
+      publicRoute((request, params) => this.handleAcceptInvitation(request, params.token!)),
+    );
+    httpServer.rawGet(
+      "/organizations/:orgId/users",
+      authenticatedRoute(requireSession, () => this.handleListUsers()),
+    );
+    httpServer.rawGet(
+      "/organizations/:orgId/policy",
+      authenticatedRoute(requireSession, () => this.handleReadPolicy()),
+    );
+    httpServer.rawPost(
+      "/organizations/:orgId/users/invite",
+      authenticatedRoute(requireSession, (request) => this.handleInvite(request)),
+    );
+    httpServer.rawPut(
+      "/users/:userId/roles",
+      authenticatedRoute(requireSession, (request, params) =>
+        this.handleChangeRoles(request, params.userId!),
+      ),
+    );
+    httpServer.rawPost(
+      "/users/:userId/disable",
+      authenticatedRoute(requireSession, (_request, params) => this.handleDisable(params.userId!)),
+    );
+    httpServer.rawPut(
+      "/organizations/:orgId/policy",
+      authenticatedRoute(requireSession, (request) => this.handleSetPolicy(request)),
+    );
+    httpServer.rawPost(
+      "/credentials",
+      authenticatedRoute(requireSession, (request) => this.handleIssueCredential(request)),
+    );
+    httpServer.rawPost(
+      "/credentials/:id/rotate",
+      authenticatedRoute(requireSession, (_request, params) => this.handleRotate(params.id!)),
+    );
+    httpServer.rawDelete(
+      "/credentials/:id",
+      authenticatedRoute(requireSession, (_request, params) => this.handleRevoke(params.id!)),
+    );
+    httpServer.rawGet("/credentials", authenticatedRoute(requireSession, () => this.handleListCredentials()));
   }
 
   // --- handlers ---
 
-  private async handleLogin(request: IncomingMessage, response: ServerResponse): Promise<void> {
-    await this.runAndRespond(response, async () => {
-      const body = await HttpServer.readJsonBody(request);
-      // Login is a pre-tenant system operation: there is no actor yet. It must run through the
-      // UnitOfWork (in a system scope) so the new session is flushed — repositories no longer
-      // flush themselves (ADR-004). The system scope opens the transaction the session write
-      // and its events commit in.
-      const loginScope: Actor = { companyId: null, actorId: null, actorType: "system" };
-      const result = await runWithActor(loginScope, () =>
-        this.deps.applicationService.execute(
-          this.deps.authenticate,
-          AuthenticateCommand.of(IdentityModule.requireString(body, "email"), IdentityModule.requireString(body, "password")),
-        ),
-      );
-      return {
-        statusCode: HTTP_OK,
-        body: { userId: result.userId, companyId: result.companyId, expiresAt: result.expiresAt.toISOString() },
-        setCookie: buildSessionCookie(result.token, this.deps.sessionTtlSeconds, this.deps.cookieSecure),
-      };
-    });
+  private async handleLogin(request: IncomingMessage): Promise<RouteResult> {
+    const body = await HttpServer.readJsonBody(request);
+    // Login is a pre-tenant system operation: there is no actor yet. It must run through the
+    // UnitOfWork (in a system scope) so the new session is flushed — repositories no longer
+    // flush themselves (ADR-004). The system scope opens the transaction the session write
+    // and its events commit in.
+    const loginScope: Actor = { companyId: null, actorId: null, actorType: "system" };
+    const result = await runWithActor(loginScope, () =>
+      this.deps.applicationService.execute(
+        this.deps.authenticate,
+        AuthenticateCommand.of(IdentityModule.requireString(body, "email"), IdentityModule.requireString(body, "password")),
+      ),
+    );
+    return {
+      statusCode: HTTP_OK,
+      body: { userId: result.userId, companyId: result.companyId, expiresAt: result.expiresAt.toISOString() },
+      headers: { "Set-Cookie": buildSessionCookie(result.token, this.deps.sessionTtlSeconds, this.deps.cookieSecure) },
+    };
   }
 
   private async handleLogout(actor: Actor): Promise<RouteResult> {
     if (actor.actorId !== null) {
       await this.deps.sessionRepository.revokeAllForUser(actor.actorId);
     }
-    return { statusCode: HTTP_OK, body: { status: "logged-out" }, setCookie: buildClearedSessionCookie() };
+    return { statusCode: HTTP_OK, body: { status: "logged-out" }, headers: { "Set-Cookie": buildClearedSessionCookie() } };
   }
 
-  private async handleProvision(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  private async handleProvision(request: IncomingMessage): Promise<RouteResult> {
     const operator: Actor = { companyId: null, actorId: "operator", actorType: "operator" };
-    await this.runAndRespond(response, () =>
-      runWithActor(operator, async () => {
-        if (this.deps.operatorSecret === null) {
-          throw new DomainError(
-            "identity.operatorProvisioningDisabled",
-            "unavailable",
-            undefined,
-            "Operator provisioning is disabled (no operator secret configured)",
-          );
-        }
-        const presented = request.headers[OPERATOR_SECRET_HEADER];
-        if (presented !== this.deps.operatorSecret) {
-          throw new DomainError("identity.forbidden", "forbidden", undefined, "Forbidden");
-        }
-
-        const body = await HttpServer.readJsonBody(request);
-        const organizationId = IdentityModule.optionalString(body, "organizationId") ?? randomUUID();
-        const command = ProvisionOrganizationCommand.of(
-          organizationId,
-          IdentityModule.requireString(body, "organizationName"),
-          IdentityModule.optionalString(body, "adminUserId") ?? randomUUID(),
-          IdentityModule.requireString(body, "adminEmail"),
-          IdentityModule.requireString(body, "adminDisplayName"),
-          IdentityModule.requireString(body, "adminPassword"),
+    return runWithActor(operator, async () => {
+      if (this.deps.operatorSecret === null) {
+        throw new DomainError(
+          "identity.operatorProvisioningDisabled",
+          "unavailable",
+          undefined,
+          "Operator provisioning is disabled (no operator secret configured)",
         );
-        const organization = await this.deps.applicationService.execute(this.deps.provisionOrganization, command);
-        return { statusCode: HTTP_CREATED, body: { organizationId: organization.id.value } };
-      }),
-    );
+      }
+      const presented = request.headers[OPERATOR_SECRET_HEADER];
+      if (presented !== this.deps.operatorSecret) {
+        throw new DomainError("identity.forbidden", "forbidden", undefined, "Forbidden");
+      }
+
+      const body = await HttpServer.readJsonBody(request);
+      const organizationId = IdentityModule.optionalString(body, "organizationId") ?? randomUUID();
+      const command = ProvisionOrganizationCommand.of(
+        organizationId,
+        IdentityModule.requireString(body, "organizationName"),
+        IdentityModule.optionalString(body, "adminUserId") ?? randomUUID(),
+        IdentityModule.requireString(body, "adminEmail"),
+        IdentityModule.requireString(body, "adminDisplayName"),
+        IdentityModule.requireString(body, "adminPassword"),
+      );
+      const organization = await this.deps.applicationService.execute(this.deps.provisionOrganization, command);
+      return { statusCode: HTTP_CREATED, body: { organizationId: organization.id.value } };
+    });
   }
 
-  private async handleDescribeInvitation(response: ServerResponse, token: string): Promise<void> {
+  private async handleDescribeInvitation(token: string): Promise<RouteResult> {
     // Public, pre-auth lookup keyed by the bearer token — run in a system scope so the
     // privileged (unfiltered) read can find the invited user across tenants.
     const system: Actor = { companyId: null, actorId: null, actorType: "system" };
-    await this.runAndRespond(response, () =>
-      runWithActor(system, async () => {
-        const invitation = await this.deps.applicationService.execute(
-          this.deps.describeInvitation,
-          token,
+    return runWithActor(system, async () => {
+      const invitation = await this.deps.applicationService.execute(
+        this.deps.describeInvitation,
+        token,
+      );
+      if (invitation === null) {
+        throw new DomainError(
+          "identity.invitationNotFound",
+          "not_found",
+          undefined,
+          "Invitation not found",
         );
-        if (invitation === null) {
-          throw new DomainError(
-            "identity.invitationNotFound",
-            "not_found",
-            undefined,
-            "Invitation not found",
-          );
-        }
-        return { statusCode: HTTP_OK, body: invitation };
-      }),
-    );
+      }
+      return { statusCode: HTTP_OK, body: invitation };
+    });
   }
 
   private async handleAcceptInvitation(
     request: IncomingMessage,
-    response: ServerResponse,
     token: string,
-  ): Promise<void> {
+  ): Promise<RouteResult> {
     const system: Actor = { companyId: null, actorId: null, actorType: "system" };
-    await this.runAndRespond(response, () =>
-      runWithActor(system, async () => {
-        const body = await HttpServer.readJsonBody(request);
-        const command = AcceptInvitationCommand.of(token, IdentityModule.requireString(body, "password"));
-        const user = await this.deps.applicationService.execute(this.deps.acceptInvitation, command);
-        return { statusCode: HTTP_OK, body: { userId: user.id.value, status: user.status } };
-      }),
-    );
+    return runWithActor(system, async () => {
+      const body = await HttpServer.readJsonBody(request);
+      const command = AcceptInvitationCommand.of(token, IdentityModule.requireString(body, "password"));
+      const user = await this.deps.applicationService.execute(this.deps.acceptInvitation, command);
+      return { statusCode: HTTP_OK, body: { userId: user.id.value, status: user.status } };
+    });
   }
 
-  private async handleInvite(request: IncomingMessage, _actor: Actor): Promise<RouteResult> {
+  private async handleInvite(request: IncomingMessage): Promise<RouteResult> {
     const body = await HttpServer.readJsonBody(request);
     const command = InviteUserCommand.of(
       IdentityModule.optionalString(body, "userId") ?? randomUUID(),
@@ -300,7 +256,6 @@ export class IdentityModule {
   private async handleChangeRoles(
     request: IncomingMessage,
     userId: string,
-    _actor: Actor,
   ): Promise<RouteResult> {
     const body = await HttpServer.readJsonBody(request);
     const command = ChangeUserRolesCommand.of(userId, IdentityModule.requireStringArray(body, "roles"));
@@ -308,12 +263,12 @@ export class IdentityModule {
     return { statusCode: HTTP_OK, body: { userId: user.id.value, roles: [...user.roles] } };
   }
 
-  private async handleDisable(userId: string, _actor: Actor): Promise<RouteResult> {
+  private async handleDisable(userId: string): Promise<RouteResult> {
     const user = await this.deps.applicationService.execute(this.deps.disableUser, DisableUserCommand.of(userId));
     return { statusCode: HTTP_OK, body: { userId: user.id.value, status: user.status } };
   }
 
-  private async handleSetPolicy(request: IncomingMessage, _actor: Actor): Promise<RouteResult> {
+  private async handleSetPolicy(request: IncomingMessage): Promise<RouteResult> {
     const body = await HttpServer.readJsonBody(request);
     const command = SetOrganizationPolicyCommand.of(IdentityModule.requireBoolean(body, "requireSeparateReviewer"));
     const organization = await this.deps.applicationService.execute(this.deps.setOrganizationPolicy, command);
@@ -323,7 +278,7 @@ export class IdentityModule {
     };
   }
 
-  private async handleIssueCredential(request: IncomingMessage, _actor: Actor): Promise<RouteResult> {
+  private async handleIssueCredential(request: IncomingMessage): Promise<RouteResult> {
     const body = await HttpServer.readJsonBody(request);
     const command = IssueConsumerCredentialCommand.of(
       IdentityModule.optionalString(body, "credentialId") ?? randomUUID(),
@@ -335,7 +290,7 @@ export class IdentityModule {
     return { statusCode: HTTP_CREATED, body: { id: result.credential.id.value, secret: result.secret } };
   }
 
-  private async handleRotate(credentialId: string, _actor: Actor): Promise<RouteResult> {
+  private async handleRotate(credentialId: string): Promise<RouteResult> {
     const result = await this.deps.applicationService.execute(
       this.deps.rotateConsumerCredential,
       RotateConsumerCredentialCommand.of(credentialId),
@@ -343,7 +298,7 @@ export class IdentityModule {
     return { statusCode: HTTP_OK, body: { id: result.credential.id.value, secret: result.secret } };
   }
 
-  private async handleRevoke(credentialId: string, _actor: Actor): Promise<RouteResult> {
+  private async handleRevoke(credentialId: string): Promise<RouteResult> {
     const credential = await this.deps.applicationService.execute(
       this.deps.revokeConsumerCredential,
       RevokeConsumerCredentialCommand.of(credentialId),
@@ -351,7 +306,7 @@ export class IdentityModule {
     return { statusCode: HTTP_OK, body: { id: credential.id.value, status: credential.status } };
   }
 
-  private async handleListCredentials(_actor: Actor): Promise<RouteResult> {
+  private async handleListCredentials(): Promise<RouteResult> {
     const credentials: ReadonlyArray<ConsumerCredentialView> =
       await this.deps.applicationService.execute(this.deps.listConsumerCredentials, undefined);
     return { statusCode: HTTP_OK, body: { credentials } };
@@ -372,20 +327,7 @@ export class IdentityModule {
     return { statusCode: HTTP_OK, body: policy };
   }
 
-  // --- response helpers ---
-
-  private respond(response: ServerResponse, result: RouteResult): void {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (result.setCookie !== undefined) {
-      headers["Set-Cookie"] = result.setCookie;
-    }
-    response.writeHead(result.statusCode, headers);
-    response.end(JSON.stringify(result.body));
-  }
-
-  private respondError(response: ServerResponse, error: unknown): void {
-    this.respond(response, toErrorResponse(error));
-  }
+  // --- body parsing helpers ---
 
   private static requireString(body: Record<string, unknown>, field: string): string {
     const value = body[field];

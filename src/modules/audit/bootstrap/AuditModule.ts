@@ -1,32 +1,27 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage } from "node:http";
 import type { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
-import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
-import { readSessionToken } from "../../identity/infrastructure/http/SessionCookie.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
+import {
+  authenticatedRoute,
+  type RouteResult,
+} from "../../../shared/infrastructure/http/authenticatedRoute.ts";
 import type { ListAuditTrailUseCase } from "../application/usecase/ListAuditTrailUseCase.ts";
 import { ListAuditTrailQuery } from "../application/query/ListAuditTrailQuery.ts";
-import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
-const HTTP_UNAUTHORIZED = 401;
-
-interface RouteResult {
-  readonly statusCode: number;
-  readonly body: unknown;
-}
 
 export interface AuditModuleDeps {
   readonly applicationService: ApplicationService;
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
   readonly listAuditTrail: ListAuditTrailUseCase;
 }
 
 /**
  * Audit trail REST edge (PRD-6, Auditor persona). A read-only, session-authenticated window
  * onto the tenant's domain-event stream. Authorization (auditor/admin) and tenant scoping are
- * enforced inside the use case + repository — the edge only resolves the human session into an
- * actor context and maps query parameters to the audit query.
+ * enforced inside the use case + repository — the shared `authenticatedRoute` resolves the human
+ * session into an actor context, and the edge only maps query parameters to the audit query.
  */
 export class AuditModule {
   private readonly deps: AuditModuleDeps;
@@ -36,36 +31,10 @@ export class AuditModule {
   }
 
   public registerRoutes(httpServer: HttpServer): void {
-    httpServer.rawGet("/audit/events", (request, response) => {
-      void this.authed(request, response, () => this.handleListEvents(request));
-    });
-  }
-
-  private async authed(
-    request: IncomingMessage,
-    response: ServerResponse,
-    run: (actor: Actor) => Promise<RouteResult>,
-  ): Promise<void> {
-    const token = readSessionToken(request.headers.cookie);
-    const principal = token === null ? null : await this.deps.resolveSession.execute(token);
-    if (principal === null) {
-      this.respond(response, {
-        statusCode: HTTP_UNAUTHORIZED,
-        body: { error: "common.unauthorized", message: "Unauthorized" },
-      });
-      return;
-    }
-    const actor: Actor = {
-      companyId: principal.companyId,
-      actorId: principal.actorId,
-      actorType: principal.actorType,
-      roles: principal.roles,
-    };
-    try {
-      this.respond(response, await runWithActor(actor, () => run(actor)));
-    } catch (error) {
-      this.respondError(response, error);
-    }
+    httpServer.rawGet(
+      "/audit/events",
+      authenticatedRoute(this.deps.sessionResolver, (request) => this.handleListEvents(request)),
+    );
   }
 
   private async handleListEvents(request: IncomingMessage): Promise<RouteResult> {
@@ -111,14 +80,5 @@ export class AuditModule {
 
   private static nonEmpty(value: string | null): string | undefined {
     return value !== null && value.length > 0 ? value : undefined;
-  }
-
-  private respond(response: ServerResponse, result: RouteResult): void {
-    response.writeHead(result.statusCode, { "Content-Type": "application/json" });
-    response.end(JSON.stringify(result.body));
-  }
-
-  private respondError(response: ServerResponse, error: unknown): void {
-    this.respond(response, toErrorResponse(error));
   }
 }

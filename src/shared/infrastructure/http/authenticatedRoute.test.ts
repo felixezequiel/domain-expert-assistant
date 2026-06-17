@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { runAuthenticatedRoute, type RouteResult } from "./authenticatedRoute.ts";
+import { runAuthenticatedRoute, runPublicRoute, type RouteResult } from "./authenticatedRoute.ts";
 import { getCurrentActor, type Actor } from "../../application/context/ActorContext.ts";
 import { DomainError } from "../../domain/errors/DomainError.ts";
 import type { SessionResolverPort } from "../../application/ports/SessionResolverPort.ts";
@@ -104,5 +104,34 @@ describe("authenticatedRoute", () => {
     );
     assert.equal(captured.headers["Set-Cookie"], "des_session=; Max-Age=0");
     assert.equal(captured.headers["Content-Type"], "application/json");
+  });
+});
+
+describe("publicRoute (runPublicRoute)", () => {
+  it("serializes the handler result without resolving a session", async () => {
+    const { response, captured } = fakeResponse();
+    await runPublicRoute(
+      async () => ({ statusCode: 201, body: { id: "x" }, headers: { "Set-Cookie": "des_session=t" } }),
+      fakeRequest(undefined),
+      response,
+      {},
+    );
+    assert.equal(captured.statusCode, 201);
+    assert.deepEqual(captured.body, { id: "x" });
+    assert.equal(captured.headers["Set-Cookie"], "des_session=t");
+  });
+
+  it("serializes a thrown DomainError to its coded shape", async () => {
+    const { response, captured } = fakeResponse();
+    await runPublicRoute(
+      async () => {
+        throw new DomainError("identity.invalidCredentials", "unauthorized", undefined, "Invalid credentials");
+      },
+      fakeRequest(undefined),
+      response,
+      {},
+    );
+    assert.equal(captured.statusCode, 401);
+    assert.deepEqual(captured.body, { error: "identity.invalidCredentials", message: "Invalid credentials" });
   });
 });

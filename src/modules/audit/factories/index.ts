@@ -1,7 +1,7 @@
 import type { EntityManagerProvider } from "../../../shared/infrastructure/persistence/adapters/EntityManagerProvider.ts";
 import type { InfrastructureResult } from "../../../shared/factories/index.ts";
 import type { LoggerPort } from "../../../shared/ports/LoggerPort.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 import type { UserDirectoryPort } from "../../../shared/ports/UserDirectoryPort.ts";
 
 import { MikroOrmAuditTrailRepository } from "../infrastructure/persistence/mikro-orm/MikroOrmAuditTrailRepository.ts";
@@ -9,7 +9,7 @@ import { ListAuditTrailUseCase } from "../application/usecase/ListAuditTrailUseC
 import { AuditModule } from "../bootstrap/AuditModule.ts";
 
 export interface AuditModuleDependencies {
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
   // Resolves event actor ids to display names (ADR-013-style cross-module read).
   readonly userDirectory: UserDirectoryPort;
 }
@@ -35,7 +35,7 @@ export class AuditModuleFactory {
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const auditModule = new AuditModule({
           applicationService: infrastructure.applicationService,
-          resolveSession: dependencies.resolveSession,
+          sessionResolver: dependencies.sessionResolver,
           listAuditTrail,
         });
         auditModule.registerRoutes(infrastructure.httpServer);

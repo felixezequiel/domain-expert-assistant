@@ -52,7 +52,7 @@ function baseDeps(overrides: Partial<KnowledgeModuleDeps>): KnowledgeModuleDeps 
   const notUsed = { execute: async () => ({}) } as unknown as never;
   return {
     applicationService: { execute: async () => [] } as unknown as KnowledgeModuleDeps["applicationService"],
-    resolveSession: { execute: async () => null } as unknown as KnowledgeModuleDeps["resolveSession"],
+    sessionResolver: { resolve: async () => null } as KnowledgeModuleDeps["sessionResolver"],
     createKnowledgeItem: notUsed,
     editKnowledgeItem: notUsed,
     submitForReview: notUsed,
@@ -124,14 +124,14 @@ describe("KnowledgeModule routes", () => {
   });
 
   it("serializes a domain error as a coded body, preserving its status", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
-    } as unknown as KnowledgeModuleDeps["resolveSession"];
+    const sessionResolver = {
+      resolve: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
+    } as unknown as KnowledgeModuleDeps["sessionResolver"];
     const applicationService = {
       execute: async () => null,
     } as unknown as KnowledgeModuleDeps["applicationService"];
 
-    new KnowledgeModule(baseDeps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+    new KnowledgeModule(baseDeps({ sessionResolver, applicationService })).registerRoutes(httpServer as never);
 
     const response = await invoke(
       httpServer.routes.get("GET /items/:id")!,
@@ -148,9 +148,9 @@ describe("KnowledgeModule routes", () => {
   });
 
   it("allows an authed route when the session resolves to a principal", async () => {
-    const resolveSession = {
-      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["admin"] }),
-    } as unknown as KnowledgeModuleDeps["resolveSession"];
+    const sessionResolver = {
+      resolve: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["admin"] }),
+    } as unknown as KnowledgeModuleDeps["sessionResolver"];
     const listTags = {
       execute: async () => [{ id: "t1", slug: "system:pricing", label: "Pricing", scope: "system" }],
     } as unknown as KnowledgeModuleDeps["listTags"];
@@ -159,7 +159,7 @@ describe("KnowledgeModule routes", () => {
         useCase.execute(input),
     } as unknown as KnowledgeModuleDeps["applicationService"];
 
-    new KnowledgeModule(baseDeps({ resolveSession, listTags, applicationService })).registerRoutes(
+    new KnowledgeModule(baseDeps({ sessionResolver, listTags, applicationService })).registerRoutes(
       httpServer as never,
     );
 

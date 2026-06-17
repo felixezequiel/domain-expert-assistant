@@ -4,6 +4,8 @@ import { EventEmitter } from "node:events";
 import { RetrievalModule, type RetrievalModuleDeps } from "./RetrievalModule.ts";
 import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
+import type { Actor } from "../../../shared/application/context/ActorContext.ts";
 import { UnauthorizedError } from "../../../shared/application/authorization/RoleBasedAuthorizer.ts";
 
 class FakeHttpServer {
@@ -48,17 +50,21 @@ function deps(overrides: Partial<RetrievalModuleDeps>): RetrievalModuleDeps {
       execute: async (useCase: { execute: (command: unknown) => Promise<unknown> }, command: unknown) =>
         useCase.execute(command),
     } as unknown as RetrievalModuleDeps["applicationService"],
-    resolveSession: { execute: async () => null } as unknown as RetrievalModuleDeps["resolveSession"],
+    sessionResolver: { resolve: async () => null } satisfies SessionResolverPort,
     semanticSearch: notUsed,
     rebuildIndex: notUsed,
     ...overrides,
   };
 }
 
-function principal(roles: ReadonlyArray<string>) {
-  return {
-    execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles }),
-  } as unknown as RetrievalModuleDeps["resolveSession"];
+function principal(roles: ReadonlyArray<string>): SessionResolverPort {
+  const actor: Actor = {
+    companyId: "c1",
+    actorId: "u1",
+    actorType: "user",
+    roles: roles as NonNullable<Actor["roles"]>,
+  };
+  return { resolve: async () => actor };
 }
 
 async function invoke(handler: RawRouteHandler, request: unknown, params: Record<string, string> = {}) {
@@ -106,7 +112,7 @@ describe("RetrievalModule routes", () => {
         },
       ],
     } as unknown as RetrievalModuleDeps["semanticSearch"];
-    new RetrievalModule(deps({ resolveSession: principal(["curator"]), semanticSearch })).registerRoutes(
+    new RetrievalModule(deps({ sessionResolver: principal(["curator"]), semanticSearch })).registerRoutes(
       httpServer as never,
     );
 
@@ -121,7 +127,7 @@ describe("RetrievalModule routes", () => {
   });
 
   it("rejects search with a missing query (400)", async () => {
-    new RetrievalModule(deps({ resolveSession: principal(["curator"]) })).registerRoutes(httpServer as never);
+    new RetrievalModule(deps({ sessionResolver: principal(["curator"]) })).registerRoutes(httpServer as never);
     const response = await invoke(
       httpServer.routes.get("POST /search")!,
       fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", body: {} }),
@@ -138,7 +144,7 @@ describe("RetrievalModule routes", () => {
         throw new UnauthorizedError(["admin"]);
       },
     } as unknown as RetrievalModuleDeps["semanticSearch"];
-    new RetrievalModule(deps({ resolveSession: principal(["curator"]), semanticSearch })).registerRoutes(
+    new RetrievalModule(deps({ sessionResolver: principal(["curator"]), semanticSearch })).registerRoutes(
       httpServer as never,
     );
 
@@ -152,7 +158,7 @@ describe("RetrievalModule routes", () => {
   });
 
   it("forbids rebuild for a non-admin (403)", async () => {
-    new RetrievalModule(deps({ resolveSession: principal(["curator"]) })).registerRoutes(httpServer as never);
+    new RetrievalModule(deps({ sessionResolver: principal(["curator"]) })).registerRoutes(httpServer as never);
     const response = await invoke(
       httpServer.routes.get("POST /index/rebuild")!,
       fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", body: {} }),
@@ -163,7 +169,7 @@ describe("RetrievalModule routes", () => {
 
   it("allows rebuild for an admin (200)", async () => {
     const rebuildIndex = { execute: async () => 3 } as unknown as RetrievalModuleDeps["rebuildIndex"];
-    new RetrievalModule(deps({ resolveSession: principal(["admin"]), rebuildIndex })).registerRoutes(
+    new RetrievalModule(deps({ sessionResolver: principal(["admin"]), rebuildIndex })).registerRoutes(
       httpServer as never,
     );
     const response = await invoke(

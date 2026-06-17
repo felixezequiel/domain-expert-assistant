@@ -3,7 +3,7 @@ import type { AggregatePersister } from "../../../shared/infrastructure/persiste
 import type { InfrastructureResult } from "../../../shared/factories/index.ts";
 import type { LoggerPort } from "../../../shared/ports/LoggerPort.ts";
 import { MikroOrmAggregatePersister } from "../../../shared/infrastructure/persistence/adapters/MikroOrmAggregatePersister.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 
 import { IngestionJob } from "../domain/aggregates/IngestionJob.ts";
 import { IngestionJobEntity } from "../infrastructure/persistence/mikro-orm/entities/IngestionJobEntity.ts";
@@ -28,7 +28,7 @@ import { KnowledgeVersionRepository } from "../../knowledge/infrastructure/persi
 const WORKER_INTERVAL_MS = 2000;
 
 export interface IngestionModuleDependencies {
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
 }
 
 export interface IngestionModuleSetup {
@@ -79,7 +79,7 @@ export class IngestionModuleFactory {
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const ingestionModule = new IngestionModule({
           applicationService: infrastructure.applicationService,
-          resolveSession: dependencies.resolveSession,
+          sessionResolver: dependencies.sessionResolver,
           uploadDocument,
           getIngestionJob,
         });

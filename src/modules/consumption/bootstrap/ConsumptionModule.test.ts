@@ -29,8 +29,9 @@ class FakeResponse {
   public setHeader(name: string, value: string): void {
     this.headers[name] = value;
   }
-  public writeHead(statusCode: number): void {
+  public writeHead(statusCode: number, headers?: Record<string, string>): void {
     this.statusCode = statusCode;
+    Object.assign(this.headers, headers);
   }
   public end(body?: string): void {
     this.payload = body ?? "";

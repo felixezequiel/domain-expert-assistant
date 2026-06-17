@@ -22,6 +22,8 @@ import { Argon2idPasswordHasher } from "../infrastructure/auth/Argon2idPasswordH
 import { Sha256OpaqueSecret } from "../infrastructure/auth/Sha256OpaqueSecret.ts";
 import { OrganizationPolicyAdapter } from "../infrastructure/knowledge/OrganizationPolicyAdapter.ts";
 import { UserDirectoryAdapter } from "../infrastructure/shared/UserDirectoryAdapter.ts";
+import { CookieSessionResolver } from "../infrastructure/http/CookieSessionResolver.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 
 import { ProvisionOrganizationUseCase } from "../application/usecase/ProvisionOrganizationUseCase.ts";
 import { AuthenticateUseCase } from "../application/usecase/AuthenticateUseCase.ts";
@@ -46,10 +48,11 @@ const MILLISECONDS_PER_SECOND = 1000;
 
 export interface IdentityModuleSetup {
   readonly persisters: ReadonlyArray<AggregatePersister>;
-  // Cross-module dependencies consumed by the Knowledge slice (ADR-008/010 session
-  // resolution; ADR-013 org governance policy). Exposed so the composition root can wire
-  // Knowledge without Knowledge importing Identity's aggregates.
-  readonly resolveSession: ResolveSessionUseCase;
+  // Cross-module dependencies consumed by the other slices (ADR-008/010 session resolution;
+  // ADR-013 org governance policy). Exposed so the composition root can wire the other modules
+  // without them importing Identity's aggregates. `sessionResolver` is the shared edge port the
+  // composition root hands to every module's `authenticatedRoute`.
+  readonly sessionResolver: SessionResolverPort;
   readonly organizationPolicy: OrganizationPolicyAdapter;
   // Resolves user ids to display names for other slices' read models (version authors,
   // audit actors) without exposing the User aggregate (ADR-013-style cross-module read).
@@ -68,6 +71,7 @@ export class IdentityModuleFactory {
     const opaqueSecret = new Sha256OpaqueSecret();
 
     const resolveSession = new ResolveSessionUseCase(sessionRepository, userRepository, opaqueSecret);
+    const sessionResolver = new CookieSessionResolver(resolveSession);
     const organizationPolicy = new OrganizationPolicyAdapter(organizationRepository);
     const userDirectory = new UserDirectoryAdapter(userRepository);
 
@@ -95,7 +99,7 @@ export class IdentityModuleFactory {
 
     return {
       persisters,
-      resolveSession,
+      sessionResolver,
       organizationPolicy,
       userDirectory,
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
@@ -114,7 +118,7 @@ export class IdentityModuleFactory {
             opaqueSecret,
             SESSION_TTL_SECONDS * MILLISECONDS_PER_SECOND,
           ),
-          resolveSession,
+          sessionResolver,
           inviteUser: new InviteUserUseCase(userRepository, opaqueSecret),
           acceptInvitation: new AcceptInvitationUseCase(userRepository, passwordHasher, opaqueSecret),
           changeUserRoles: new ChangeUserRolesUseCase(userRepository),

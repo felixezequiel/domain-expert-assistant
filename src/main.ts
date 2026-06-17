@@ -38,26 +38,26 @@ async function main(): Promise<void> {
   // --- Module factories (vertical slices) ---
   const identityModule = IdentityModuleFactory.create(entityManagerProvider);
   const knowledgeModule = KnowledgeModuleFactory.create(entityManagerProvider, {
-    resolveSession: identityModule.resolveSession,
+    sessionResolver: identityModule.sessionResolver,
     organizationPolicy: identityModule.organizationPolicy,
     userDirectory: identityModule.userDirectory,
   });
   const ingestionModule = IngestionModuleFactory.create(entityManagerProvider, {
-    resolveSession: identityModule.resolveSession,
+    sessionResolver: identityModule.sessionResolver,
   });
   // One local BGE-M3 embedder, shared by Retrieval (projection) and Consumption (search), so
   // the multi-hundred-MB model is loaded once (ADR-017).
   const embedder = new TransformersEmbedder();
   // Retrieval & Indexing (PRD-4): derived read-model, so it owns no aggregate/persister.
   const retrievalModule = RetrievalModuleFactory.create(entityManagerProvider, {
-    resolveSession: identityModule.resolveSession,
+    sessionResolver: identityModule.sessionResolver,
     embedder,
   });
   // Consumption Gateway (PRD-5): consumer-facing REST + MCP, owns no aggregate/persister.
   const consumptionModule = ConsumptionModuleFactory.create(entityManagerProvider, { embedder });
   // Audit trail (PRD-6, Auditor): read-only window onto the tenant's domain-event stream.
   const auditModule = AuditModuleFactory.create(entityManagerProvider, {
-    resolveSession: identityModule.resolveSession,
+    sessionResolver: identityModule.sessionResolver,
     userDirectory: identityModule.userDirectory,
   });
 

@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
-import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
-import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
-import { readSessionToken } from "../../identity/infrastructure/http/SessionCookie.ts";
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
+import {
+  authenticatedRoute,
+  type RouteResult,
+} from "../../../shared/infrastructure/http/authenticatedRoute.ts";
 
 import { CreateKnowledgeItemCommand } from "../application/command/CreateKnowledgeItemCommand.ts";
 import { EditKnowledgeItemCommand } from "../application/command/EditKnowledgeItemCommand.ts";
@@ -52,16 +53,11 @@ import type {
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 
-interface RouteResult {
-  readonly statusCode: number;
-  readonly body: unknown;
-}
-
 export interface KnowledgeModuleDeps {
   readonly applicationService: ApplicationService;
-  // Same cookie + ResolveSession flow as the Identity edge (ADR-008/010) — Knowledge does
-  // not re-implement session lookup, it depends on Identity's use case.
-  readonly resolveSession: ResolveSessionUseCase;
+  // Resolves the session cookie to the authenticated Actor at the shared edge
+  // (`authenticatedRoute`); Knowledge no longer re-implements session lookup (ADR-011 amendment).
+  readonly sessionResolver: SessionResolverPort;
   readonly createKnowledgeItem: CreateKnowledgeItemUseCase;
   readonly editKnowledgeItem: EditKnowledgeItemUseCase;
   readonly submitForReview: SubmitForReviewUseCase;
@@ -84,9 +80,9 @@ export interface KnowledgeModuleDeps {
 }
 
 /**
- * Knowledge curation REST edge (PRD-2 §8). Every route is authenticated: it reuses the
- * Identity session cookie + ResolveSession flow to open the Actor Context, exactly as the
- * Identity edge does. Commands run through ApplicationService, whose authorize step enforces
+ * Knowledge curation REST edge (PRD-2 §8). Every route is wrapped by the shared
+ * `authenticatedRoute`, which resolves the session cookie to the Actor via `SessionResolverPort`
+ * and opens the Actor Context (ADR-011 amendment). Commands run through ApplicationService, whose authorize step enforces
  * each use case's `requiredRoles` (ADR-011); queries declare no roles, so any authenticated
  * member of the tenant passes. The org's `requireSeparateReviewer` policy reaches the approve
  * flow through an injected adapter (ADR-013), not through this edge.
@@ -99,96 +95,34 @@ export class KnowledgeModule {
   }
 
   public registerRoutes(httpServer: HttpServer): void {
-    httpServer.rawPost("/items", (request, response) => {
-      void this.authed(request, response, async () => this.handleCreateItem(request));
-    });
-    httpServer.rawPut("/items/:id", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleEditItem(request, params.id!));
-    });
-    httpServer.rawPost("/items/:id/submit", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleSubmit(params.id!));
-    });
-    httpServer.rawPost("/items/:id/approve", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleApprove(params.id!));
-    });
-    httpServer.rawPost("/items/:id/reject", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleReject(request, params.id!));
-    });
-    httpServer.rawPost("/items/:id/deprecate", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleDeprecate(params.id!));
-    });
-    httpServer.rawPost("/items/:id/archive", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleArchive(params.id!));
-    });
-    httpServer.rawPost("/items/:id/rollback", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleRollback(request, params.id!));
-    });
-    httpServer.rawPost("/items/:id/retag", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleRetag(request, params.id!));
-    });
-    httpServer.rawPost("/items/:id/move", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleMove(request, params.id!));
-    });
+    const authed = (handler: Parameters<typeof authenticatedRoute>[1]) =>
+      authenticatedRoute(this.deps.sessionResolver, handler);
 
-    httpServer.rawGet("/items", (request, response) => {
-      void this.authed(request, response, async () => this.handleListItems(request));
-    });
-    httpServer.rawGet("/items/:id/versions", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleVersionHistory(params.id!));
-    });
-    httpServer.rawGet("/items/:id", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleGetItem(params.id!));
-    });
+    httpServer.rawPost("/items", authed((request) => this.handleCreateItem(request)));
+    httpServer.rawPut("/items/:id", authed((request, params) => this.handleEditItem(request, params.id!)));
+    httpServer.rawPost("/items/:id/submit", authed((_request, params) => this.handleSubmit(params.id!)));
+    httpServer.rawPost("/items/:id/approve", authed((_request, params) => this.handleApprove(params.id!)));
+    httpServer.rawPost("/items/:id/reject", authed((request, params) => this.handleReject(request, params.id!)));
+    httpServer.rawPost("/items/:id/deprecate", authed((_request, params) => this.handleDeprecate(params.id!)));
+    httpServer.rawPost("/items/:id/archive", authed((_request, params) => this.handleArchive(params.id!)));
+    httpServer.rawPost("/items/:id/rollback", authed((request, params) => this.handleRollback(request, params.id!)));
+    httpServer.rawPost("/items/:id/retag", authed((request, params) => this.handleRetag(request, params.id!)));
+    httpServer.rawPost("/items/:id/move", authed((request, params) => this.handleMove(request, params.id!)));
 
-    httpServer.rawPost("/collections", (request, response) => {
-      void this.authed(request, response, async () => this.handleCreateCollection(request));
-    });
-    httpServer.rawPut("/collections/:id", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleRenameCollection(request, params.id!));
-    });
-    httpServer.rawGet("/collections", (request, response) => {
-      void this.authed(request, response, async () => this.handleListCollections());
-    });
+    httpServer.rawGet("/items", authed((request) => this.handleListItems(request)));
+    httpServer.rawGet("/items/:id/versions", authed((_request, params) => this.handleVersionHistory(params.id!)));
+    httpServer.rawGet("/items/:id", authed((_request, params) => this.handleGetItem(params.id!)));
 
-    httpServer.rawPost("/tags", (request, response) => {
-      void this.authed(request, response, async () => this.handleCreateTag(request));
-    });
-    httpServer.rawDelete("/tags/:id", (request, response, params) => {
-      void this.authed(request, response, async () => this.handleRemoveTag(params.id!));
-    });
-    httpServer.rawGet("/tags", (request, response) => {
-      void this.authed(request, response, async () => this.handleListTags());
-    });
-  }
+    httpServer.rawPost("/collections", authed((request) => this.handleCreateCollection(request)));
+    httpServer.rawPut(
+      "/collections/:id",
+      authed((request, params) => this.handleRenameCollection(request, params.id!)),
+    );
+    httpServer.rawGet("/collections", authed(() => this.handleListCollections()));
 
-  // --- auth wrapper ---
-
-  private async authed(
-    request: IncomingMessage,
-    response: ServerResponse,
-    run: () => Promise<RouteResult>,
-  ): Promise<void> {
-    const token = readSessionToken(request.headers.cookie);
-    const principal = token === null ? null : await this.deps.resolveSession.execute(token);
-    if (principal === null) {
-      this.respondError(response, new DomainError("common.unauthorized", "unauthorized", undefined, "Unauthorized"));
-      return;
-    }
-    const actor: Actor = {
-      companyId: principal.companyId,
-      actorId: principal.actorId,
-      actorType: principal.actorType,
-      roles: principal.roles,
-    };
-    await this.runAndRespond(response, () => runWithActor(actor, run));
-  }
-
-  private async runAndRespond(response: ServerResponse, run: () => Promise<RouteResult>): Promise<void> {
-    try {
-      this.respond(response, await run());
-    } catch (error) {
-      this.respondError(response, error);
-    }
+    httpServer.rawPost("/tags", authed((request) => this.handleCreateTag(request)));
+    httpServer.rawDelete("/tags/:id", authed((_request, params) => this.handleRemoveTag(params.id!)));
+    httpServer.rawGet("/tags", authed(() => this.handleListTags()));
   }
 
   // --- item command handlers ---
@@ -350,17 +284,6 @@ export class KnowledgeModule {
   private async handleListTags(): Promise<RouteResult> {
     const tags = await this.deps.applicationService.execute(this.deps.listTags, undefined);
     return { statusCode: HTTP_OK, body: { tags } };
-  }
-
-  // --- response helpers ---
-
-  private respond(response: ServerResponse, result: RouteResult): void {
-    response.writeHead(result.statusCode, { "Content-Type": "application/json" });
-    response.end(JSON.stringify(result.body));
-  }
-
-  private respondError(response: ServerResponse, error: unknown): void {
-    this.respond(response, toErrorResponse(error));
   }
 
   // --- body parsing helpers ---

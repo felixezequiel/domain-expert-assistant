@@ -4,7 +4,7 @@ import type { InfrastructureResult } from "../../../shared/factories/index.ts";
 import type { LoggerPort } from "../../../shared/ports/LoggerPort.ts";
 import { MikroOrmAggregatePersister } from "../../../shared/infrastructure/persistence/adapters/MikroOrmAggregatePersister.ts";
 
-import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { SessionResolverPort } from "../../../shared/application/ports/SessionResolverPort.ts";
 import type { OrganizationPolicyPort } from "../application/types.ts";
 import type { UserDirectoryPort } from "../../../shared/ports/UserDirectoryPort.ts";
 
@@ -50,7 +50,7 @@ import {
 import { KnowledgeModule } from "../bootstrap/KnowledgeModule.ts";
 
 export interface KnowledgeModuleDependencies {
-  readonly resolveSession: ResolveSessionUseCase;
+  readonly sessionResolver: SessionResolverPort;
   readonly organizationPolicy: OrganizationPolicyPort;
   // Resolves version-history author ids to display names (ADR-013-style cross-module read).
   readonly userDirectory: UserDirectoryPort;
@@ -99,7 +99,7 @@ export class KnowledgeModuleFactory {
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const knowledgeModule = new KnowledgeModule({
           applicationService: infrastructure.applicationService,
-          resolveSession: deps.resolveSession,
+          sessionResolver: deps.sessionResolver,
           createKnowledgeItem: new CreateKnowledgeItemUseCase(
             itemRepository,
             collectionRepository,
