@@ -115,6 +115,46 @@
       "copied": "Copiado",
       "done": "Concluir"
     },
+    "mcp": {
+      "heading": "Conecte seu cliente de IA (MCP)",
+      "subtitle": "Cole a configuração abaixo no cliente escolhido. Listamos apenas clientes compatíveis com um servidor MCP remoto autenticado por API key.",
+      "clientLabel": "Cliente",
+      "generic": "Outro / genérico",
+      "configFor": "Configuração para {{client}}",
+      "copy": "Copiar configuração",
+      "copied": "Configuração copiada",
+      "steps": {
+        "claude-code": [
+          "Rode este comando no terminal onde o Claude Code está instalado.",
+          "Reinicie o Claude Code; as ferramentas domain-expert aparecem em /mcp."
+        ],
+        "claude-desktop": [
+          "Abra o Claude Desktop → Configurações → Desenvolvedor → Editar configuração.",
+          "Cole isto em claude_desktop_config.json (mescle com um mcpServers existente).",
+          "Salve e reinicie o Claude Desktop por completo.",
+          "Requer Node.js (npx) — o mcp-remote faz a ponte com o servidor HTTP."
+        ],
+        "cursor": [
+          "Abra (ou crie) ~/.cursor/mcp.json — ou use Configurações → MCP → Adicionar servidor.",
+          "Cole isto (mescle com um mcpServers existente) e salve.",
+          "Reabra o Cursor e ative domain-expert em Configurações → MCP."
+        ],
+        "vscode": [
+          "Crie .vscode/mcp.json no seu workspace (ou rode “MCP: Add Server” na paleta de comandos).",
+          "Cole isto e salve.",
+          "Clique em “Start” no servidor. Requer VS Code 1.102 ou superior."
+        ],
+        "windsurf": [
+          "Abra o Windsurf → Configurações → Cascade → Servidores MCP → “Adicionar servidor” (ou edite ~/.codeium/windsurf/mcp_config.json).",
+          "Cole isto (mescle com um mcpServers existente) e salve.",
+          "Clique em atualizar no painel de MCP."
+        ],
+        "generic": [
+          "Qualquer cliente MCP que aceite um servidor remoto (Streamable HTTP) com header customizado funciona.",
+          "Aponte-o para a URL abaixo e envie o header Authorization: Bearer … em toda requisição."
+        ]
+      }
+    },
     "toasts": {
       "issued": "Credencial emitida",
       "rotated": "Credencial rotacionada",

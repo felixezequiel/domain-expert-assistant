@@ -36,4 +36,30 @@ describe("SecretRevealDialog", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders a ready-to-paste MCP config with the server URL and the key", () => {
+    render(<SecretRevealDialog secret="abc.def" onClose={vi.fn()} />);
+
+    const snippet = screen.getByTestId("mcp-snippet").textContent ?? "";
+    expect(snippet).toContain("/mcp");
+    expect(snippet).toContain("abc.def");
+  });
+
+  it("copies the MCP config to the clipboard (distinct from the secret copy)", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<SecretRevealDialog secret="abc.def" onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy config" }));
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("abc.def"));
+    expect(screen.getByRole("button", { name: "Config copied" })).toBeInTheDocument();
+  });
+
+  it("lists setup steps for the default client", () => {
+    render(<SecretRevealDialog secret="abc.def" onClose={vi.fn()} />);
+
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
+  });
 });

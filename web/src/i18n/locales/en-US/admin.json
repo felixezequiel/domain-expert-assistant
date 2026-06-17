@@ -115,6 +115,46 @@
       "copied": "Copied",
       "done": "Done"
     },
+    "mcp": {
+      "heading": "Connect your AI client (MCP)",
+      "subtitle": "Paste the config below into your chosen client. We only list clients compatible with a remote, API-key-authenticated MCP server.",
+      "clientLabel": "Client",
+      "generic": "Other / generic",
+      "configFor": "Config for {{client}}",
+      "copy": "Copy config",
+      "copied": "Config copied",
+      "steps": {
+        "claude-code": [
+          "Run this command in the terminal where Claude Code is installed.",
+          "Restart Claude Code; the domain-expert tools appear under /mcp."
+        ],
+        "claude-desktop": [
+          "Open Claude Desktop → Settings → Developer → Edit Config.",
+          "Paste this into claude_desktop_config.json (merge with any existing mcpServers).",
+          "Save and fully restart Claude Desktop.",
+          "Requires Node.js (npx) — mcp-remote bridges the HTTP server."
+        ],
+        "cursor": [
+          "Open (or create) ~/.cursor/mcp.json — or use Settings → MCP → Add new server.",
+          "Paste this (merge with any existing mcpServers) and save.",
+          "Reopen Cursor and enable domain-expert in Settings → MCP."
+        ],
+        "vscode": [
+          "Create .vscode/mcp.json in your workspace (or run “MCP: Add Server” from the Command Palette).",
+          "Paste this and save.",
+          "Click “Start” on the server. Requires VS Code 1.102 or newer."
+        ],
+        "windsurf": [
+          "Open Windsurf → Settings → Cascade → MCP Servers → “Add custom server” (or edit ~/.codeium/windsurf/mcp_config.json).",
+          "Paste this (merge with any existing mcpServers) and save.",
+          "Click refresh in the MCP panel."
+        ],
+        "generic": [
+          "Any MCP client that accepts a remote (Streamable HTTP) server with a custom header works.",
+          "Point it at the URL below and send the Authorization: Bearer … header on every request."
+        ]
+      }
+    },
     "toasts": {
       "issued": "Credential issued",
       "rotated": "Credential rotated",
