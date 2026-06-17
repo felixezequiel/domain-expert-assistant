@@ -70,9 +70,9 @@ export function SecretRevealDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <code
-            className="block flex-1 break-all rounded-md border border-border bg-muted px-3 py-2 font-mono text-sm"
+            className="min-w-0 flex-1 break-all rounded-md border border-border bg-muted px-3 py-2 font-mono text-sm"
             data-testid="credential-secret"
           >
             {secret}
@@ -81,6 +81,7 @@ export function SecretRevealDialog({
             type="button"
             variant="outline"
             size="sm"
+            className="shrink-0"
             onClick={() => void copyTo(secret, setCopiedSecret)}
           >
             {copiedSecret ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
@@ -113,14 +114,15 @@ export function SecretRevealDialog({
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0 text-sm text-muted-foreground">
                 {t("admin.credentials.mcp.configFor", { client: clientLabel })}
               </span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className="shrink-0"
                 onClick={() => void copyTo(snippet, setCopiedConfig)}
               >
                 {copiedConfig ? (
@@ -132,7 +134,7 @@ export function SecretRevealDialog({
               </Button>
             </div>
             <pre
-              className="overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs leading-relaxed"
+              className="whitespace-pre-wrap break-all rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs leading-relaxed"
               data-testid="mcp-snippet"
             >
               {snippet}
