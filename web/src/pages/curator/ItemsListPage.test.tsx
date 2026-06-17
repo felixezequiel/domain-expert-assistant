@@ -55,6 +55,70 @@ describe("ItemsListPage", () => {
     );
   });
 
+  it("surfaces rejected drafts in a 'needs attention' callout above the table", async () => {
+    installFetch(
+      mockFetchSequence([
+        { status: 200, body: { collections: [] } },
+        { status: 200, body: { tags: [] } },
+        // table query (status filter) — an unrelated published item
+        {
+          status: 200,
+          body: {
+            items: [
+              {
+                id: "p1",
+                collectionId: "c1",
+                title: "Published doc",
+                body: "x",
+                tagIds: [],
+                sensitivity: "internal",
+                status: "published",
+                currentVersionNumber: 2,
+                publishedVersionNumber: 2,
+                isServed: true,
+                isStale: false,
+                lastRejectionReason: null,
+              },
+            ],
+          },
+        },
+        // attention query (drafts) — a rejected draft that must not get lost in the table
+        {
+          status: 200,
+          body: {
+            items: [
+              {
+                id: "d1",
+                collectionId: "c1",
+                title: "Pricing guide",
+                body: "x",
+                tagIds: [],
+                sensitivity: "internal",
+                status: "draft",
+                currentVersionNumber: 3,
+                publishedVersionNumber: null,
+                isServed: false,
+                isStale: false,
+                lastRejectionReason: "Missing tax section",
+              },
+            ],
+          },
+        },
+      ]),
+    );
+
+    render(
+      <MemoryRouter>
+        <ItemsListPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Needs your attention")).toBeInTheDocument());
+    expect(screen.getByText("Pricing guide")).toBeInTheDocument();
+    expect(screen.getByText("Rejected: Missing tax section")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Pricing guide/ })).toHaveAttribute("href", "/items/d1");
+  });
+
   it("shows an empty state when there are no items", async () => {
     installFetch(
       mockFetchSequence([

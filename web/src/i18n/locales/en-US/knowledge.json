@@ -23,6 +23,10 @@
     "stale": "stale",
     "rowActions": {
       "versions": "Versions"
+    },
+    "attention": {
+      "heading": "Needs your attention",
+      "rejected": "Rejected: {{reason}}"
     }
   },
   "editor": {

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
 import { LIFECYCLE_STATUSES, SENSITIVITY_LEVELS, type KnowledgeItemView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
@@ -53,6 +53,14 @@ export function ItemsListPage(): JSX.Element {
     [collectionId, status],
   );
 
+  // Drafts that came back from review with a rejection reason are the "needs attention" set
+  // (mirrors the dashboard). Fetched independently of the table filters so the callout stays
+  // visible even when the table is filtered to another status — that intent must not get lost.
+  const attention = useAsync(() => itemsApi.list(undefined, "draft"), []);
+  const rejectedDrafts = (attention.data?.items ?? []).filter(
+    (item) => item.lastRejectionReason !== null,
+  );
+
   const visibleItems = (items.data?.items ?? []).filter((item) => {
     const tagMatches = tagId === ALL || item.tagIds.includes(tagId);
     const sensitivityMatches = sensitivity === ALL || item.sensitivity === sensitivity;
@@ -80,6 +88,34 @@ export function ItemsListPage(): JSX.Element {
           </Link>
         </Button>
       </div>
+
+      {rejectedDrafts.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+            {t("knowledge.list.attention.heading")}
+          </h2>
+          <Card className="border-warning/40 bg-warning/5">
+            <CardContent className="divide-y divide-border p-0">
+              {rejectedDrafts.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/items/${item.id}`}
+                  className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-warning/10"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {t("knowledge.list.attention.rejected", { reason: item.lastRejectionReason })}
+                    </p>
+                  </div>
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
       <Card>
         <CardContent className="flex flex-wrap gap-3 py-4">

@@ -23,6 +23,10 @@
     "stale": "desatualizado",
     "rowActions": {
       "versions": "Versões"
+    },
+    "attention": {
+      "heading": "Precisa da sua atenção",
+      "rejected": "Rejeitado: {{reason}}"
     }
   },
   "editor": {
