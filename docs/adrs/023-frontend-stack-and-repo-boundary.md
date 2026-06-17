@@ -69,6 +69,7 @@ Escolhida a **alternativa 3**. SPA em **`/web`** (irmão de `/src`, **fora** do 
 - Sessão no browser = cookie `httpOnly` + `SameSite`; jamais token em `localStorage`.
 - Visibilidade por papel na UI é UX; a autorização real é server-side (ADR-011).
 - O corpo de conhecimento é editado e armazenado como markdown.
+- **Emenda (2026-06-17): a comparação de versões usa o DiffEditor do Monaco (VS Code), tema Monokai.** `@monaco-editor/react` + `monaco-editor` são bundlados **localmente** (não o CDN padrão do loader — mantém a SPA self-contained/offline, coerente com este ADR) e **lazy-loaded** (chunk próprio), então só a tela de histórico de versões carrega o peso do Monaco. Monaco não roda em jsdom: componentes que o usam são testados mockando `@monaco-editor/react`, com `monaco-editor` + `?worker` apontados para stubs via `test.alias`; o editor real é verificado no build + navegador.
 - A SPA é compilada estática e servida pelo monólito na mesma origem; o CI inclui um passo para `/web`.
 
 ## Emenda — 2026-06-16: sistema de UI, endpoints de leitura para a SPA, sessão e capabilities

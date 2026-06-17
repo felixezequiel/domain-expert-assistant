@@ -1,7 +1,13 @@
-import { diffLines, type Change } from "diff";
-import { cn } from "../lib/utils.ts";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
-// Line-level diff between two version bodies (PRD-6: "UI mostra o diff entre versões").
+// The Monaco-powered diff lives in its own chunk; lazy-load it so the multi-MB Monaco bundle
+// only reaches the version-history screen, not every page.
+const MonacoVersionDiff = lazy(() => import("./MonacoVersionDiff.tsx"));
+
+// Side-by-side version comparison (PRD-6: "UI mostra o diff entre versões") powered by
+// Monaco's diff editor — the VS Code experience — themed Monokai. The header keeps the
+// −old / +new labels above the editor.
 export function VersionDiff({
   oldText,
   newText,
@@ -13,45 +19,21 @@ export function VersionDiff({
   readonly oldLabel: string;
   readonly newLabel: string;
 }): JSX.Element {
-  const changes: Change[] = diffLines(oldText, newText);
-
   return (
     <div className="overflow-hidden rounded-lg border border-border" data-testid="version-diff">
       <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
         <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-destructive">− {oldLabel}</span>
         <span className="rounded bg-success/15 px-1.5 py-0.5 text-success">+ {newLabel}</span>
       </div>
-      <pre className="overflow-x-auto bg-card p-0 font-mono text-xs leading-relaxed">
-        {changes.map((change, index) => (
-          <DiffChange key={index} change={change} />
-        ))}
-      </pre>
+      <Suspense
+        fallback={
+          <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading diff…
+          </div>
+        }
+      >
+        <MonacoVersionDiff oldText={oldText} newText={newText} />
+      </Suspense>
     </div>
-  );
-}
-
-function DiffChange({ change }: { readonly change: Change }): JSX.Element {
-  const lines = change.value.replace(/\n$/, "").split("\n");
-  let lineClass = "text-foreground/80";
-  let prefix = "  ";
-  let kind = "context";
-  if (change.added === true) {
-    lineClass = "bg-success/10 text-success";
-    prefix = "+ ";
-    kind = "+";
-  } else if (change.removed === true) {
-    lineClass = "bg-destructive/10 text-destructive";
-    prefix = "- ";
-    kind = "-";
-  }
-  return (
-    <>
-      {lines.map((line, index) => (
-        <span key={index} className={cn("block px-3", lineClass)} data-change={kind}>
-          {prefix}
-          {line}
-        </span>
-      ))}
-    </>
   );
 }

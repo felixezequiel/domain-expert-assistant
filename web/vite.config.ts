@@ -37,5 +37,14 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Monaco can't load in jsdom (its package entry + ?worker bundle don't resolve there).
+    // Components that use it mock @monaco-editor/react; these aliases just let the module graph
+    // resolve. The real diff editor is verified via the production build + a browser check.
+    alias: {
+      "monaco-editor/esm/vs/editor/editor.worker?worker": fileURLToPath(
+        new URL("./src/test/monaco/index.ts", import.meta.url),
+      ),
+      "monaco-editor": fileURLToPath(new URL("./src/test/monaco/index.ts", import.meta.url)),
+    },
   },
 });

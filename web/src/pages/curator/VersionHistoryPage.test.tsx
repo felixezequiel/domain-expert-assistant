@@ -5,6 +5,26 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { VersionHistoryPage } from "./VersionHistoryPage.tsx";
 import { mockFetchSequence, installFetch } from "../../test/index.ts";
 
+// VersionDiff lazy-loads Monaco, which can't run in jsdom — stub it to a plain element that
+// surfaces the two compared bodies, so the page wiring (which versions are diffed) is testable.
+vi.mock("../../components/VersionDiff.tsx", () => ({
+  VersionDiff: ({
+    oldText,
+    newText,
+    oldLabel,
+    newLabel,
+  }: {
+    oldText: string;
+    newText: string;
+    oldLabel: string;
+    newLabel: string;
+  }) => (
+    <div data-testid="version-diff" data-old={oldText} data-new={newText}>
+      {oldLabel} {newLabel}
+    </div>
+  ),
+}));
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -49,9 +69,10 @@ describe("VersionHistoryPage", () => {
     // Author shown as a resolved display name, not the raw UUID (U2).
     expect(screen.getAllByText("Ada Lovelace").length).toBeGreaterThan(0);
     expect(screen.queryByText("u1")).not.toBeInTheDocument();
+    // The two latest versions are compared (v1 body as original, v2 body as modified).
     const diff = screen.getByTestId("version-diff");
-    expect(diff.querySelector('[data-change="-"]')?.textContent).toContain("first line");
-    expect(diff.querySelector('[data-change="+"]')?.textContent).toContain("second line");
+    expect(diff).toHaveAttribute("data-old", "first line");
+    expect(diff).toHaveAttribute("data-new", "second line");
 
     // (B4) rollback opens a confirmation dialog before calling the API.
     await userEvent.click(screen.getAllByRole("button", { name: /Roll back to this/ })[0]!);

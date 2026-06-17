@@ -1,33 +1,26 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { VersionDiff } from "./VersionDiff.tsx";
 
+// VersionDiff lazy-loads the Monaco editor, which can't run in jsdom — stub the lazy child
+// and assert VersionDiff renders the labels and hands both versions to it.
+vi.mock("./MonacoVersionDiff.tsx", () => ({
+  default: ({ oldText, newText }: { oldText: string; newText: string }) => (
+    <div data-testid="monaco-diff" data-old={oldText} data-new={newText} />
+  ),
+}));
+
 describe("VersionDiff", () => {
-  it("marks added and removed lines between two versions", () => {
+  it("shows both version labels and delegates both texts to the Monaco diff", async () => {
     render(
-      <VersionDiff
-        oldText={"line one\nline two\nline three"}
-        newText={"line one\nline two changed\nline three"}
-        oldLabel="v1"
-        newLabel="v2"
-      />,
+      <VersionDiff oldText="old body" newText="new body" oldLabel="v3" newLabel="v4" />,
     );
 
-    const diff = screen.getByTestId("version-diff");
-    expect(diff.querySelector('[data-change="-"]')?.textContent).toContain("line two");
-    expect(diff.querySelector('[data-change="+"]')?.textContent).toContain("line two changed");
-  });
-
-  it("shows both version labels", () => {
-    render(<VersionDiff oldText="a" newText="b" oldLabel="v3" newLabel="v4" />);
     expect(screen.getByText(/v3/)).toBeInTheDocument();
     expect(screen.getByText(/v4/)).toBeInTheDocument();
-  });
 
-  it("renders only context lines when the texts are identical", () => {
-    render(<VersionDiff oldText={"same\ntext"} newText={"same\ntext"} oldLabel="v1" newLabel="v1" />);
-    const diff = screen.getByTestId("version-diff");
-    expect(diff.querySelector('[data-change="+"]')).toBeNull();
-    expect(diff.querySelector('[data-change="-"]')).toBeNull();
+    const editor = await screen.findByTestId("monaco-diff");
+    expect(editor).toHaveAttribute("data-old", "old body");
+    expect(editor).toHaveAttribute("data-new", "new body");
   });
 });
