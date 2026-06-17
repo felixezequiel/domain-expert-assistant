@@ -335,6 +335,7 @@ Before deploying:
 - [ ] Configure Postgres via env (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) with the `pgvector` extension available
 - [ ] Add your auth layer — this template intentionally has none (BYO JWT/Auth0/Cognito)
 - [ ] Configure SMTP via `SmtpEmailAdapter.createFromEnv` or replace with your provider
+- [ ] Tune the ingestion upload cap if needed (`INGESTION_MAX_UPLOAD_BYTES`, default 10 MiB)
 - [ ] Wire `ErrorHandler` in `main.ts` to capture `uncaughtException` / `unhandledRejection`
 - [ ] Point your orchestrator's probes at `/health/live` and `/health/ready`
 - [ ] Forward stdout to your log aggregator — logs are JSON with `correlationId`
