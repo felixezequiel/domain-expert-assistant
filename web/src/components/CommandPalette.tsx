@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCapabilities } from "../auth/AuthContext.tsx";
+import { Button } from "./ui/button.tsx";
 import {
   CommandDialog,
   CommandEmpty,
@@ -80,17 +81,18 @@ export function CommandPalette(): JSX.Element {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md border border-input bg-background/60 px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:w-72"
+        className="h-9 justify-start gap-2 px-2.5 font-normal text-muted-foreground hover:text-foreground sm:w-72"
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="hidden flex-1 text-left sm:inline">Search or jump to…</span>
         <kbd className="hidden rounded border border-border bg-muted px-1.5 font-mono text-[0.7rem] text-muted-foreground sm:inline">
           ⌘K
         </kbd>
-      </button>
+      </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Search or jump to…" />

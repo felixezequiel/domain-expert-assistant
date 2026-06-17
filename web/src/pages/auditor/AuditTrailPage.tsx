@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
 import type { AuditEventView } from "../../api/types.ts";
 import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { DatePicker } from "../../components/DatePicker.tsx";
 import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { formatDateTime } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
@@ -30,8 +31,8 @@ export function AuditTrailPage(): JSX.Element {
   const [aggregateId, setAggregateId] = useState("");
   const [actorId, setActorId] = useState("");
   const [eventName, setEventName] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState<Date | null>(null);
+  const [to, setTo] = useState<Date | null>(null);
 
   const [events, setEvents] = useState<ReadonlyArray<AuditEventView>>([]);
   const [loading, setLoading] = useState(false);
@@ -51,11 +52,15 @@ export function AuditTrailPage(): JSX.Element {
     if (eventName !== "") {
       filter.eventName = eventName;
     }
-    if (from !== "") {
-      filter.from = new Date(from).toISOString();
+    if (from !== null) {
+      const start = new Date(from);
+      start.setHours(0, 0, 0, 0);
+      filter.from = start.toISOString();
     }
-    if (to !== "") {
-      filter.to = new Date(to).toISOString();
+    if (to !== null) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      filter.to = end.toISOString();
     }
     try {
       const result = await auditApi.events(filter);
@@ -136,23 +141,11 @@ export function AuditTrailPage(): JSX.Element {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="audit-from">From</Label>
-            <Input
-              id="audit-from"
-              type="datetime-local"
-              aria-label="From"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-            />
+            <DatePicker id="audit-from" ariaLabel="From" placeholder="From date" value={from} onChange={setFrom} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="audit-to">To</Label>
-            <Input
-              id="audit-to"
-              type="datetime-local"
-              aria-label="To"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-            />
+            <DatePicker id="audit-to" ariaLabel="To" placeholder="To date" value={to} onChange={setTo} />
           </div>
           <div className="flex items-end">
             <Button type="button" onClick={() => void runSearch()} disabled={loading}>

@@ -11,13 +11,14 @@ import {
   Search,
   Settings,
   Upload,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth, useCapabilities } from "../auth/AuthContext.tsx";
 import { cn } from "../lib/utils.ts";
 import { CommandPalette } from "./CommandPalette.tsx";
+import { Avatar, AvatarFallback } from "./ui/avatar.tsx";
 import { Button } from "./ui/button.tsx";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,46 +156,31 @@ export function Layout(): JSX.Element {
         {nav}
       </aside>
 
-      {/* Mobile drawer */}
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
-            <div className="flex items-center justify-between border-b border-sidebar-border pr-2">
-              {brand}
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="Close menu">
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            {nav}
-          </aside>
-        </div>
-      ) : null}
-
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          {/* Mobile navigation drawer */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 bg-sidebar p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation</SheetTitle>
+              </SheetHeader>
+              {brand}
+              {nav}
+            </SheetContent>
+          </Sheet>
           <CommandPalette />
           <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-                  {initials(displayName)}
-                </span>
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="text-xs font-semibold">{initials(displayName)}</AvatarFallback>
+                </Avatar>
                 <span className="hidden text-sm font-medium sm:inline">{displayName}</span>
               </Button>
             </DropdownMenuTrigger>
