@@ -19,26 +19,61 @@
 - **GraphQL** built in alongside REST
 - **ESLint 9** flat config + **Prettier** + GitHub Actions CI
 
-## Quickstart
+## Quickstart — the whole app in one command
+
+Everything — Postgres + pgvector, database migrations, the REST + GraphQL API, the admin SPA,
+and a **seeded demo org with test users and knowledge items in every lifecycle state** — comes
+up with a single command:
 
 ```bash
-git clone <your-fork> my-service && cd my-service
-nvm use                     # or ensure Node 24+
-npm install
-docker compose up -d        # Postgres + pgvector (required — ADR-018)
-npm start                   # boots REST :3000 and GraphQL :4000
-
-# in another terminal
-curl http://localhost:3000/health/live
-# → {"status":"ok"}
-
-curl http://localhost:3000/health/ready
-# → {"status":"ready"}   (verifies the Postgres connection)
+docker compose up -d --build
 ```
 
-That's it — Postgres comes up via `docker-compose.yml` (connection defaults via
-`POSTGRES_*`, see [`.env.example`](.env.example)), migrations run automatically on boot,
-and you have a working DDD service with event store, correlation IDs and health checks.
+Then open **http://localhost:3000** and sign in with one of the seeded **test accounts**
+(local/dev only — full list in [docs/test-accounts.md](docs/test-accounts.md)):
+
+| Persona  | Email                      | Password      | What they see                                |
+|----------|----------------------------|---------------|----------------------------------------------|
+| Admin    | `ada@e2e.test`             | `Passw0rd!23` | Everything (admin implies all capabilities)  |
+| Curator  | `carl.curator@e2e.test`    | `Curator!23`  | Curation: drafts, items, upload, submit      |
+| Reviewer | `rita.reviewer@e2e.test`   | `Reviewer!23` | Review queue: approve / request changes      |
+| Auditor  | `amy.auditor@e2e.test`     | `Auditor!23`  | The audit trail                              |
+
+`docker compose up -d --build` starts three services:
+
+- **postgres** — Postgres 16 + pgvector.
+- **app** — runs migrations on boot, then serves REST `:3000`, GraphQL `:4000`, and the SPA at `/`.
+- **seed** — a one-shot that waits for the app to be healthy, creates the `Acme Knowledge E2E`
+  org + the accounts above + demo knowledge items (one per lifecycle state), then exits.
+  **Idempotent** — re-running `up` is safe.
+
+```bash
+docker compose logs -f app    # follow the app logs
+docker compose logs seed      # see what the seed created
+docker compose down           # stop;  add -v to also wipe the database volume and re-seed fresh
+```
+
+> The seed provisions the org via the operator endpoint using a **dev-only** `OPERATOR_SECRET`
+> (`dev-secret`, set in `docker-compose.yml`). It exists solely for local provisioning — never
+> use it, or these throwaway accounts, in a real deployment. (Semantic search uses a local
+> embedding model that downloads on first use, ADR-017 — the first `/search` may lag briefly.)
+
+### Local dev (run the app on your host)
+
+Prefer hot iteration and the native test runner? Bring up just Postgres and run Node directly:
+
+```bash
+nvm use                                   # or ensure Node 24+
+npm install
+docker compose up -d postgres             # just Postgres + pgvector
+cd web && npm install && npm run build && cd ..   # build the SPA once (served by the app)
+npm start                                 # REST :3000 + GraphQL :4000 (migrations run on boot)
+
+# seed the test accounts (the server above must be running, in another terminal):
+OPERATOR_SECRET=dev-secret npm run seed:test
+
+curl http://localhost:3000/health/ready   # → {"status":"ready"}  (verifies the Postgres connection)
+```
 
 > This repository builds the **Domain Expert Assistant** product on top of the DDD/hexagonal
 > template. The template's demo `user` module has been removed in favour of the real

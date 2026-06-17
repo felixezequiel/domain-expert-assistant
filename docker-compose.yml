@@ -16,5 +16,49 @@ services:
       timeout: 3s
       retries: 20
 
+  # The whole app: runs migrations on boot, then serves REST :3000 + GraphQL :4000 + the SPA.
+  app:
+    build: .
+    image: domain-expert:dev
+    container_name: domain-expert-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: domain_expert
+      POSTGRES_PASSWORD: domain_expert
+      POSTGRES_DB: domain_expert
+      # Enables the operator endpoint so the seed can provision the demo org. DEV-ONLY secret.
+      OPERATOR_SECRET: dev-secret
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  # One-shot: waits for the app to be healthy, seeds the demo org + test users + demo items
+  # (idempotent), then exits. Re-running `up` is safe.
+  seed:
+    image: domain-expert:dev
+    container_name: domain-expert-seed
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      SEED_BASE_URL: http://app:3000
+      OPERATOR_SECRET: dev-secret
+    command: ["node", "scripts/seed-test-users.mjs"]
+    restart: "no"
+
 volumes:
   pgdata:
