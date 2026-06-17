@@ -17,6 +17,7 @@
     "bench": "node --import @swc-node/register/esm-register scripts/bench.ts",
     "migration:create": "node --import @swc-node/register/esm-register node_modules/.bin/mikro-orm migration:create",
     "migration:up": "node --import @swc-node/register/esm-register node_modules/.bin/mikro-orm migration:up",
+    "seed:test": "node scripts/seed-test-users.mjs",
     "hooks:test": "node scripts/test-hooks.mjs",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "precommit": "node scripts/precommit.mjs",
