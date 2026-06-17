@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposto
+Aceito — implementado (RBAC por `requiredRoles` + `AuthorizerPort` no `ApplicationService`; ver a emenda de 2026-06-17 sobre autenticação na borda).
 
 ## Data
 
