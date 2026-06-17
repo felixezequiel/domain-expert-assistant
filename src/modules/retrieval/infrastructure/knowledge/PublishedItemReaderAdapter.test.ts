@@ -36,6 +36,7 @@ function version(versionNumber: number, createdAt: string): KnowledgeVersionView
     tagIds: [],
     sensitivity: "internal",
     createdBy: "curator-1",
+    createdByName: null,
     createdAt,
   };
 }

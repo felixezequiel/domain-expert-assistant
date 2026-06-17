@@ -18,6 +18,7 @@ function version(versionNumber: number, body: string) {
     tagIds: [],
     sensitivity: "internal",
     createdBy: "u1",
+    createdByName: "Ada Lovelace",
     createdAt: "2026-01-01T10:00:00.000Z",
   };
 }
@@ -45,6 +46,9 @@ describe("VersionHistoryPage", () => {
     expect(screen.getByRole("heading", { name: "Version history" })).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByTestId("version-diff")).toBeInTheDocument());
+    // Author shown as a resolved display name, not the raw UUID (U2).
+    expect(screen.getAllByText("Ada Lovelace").length).toBeGreaterThan(0);
+    expect(screen.queryByText("u1")).not.toBeInTheDocument();
     const diff = screen.getByTestId("version-diff");
     expect(diff.querySelector('[data-change="-"]')?.textContent).toContain("first line");
     expect(diff.querySelector('[data-change="+"]')?.textContent).toContain("second line");

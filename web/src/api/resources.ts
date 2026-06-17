@@ -6,6 +6,7 @@ import type {
   CurrentUser,
   IngestionJobView,
   IngestionUploadAccepted,
+  InvitationView,
   InvitedUser,
   IssuedCredential,
   KnowledgeItemListEntry,
@@ -30,6 +31,9 @@ export const authApi = {
   me: (): Promise<CurrentUser> => apiClient.get<CurrentUser>("/auth/me"),
   acceptInvitation: (token: string, password: string): Promise<{ userId: string; status: string }> =>
     apiClient.post(`/invitations/${encodeURIComponent(token)}/accept`, { password }),
+  // Public, pre-auth: the invitee sees which org/roles they're accepting before setting a password.
+  invitation: (token: string): Promise<InvitationView> =>
+    apiClient.get(`/invitations/${encodeURIComponent(token)}`),
 };
 
 export const usersApi = {

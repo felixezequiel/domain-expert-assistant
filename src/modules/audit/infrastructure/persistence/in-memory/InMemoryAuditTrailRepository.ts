@@ -1,5 +1,5 @@
 import type {
-  AuditEventView,
+  AuditEventRecord,
   AuditTrailFilter,
   AuditTrailReadPort,
 } from "../../../application/types.ts";
@@ -13,15 +13,15 @@ import { resolveTenantScope } from "../../../../../shared/application/tenancy/Te
  * throws. The MikroORM adapter is wired when the Auditor surface lands (PRD-5/6).
  */
 export class InMemoryAuditTrailRepository implements AuditTrailReadPort {
-  private readonly events: Array<AuditEventView> = [];
+  private readonly events: Array<AuditEventRecord> = [];
 
-  public seed(event: AuditEventView): void {
+  public seed(event: AuditEventRecord): void {
     this.events.push(event);
   }
 
-  public async findEvents(filter: AuditTrailFilter): Promise<ReadonlyArray<AuditEventView>> {
+  public async findEvents(filter: AuditTrailFilter): Promise<ReadonlyArray<AuditEventRecord>> {
     const decision = resolveTenantScope(getCurrentActor());
-    const results: Array<AuditEventView> = [];
+    const results: Array<AuditEventRecord> = [];
 
     for (const event of this.events) {
       if (decision.kind === "filtered" && event.companyId !== decision.companyId) {
@@ -39,7 +39,7 @@ export class InMemoryAuditTrailRepository implements AuditTrailReadPort {
     return results;
   }
 
-  private static matchesFilter(event: AuditEventView, filter: AuditTrailFilter): boolean {
+  private static matchesFilter(event: AuditEventRecord, filter: AuditTrailFilter): boolean {
     if (filter.aggregateId !== null && event.aggregateId !== filter.aggregateId) {
       return false;
     }

@@ -2,6 +2,7 @@ import type { EntityManagerProvider } from "../../../shared/infrastructure/persi
 import type { InfrastructureResult } from "../../../shared/factories/index.ts";
 import type { LoggerPort } from "../../../shared/ports/LoggerPort.ts";
 import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
+import type { UserDirectoryPort } from "../../../shared/ports/UserDirectoryPort.ts";
 
 import { MikroOrmAuditTrailRepository } from "../infrastructure/persistence/mikro-orm/MikroOrmAuditTrailRepository.ts";
 import { ListAuditTrailUseCase } from "../application/usecase/ListAuditTrailUseCase.ts";
@@ -9,6 +10,8 @@ import { AuditModule } from "../bootstrap/AuditModule.ts";
 
 export interface AuditModuleDependencies {
   readonly resolveSession: ResolveSessionUseCase;
+  // Resolves event actor ids to display names (ADR-013-style cross-module read).
+  readonly userDirectory: UserDirectoryPort;
 }
 
 export interface AuditModuleSetup {
@@ -26,7 +29,7 @@ export class AuditModuleFactory {
     dependencies: AuditModuleDependencies,
   ): AuditModuleSetup {
     const auditTrailRepository = new MikroOrmAuditTrailRepository(entityManagerProvider);
-    const listAuditTrail = new ListAuditTrailUseCase(auditTrailRepository);
+    const listAuditTrail = new ListAuditTrailUseCase(auditTrailRepository, dependencies.userDirectory);
 
     return {
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {

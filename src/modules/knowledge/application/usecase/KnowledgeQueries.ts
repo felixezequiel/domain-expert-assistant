@@ -1,4 +1,5 @@
 import type { UseCase } from "../../../../shared/application/UseCase.ts";
+import type { UserDirectoryPort } from "../../../../shared/ports/UserDirectoryPort.ts";
 import { KnowledgeItemId } from "../../domain/identifiers/KnowledgeItemId.ts";
 import type { KnowledgeItem } from "../../domain/aggregates/KnowledgeItem.ts";
 import type { Tag } from "../../domain/aggregates/Tag.ts";
@@ -36,7 +37,7 @@ function itemView(item: KnowledgeItem): KnowledgeItemView {
   };
 }
 
-function versionView(version: KnowledgeVersion): KnowledgeVersionView {
+function versionView(version: KnowledgeVersion, createdByName: string | null): KnowledgeVersionView {
   return {
     itemId: version.itemId,
     versionNumber: version.versionNumber,
@@ -45,6 +46,7 @@ function versionView(version: KnowledgeVersion): KnowledgeVersionView {
     tagIds: version.tagIds,
     sensitivity: version.sensitivity,
     createdBy: version.createdBy,
+    createdByName,
     createdAt: version.createdAt.toISOString(),
   };
 }
@@ -72,12 +74,18 @@ export class ListKnowledgeItemsUseCase
 }
 
 export class GetVersionHistoryUseCase implements UseCase<string, ReadonlyArray<KnowledgeVersionView>> {
-  constructor(private readonly versionRepository: KnowledgeVersionRepositoryPort) {}
+  constructor(
+    private readonly versionRepository: KnowledgeVersionRepositoryPort,
+    private readonly userDirectory: UserDirectoryPort,
+  ) {}
   public async execute(itemId: string): Promise<ReadonlyArray<KnowledgeVersionView>> {
     const versions = await this.versionRepository.listByItem(itemId);
+    const authorNames = await this.userDirectory.resolveDisplayNames(
+      versions.map((version) => version.createdBy),
+    );
     const views: Array<KnowledgeVersionView> = [];
     for (const version of versions) {
-      views.push(versionView(version));
+      views.push(versionView(version, authorNames.get(version.createdBy) ?? null));
     }
     return views;
   }

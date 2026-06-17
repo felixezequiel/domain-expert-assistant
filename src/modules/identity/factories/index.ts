@@ -21,6 +21,7 @@ import { MikroOrmSessionRepository } from "../infrastructure/persistence/mikro-o
 import { Argon2idPasswordHasher } from "../infrastructure/auth/Argon2idPasswordHasher.ts";
 import { Sha256OpaqueSecret } from "../infrastructure/auth/Sha256OpaqueSecret.ts";
 import { OrganizationPolicyAdapter } from "../infrastructure/knowledge/OrganizationPolicyAdapter.ts";
+import { UserDirectoryAdapter } from "../infrastructure/shared/UserDirectoryAdapter.ts";
 
 import { ProvisionOrganizationUseCase } from "../application/usecase/ProvisionOrganizationUseCase.ts";
 import { AuthenticateUseCase } from "../application/usecase/AuthenticateUseCase.ts";
@@ -37,6 +38,7 @@ import { ListConsumerCredentialsUseCase } from "../application/usecase/ListConsu
 import { DescribeCurrentUserUseCase } from "../application/usecase/DescribeCurrentUserUseCase.ts";
 import { ListOrgUsersUseCase } from "../application/usecase/ListOrgUsersUseCase.ts";
 import { ReadOrgPolicyUseCase } from "../application/usecase/ReadOrgPolicyUseCase.ts";
+import { DescribeInvitationUseCase } from "../application/usecase/DescribeInvitationUseCase.ts";
 import { IdentityModule } from "../bootstrap/IdentityModule.ts";
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -49,6 +51,9 @@ export interface IdentityModuleSetup {
   // Knowledge without Knowledge importing Identity's aggregates.
   readonly resolveSession: ResolveSessionUseCase;
   readonly organizationPolicy: OrganizationPolicyAdapter;
+  // Resolves user ids to display names for other slices' read models (version authors,
+  // audit actors) without exposing the User aggregate (ADR-013-style cross-module read).
+  readonly userDirectory: UserDirectoryAdapter;
   register(infrastructure: InfrastructureResult, logger: LoggerPort): void;
 }
 
@@ -64,6 +69,7 @@ export class IdentityModuleFactory {
 
     const resolveSession = new ResolveSessionUseCase(sessionRepository, userRepository, opaqueSecret);
     const organizationPolicy = new OrganizationPolicyAdapter(organizationRepository);
+    const userDirectory = new UserDirectoryAdapter(userRepository);
 
     const persisters: ReadonlyArray<AggregatePersister> = [
       new MikroOrmAggregatePersister({
@@ -91,6 +97,7 @@ export class IdentityModuleFactory {
       persisters,
       resolveSession,
       organizationPolicy,
+      userDirectory,
       register(infrastructure: InfrastructureResult, _logger: LoggerPort): void {
         const identityModule = new IdentityModule({
           applicationService: infrastructure.applicationService,
@@ -120,6 +127,11 @@ export class IdentityModuleFactory {
           describeCurrentUser: new DescribeCurrentUserUseCase(userRepository),
           listOrgUsers: new ListOrgUsersUseCase(userRepository),
           readOrgPolicy: new ReadOrgPolicyUseCase(organizationRepository),
+          describeInvitation: new DescribeInvitationUseCase(
+            userRepository,
+            organizationRepository,
+            opaqueSecret,
+          ),
           operatorSecret: process.env.OPERATOR_SECRET ?? null,
           sessionTtlSeconds: SESSION_TTL_SECONDS,
           cookieSecure: process.env.NODE_ENV === "production",

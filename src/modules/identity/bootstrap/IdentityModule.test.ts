@@ -69,6 +69,7 @@ function baseDeps(overrides: Partial<IdentityModuleDeps>): IdentityModuleDeps {
     describeCurrentUser: notUsed,
     listOrgUsers: notUsed,
     readOrgPolicy: notUsed,
+    describeInvitation: notUsed,
     operatorSecret: null,
     sessionTtlSeconds: 3600,
     cookieSecure: false,
@@ -100,6 +101,7 @@ describe("IdentityModule routes", () => {
     assert.ok(httpServer.routes.has("GET /organizations/:orgId/users"));
     assert.ok(httpServer.routes.has("GET /organizations/:orgId/policy"));
     assert.ok(httpServer.routes.has("POST /operator/organizations"));
+    assert.ok(httpServer.routes.has("GET /invitations/:token"));
     assert.ok(httpServer.routes.has("POST /invitations/:token/accept"));
     assert.ok(httpServer.routes.has("POST /organizations/:orgId/users/invite"));
     assert.ok(httpServer.routes.has("PUT /users/:userId/roles"));

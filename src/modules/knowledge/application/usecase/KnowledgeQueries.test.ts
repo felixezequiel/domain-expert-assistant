@@ -12,6 +12,7 @@ import {
   FakeCollectionRepository,
   FakeTagRepository,
   FakeKnowledgeVersionRepository,
+  FakeUserDirectory,
 } from "../testDoubles/index.ts";
 import { KnowledgeItem } from "../../domain/aggregates/KnowledgeItem.ts";
 import { KnowledgeItemId } from "../../domain/identifiers/KnowledgeItemId.ts";
@@ -60,16 +61,29 @@ describe("Knowledge queries", () => {
     assert.deepEqual(drafts.map((v) => v.id), ["i1"]);
   });
 
-  it("returns version history", async () => {
+  it("returns version history, resolving the author id to a display name", async () => {
     const repo = new FakeKnowledgeVersionRepository();
     await repo.append(
-      new KnowledgeVersion({ itemId: "i1", versionNumber: 1, title: "T", body: "B", tagIds: [], sensitivity: "public", createdBy: "a", createdAt: new Date("2026-06-16T00:00:00.000Z") }),
+      new KnowledgeVersion({ itemId: "i1", versionNumber: 1, title: "T", body: "B", tagIds: [], sensitivity: "public", createdBy: "author-1", createdAt: new Date("2026-06-16T00:00:00.000Z") }),
     );
-    const useCase = new GetVersionHistoryUseCase(repo);
+    const useCase = new GetVersionHistoryUseCase(repo, new FakeUserDirectory({ "author-1": "Ada Lovelace" }));
 
     const history = await useCase.execute("i1");
     assert.equal(history.length, 1);
     assert.equal(history[0]!.createdAt, "2026-06-16T00:00:00.000Z");
+    assert.equal(history[0]!.createdBy, "author-1");
+    assert.equal(history[0]!.createdByName, "Ada Lovelace");
+  });
+
+  it("leaves the author name null when the directory cannot resolve it (UI falls back to the id)", async () => {
+    const repo = new FakeKnowledgeVersionRepository();
+    await repo.append(
+      new KnowledgeVersion({ itemId: "i1", versionNumber: 1, title: "T", body: "B", tagIds: [], sensitivity: "public", createdBy: "system", createdAt: new Date("2026-06-16T00:00:00.000Z") }),
+    );
+    const useCase = new GetVersionHistoryUseCase(repo, new FakeUserDirectory());
+
+    const history = await useCase.execute("i1");
+    assert.equal(history[0]!.createdByName, null);
   });
 
   it("lists collections and tags as views", async () => {

@@ -1,7 +1,7 @@
 import type { EntityManagerProvider } from "../../../../../shared/infrastructure/persistence/adapters/EntityManagerProvider.ts";
 import { SystemEventEntity } from "../../../../../shared/infrastructure/persistence/adapters/eventStore/SystemEventEntity.ts";
 import type {
-  AuditEventView,
+  AuditEventRecord,
   AuditTrailFilter,
   AuditTrailReadPort,
 } from "../../../application/types.ts";
@@ -22,14 +22,14 @@ export class MikroOrmAuditTrailRepository implements AuditTrailReadPort {
     this.entityManagerProvider = entityManagerProvider;
   }
 
-  public async findEvents(filter: AuditTrailFilter): Promise<ReadonlyArray<AuditEventView>> {
+  public async findEvents(filter: AuditTrailFilter): Promise<ReadonlyArray<AuditEventRecord>> {
     const entityManager = this.entityManagerProvider.getEntityManager();
     const where = MikroOrmAuditTrailRepository.buildWhere(filter);
     const entities = await entityManager.find(SystemEventEntity, where, {
       orderBy: { occurredAt: "desc" },
       limit: filter.limit,
     });
-    return entities.map((entity) => MikroOrmAuditTrailRepository.toView(entity));
+    return entities.map((entity) => MikroOrmAuditTrailRepository.toRecord(entity));
   }
 
   private static buildWhere(filter: AuditTrailFilter): Record<string, unknown> {
@@ -56,7 +56,7 @@ export class MikroOrmAuditTrailRepository implements AuditTrailReadPort {
     return where;
   }
 
-  private static toView(entity: SystemEventEntity): AuditEventView {
+  private static toRecord(entity: SystemEventEntity): AuditEventRecord {
     return {
       eventId: entity.id,
       eventName: entity.eventName,

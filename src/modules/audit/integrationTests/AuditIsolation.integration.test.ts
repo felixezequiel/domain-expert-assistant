@@ -18,6 +18,7 @@ import { MissingTenantContextError } from "../../../shared/application/tenancy/T
 import { InMemoryAuditTrailRepository } from "../infrastructure/persistence/in-memory/InMemoryAuditTrailRepository.ts";
 import { ListAuditTrailUseCase } from "../application/usecase/ListAuditTrailUseCase.ts";
 import { ListAuditTrailQuery } from "../application/query/ListAuditTrailQuery.ts";
+import { NullUserDirectory } from "../../../shared/application/NullUserDirectory.ts";
 
 class NoteId extends Identifier {}
 
@@ -121,7 +122,7 @@ describe("Audit isolation (PRD-0)", () => {
       applicationService.execute(useCase, { id: "note-b1", companyId: "company-B" }),
     );
 
-    const listAuditTrail = new ListAuditTrailUseCase(repository);
+    const listAuditTrail = new ListAuditTrailUseCase(repository, new NullUserDirectory());
 
     const seenByA = await runWithActor(TENANT_A, () =>
       listAuditTrail.execute(ListAuditTrailQuery.of()),
@@ -152,7 +153,7 @@ describe("Audit isolation (PRD-0)", () => {
       applicationService.execute(useCase, { id: "note-a1", companyId: "company-A" }),
     );
 
-    const listAuditTrail = new ListAuditTrailUseCase(repository);
+    const listAuditTrail = new ListAuditTrailUseCase(repository, new NullUserDirectory());
 
     const seenByA = await runWithActor(TENANT_A, () =>
       listAuditTrail.execute(ListAuditTrailQuery.of()),
@@ -181,7 +182,7 @@ describe("Audit isolation (PRD-0)", () => {
     );
 
     const seenByB = await runWithActor(TENANT_B, () =>
-      new ListAuditTrailUseCase(repository).execute(ListAuditTrailQuery.of()),
+      new ListAuditTrailUseCase(repository, new NullUserDirectory()).execute(ListAuditTrailQuery.of()),
     );
     assert.equal(seenByB.length, 0);
   });
@@ -190,7 +191,7 @@ describe("Audit isolation (PRD-0)", () => {
     const { repository } = buildStack();
 
     await assert.rejects(
-      () => new ListAuditTrailUseCase(repository).execute(ListAuditTrailQuery.of()),
+      () => new ListAuditTrailUseCase(repository, new NullUserDirectory()).execute(ListAuditTrailQuery.of()),
       MissingTenantContextError,
     );
   });

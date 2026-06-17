@@ -99,7 +99,7 @@ export function VersionHistoryPage(): JSX.Element {
       <TableRow key={version.versionNumber}>
         <TableCell className="font-medium">v{version.versionNumber}</TableCell>
         <TableCell>{version.title}</TableCell>
-        <TableCell>{version.createdBy}</TableCell>
+        <TableCell>{version.createdByName ?? version.createdBy}</TableCell>
         <TableCell>{formatDateTime(version.createdAt)}</TableCell>
         <TableCell className="text-right">
           <Button

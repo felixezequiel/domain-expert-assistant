@@ -24,6 +24,7 @@ import {
   ListKnowledgeItemsUseCase,
   GetVersionHistoryUseCase,
 } from "../../knowledge/application/usecase/KnowledgeQueries.ts";
+import { NullUserDirectory } from "../../../shared/application/NullUserDirectory.ts";
 
 const PROJECTION_INTERVAL_MS = 1000;
 
@@ -55,7 +56,12 @@ export class RetrievalModuleFactory {
     const publishedItemReader = new PublishedItemReaderAdapter(
       new GetKnowledgeItemUseCase(new KnowledgeItemRepository(entityManagerProvider)),
       new ListKnowledgeItemsUseCase(new KnowledgeItemRepository(entityManagerProvider)),
-      new GetVersionHistoryUseCase(new KnowledgeVersionRepository(entityManagerProvider)),
+      // The projection reads versions only for body text, never the author name, so a null
+      // directory keeps Retrieval free of any dependency on the Identity context.
+      new GetVersionHistoryUseCase(
+        new KnowledgeVersionRepository(entityManagerProvider),
+        new NullUserDirectory(),
+      ),
     );
 
     const projectItem = new ProjectItemUseCase(publishedItemReader, embedder, chunkIndex);

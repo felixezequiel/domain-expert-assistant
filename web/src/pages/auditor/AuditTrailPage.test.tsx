@@ -20,6 +20,7 @@ const auditEvent: AuditEventView = {
   occurredAt: "2026-01-01T00:00:00.000Z",
   companyId: "c1",
   actorId: "u1",
+  actorName: "Ada Lovelace",
   actorType: "user",
   causationId: null,
 };
@@ -42,6 +43,9 @@ describe("AuditTrailPage", () => {
     expect(events).toHaveBeenCalledWith(
       expect.objectContaining({ aggregateId: "i1", limit: 100 }),
     );
+    // Actor shown as a resolved display name, not the raw UUID (U2).
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.queryByText("u1")).not.toBeInTheDocument();
     // formatted, not raw ISO (U2)
     expect(screen.queryByText(auditEvent.occurredAt)).not.toBeInTheDocument();
     expect(screen.getByText(formatDateTime(auditEvent.occurredAt))).toBeInTheDocument();

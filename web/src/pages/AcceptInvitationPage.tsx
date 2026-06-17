@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { authApi } from "../api/resources.ts";
 import { ApiError } from "../api/ApiError.ts";
+import { useAsync } from "../hooks/useAsync.ts";
+import { Badge } from "../components/ui/badge.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -17,12 +19,20 @@ function submitErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
 
-// Reached via /#/invitations/:token — an invited user sets a password to activate the
-// account, then is sent to the login screen. Password match + length are validated
+// Reached via /#/invitations/:token. Before asking for a password we fetch the invitation's
+// public context (org, invited email, roles) so the invitee knows what they're joining; then
+// they set a password to activate the account. Password match + length are validated
 // client-side before the API is called.
 export function AcceptInvitationPage(): JSX.Element {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const invitation = useAsync(
+    () =>
+      token === undefined
+        ? Promise.reject(new Error("Missing invitation token."))
+        : authApi.invitation(token),
+    [token],
+  );
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -82,14 +92,55 @@ export function AcceptInvitationPage(): JSX.Element {
     );
   }
 
+  if (invitation.error !== null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl">Invitation not found</CardTitle>
+            <CardDescription>
+              This invitation link is invalid or has already been used. Ask an administrator to
+              send a new one.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
+              Back to sign in
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const context = invitation.data;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl">Accept your invitation</CardTitle>
+          <CardTitle className="text-xl">
+            {context === null ? "Accept your invitation" : `Join ${context.organizationName}`}
+          </CardTitle>
           <CardDescription>Set a password to activate your account, then sign in.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {context !== null ? (
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 px-3 py-3 text-sm">
+              <p className="text-muted-foreground">
+                Invited as <span className="font-medium text-foreground">{context.email}</span>
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-muted-foreground">Roles:</span>
+                {context.roles.map((role) => (
+                  <Badge key={role} variant="secondary">
+                    {role}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <form className="space-y-4" onSubmit={(event) => void submit(event)}>
             <div className="space-y-1.5">
               <Label htmlFor="invite-password">Password</Label>

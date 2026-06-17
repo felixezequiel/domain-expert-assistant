@@ -76,6 +76,8 @@ export interface KnowledgeVersionView {
   readonly tagIds: ReadonlyArray<string>;
   readonly sensitivity: string;
   readonly createdBy: string;
+  // Resolved author display name (null when the backend cannot resolve it — fall back to createdBy).
+  readonly createdByName: string | null;
   readonly createdAt: string;
 }
 
@@ -142,6 +144,8 @@ export interface AuditEventView {
   readonly occurredAt: string;
   readonly companyId: string | null;
   readonly actorId: string | null;
+  // Resolved actor display name (null for a system/operator actor — fall back to actorId).
+  readonly actorName: string | null;
   readonly actorType: string | null;
   readonly causationId: string | null;
 }
@@ -149,4 +153,11 @@ export interface AuditEventView {
 export interface InvitedUser {
   readonly userId: string;
   readonly invitationToken: string;
+}
+
+/** GET /invitations/:token — public context for the accept-invitation screen. */
+export interface InvitationView {
+  readonly organizationName: string;
+  readonly email: string;
+  readonly roles: ReadonlyArray<string>;
 }

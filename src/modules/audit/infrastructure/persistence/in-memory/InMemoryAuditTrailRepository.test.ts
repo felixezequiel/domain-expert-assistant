@@ -2,11 +2,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { InMemoryAuditTrailRepository } from "./InMemoryAuditTrailRepository.ts";
 import { ListAuditTrailQuery } from "../../../application/query/ListAuditTrailQuery.ts";
-import type { AuditEventView } from "../../../application/types.ts";
+import type { AuditEventRecord } from "../../../application/types.ts";
 import { runWithActor } from "../../../../../shared/application/context/ActorContext.ts";
 import { MissingTenantContextError } from "../../../../../shared/application/tenancy/TenantScopeResolution.ts";
 
-function view(overrides: Partial<AuditEventView>): AuditEventView {
+function view(overrides: Partial<AuditEventRecord>): AuditEventRecord {
   return {
     eventId: "e",
     eventName: "Sample",
@@ -20,7 +20,7 @@ function view(overrides: Partial<AuditEventView>): AuditEventView {
   };
 }
 
-function repoWith(events: ReadonlyArray<AuditEventView>): InMemoryAuditTrailRepository {
+function repoWith(events: ReadonlyArray<AuditEventRecord>): InMemoryAuditTrailRepository {
   const repo = new InMemoryAuditTrailRepository();
   for (const event of events) {
     repo.seed(event);

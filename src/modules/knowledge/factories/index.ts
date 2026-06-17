@@ -6,6 +6,7 @@ import { MikroOrmAggregatePersister } from "../../../shared/infrastructure/persi
 
 import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
 import type { OrganizationPolicyPort } from "../application/types.ts";
+import type { UserDirectoryPort } from "../../../shared/ports/UserDirectoryPort.ts";
 
 import { KnowledgeItem } from "../domain/aggregates/KnowledgeItem.ts";
 import { Collection } from "../domain/aggregates/Collection.ts";
@@ -51,6 +52,8 @@ import { KnowledgeModule } from "../bootstrap/KnowledgeModule.ts";
 export interface KnowledgeModuleDependencies {
   readonly resolveSession: ResolveSessionUseCase;
   readonly organizationPolicy: OrganizationPolicyPort;
+  // Resolves version-history author ids to display names (ADR-013-style cross-module read).
+  readonly userDirectory: UserDirectoryPort;
 }
 
 export interface KnowledgeModuleSetup {
@@ -118,7 +121,7 @@ export class KnowledgeModuleFactory {
           removeTenantTag: new RemoveTenantTagUseCase(tagRepository, itemRepository),
           getKnowledgeItem: new GetKnowledgeItemUseCase(itemRepository),
           listKnowledgeItems: new ListKnowledgeItemsUseCase(itemRepository),
-          getVersionHistory: new GetVersionHistoryUseCase(versionRepository),
+          getVersionHistory: new GetVersionHistoryUseCase(versionRepository, deps.userDirectory),
           listCollections: new ListCollectionsUseCase(collectionRepository),
           listTags: new ListTagsUseCase(tagRepository),
         });

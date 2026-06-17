@@ -25,6 +25,14 @@ const DEFAULT_LIMIT = 100;
 
 type Mutable<T> = { -readonly [Key in keyof T]: T[Key] };
 
+// Prefer the resolved actor display name; fall back to the raw id, then to "system".
+function actorLabel(event: AuditEventView): string {
+  if (event.actorName !== null) {
+    return event.actorName;
+  }
+  return event.actorId ?? "system";
+}
+
 // Read-only audit trail (Auditor persona). Filters by aggregate / actor / event name /
 // time window. The endpoint is auditor/admin-gated server-side; a 403 renders as
 // "not permitted" via ErrorNotice (the router also gates this page by capability).
@@ -100,7 +108,7 @@ export function AuditTrailPage(): JSX.Element {
             {event.aggregateId}
           </code>
         </TableCell>
-        <TableCell>{event.actorId ?? "system"}</TableCell>
+        <TableCell>{actorLabel(event)}</TableCell>
         <TableCell>{event.actorType ?? "system"}</TableCell>
       </TableRow>
     ));

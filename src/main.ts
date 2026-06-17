@@ -40,6 +40,7 @@ async function main(): Promise<void> {
   const knowledgeModule = KnowledgeModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
     organizationPolicy: identityModule.organizationPolicy,
+    userDirectory: identityModule.userDirectory,
   });
   const ingestionModule = IngestionModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
@@ -57,6 +58,7 @@ async function main(): Promise<void> {
   // Audit trail (PRD-6, Auditor): read-only window onto the tenant's domain-event stream.
   const auditModule = AuditModuleFactory.create(entityManagerProvider, {
     resolveSession: identityModule.resolveSession,
+    userDirectory: identityModule.userDirectory,
   });
 
   // --- Shared infrastructure ---

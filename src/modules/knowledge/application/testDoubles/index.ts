@@ -13,6 +13,7 @@ import type { CollectionId } from "../../domain/identifiers/CollectionId.ts";
 import type { Tag } from "../../domain/aggregates/Tag.ts";
 import type { TagId } from "../../domain/identifiers/TagId.ts";
 import type { KnowledgeVersion } from "../../domain/entities/KnowledgeVersion.ts";
+import type { UserDirectoryPort } from "../../../../shared/ports/UserDirectoryPort.ts";
 
 /**
  * In-memory port doubles for Knowledge application unit tests (hexagonal rule: app tests
@@ -136,5 +137,24 @@ export class FakeOrganizationPolicy implements OrganizationPolicyPort {
   constructor(private readonly value: boolean) {}
   public async requireSeparateReviewer(): Promise<boolean> {
     return this.value;
+  }
+}
+
+export class FakeUserDirectory implements UserDirectoryPort {
+  private readonly names: ReadonlyMap<string, string>;
+  constructor(names: Record<string, string> = {}) {
+    this.names = new Map(Object.entries(names));
+  }
+  public async resolveDisplayNames(
+    userIds: ReadonlyArray<string>,
+  ): Promise<ReadonlyMap<string, string>> {
+    const resolved = new Map<string, string>();
+    for (const userId of userIds) {
+      const name = this.names.get(userId);
+      if (name !== undefined) {
+        resolved.set(userId, name);
+      }
+    }
+    return resolved;
   }
 }

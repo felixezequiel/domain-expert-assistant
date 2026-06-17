@@ -84,6 +84,9 @@ export interface KnowledgeVersionView {
   readonly tagIds: ReadonlyArray<string>;
   readonly sensitivity: string;
   readonly createdBy: string;
+  // The author's display name, resolved from the user directory (null when it cannot be
+  // resolved — e.g. a system author — so the UI falls back to the id).
+  readonly createdByName: string | null;
   readonly createdAt: string;
 }
 

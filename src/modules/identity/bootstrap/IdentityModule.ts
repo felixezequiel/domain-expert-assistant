@@ -37,12 +37,14 @@ import type { ListConsumerCredentialsUseCase } from "../application/usecase/List
 import type { DescribeCurrentUserUseCase } from "../application/usecase/DescribeCurrentUserUseCase.ts";
 import type { ListOrgUsersUseCase } from "../application/usecase/ListOrgUsersUseCase.ts";
 import type { ReadOrgPolicyUseCase } from "../application/usecase/ReadOrgPolicyUseCase.ts";
+import type { DescribeInvitationUseCase } from "../application/usecase/DescribeInvitationUseCase.ts";
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
 const HTTP_INTERNAL_ERROR = 500;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 
@@ -70,6 +72,7 @@ export interface IdentityModuleDeps {
   readonly describeCurrentUser: DescribeCurrentUserUseCase;
   readonly listOrgUsers: ListOrgUsersUseCase;
   readonly readOrgPolicy: ReadOrgPolicyUseCase;
+  readonly describeInvitation: DescribeInvitationUseCase;
   readonly operatorSecret: string | null;
   readonly sessionTtlSeconds: number;
   readonly cookieSecure: boolean;
@@ -102,6 +105,9 @@ export class IdentityModule {
     });
     httpServer.rawPost("/operator/organizations", (request, response) => {
       void this.handleProvision(request, response);
+    });
+    httpServer.rawGet("/invitations/:token", (request, response, params) => {
+      void this.handleDescribeInvitation(response, params.token!);
     });
     httpServer.rawPost("/invitations/:token/accept", (request, response, params) => {
       void this.handleAcceptInvitation(request, response, params.token!);
@@ -233,6 +239,24 @@ export class IdentityModule {
         );
         const organization = await this.deps.applicationService.execute(this.deps.provisionOrganization, command);
         return { statusCode: HTTP_CREATED, body: { organizationId: organization.id.value } };
+      }),
+    );
+  }
+
+  private async handleDescribeInvitation(response: ServerResponse, token: string): Promise<void> {
+    // Public, pre-auth lookup keyed by the bearer token — run in a system scope so the
+    // privileged (unfiltered) read can find the invited user across tenants.
+    const system: Actor = { companyId: null, actorId: null, actorType: "system" };
+    await this.runAndRespond(response, () =>
+      runWithActor(system, async () => {
+        const invitation = await this.deps.applicationService.execute(
+          this.deps.describeInvitation,
+          token,
+        );
+        if (invitation === null) {
+          return { statusCode: HTTP_NOT_FOUND, body: { error: "Invitation not found" } };
+        }
+        return { statusCode: HTTP_OK, body: invitation };
       }),
     );
   }
