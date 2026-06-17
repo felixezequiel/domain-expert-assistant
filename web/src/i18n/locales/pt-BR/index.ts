@@ -7,6 +7,7 @@ import review from "./review.json";
 import audit from "./audit.json";
 import consumer from "./consumer.json";
 import admin from "./admin.json";
+import errors from "./errors.json";
 
 // Single `translation` namespace, grouped by area. Each section is its own JSON file so the
 // translation work parallelises without file conflicts. Keys are dotted: t("nav.links.home").
@@ -20,4 +21,5 @@ export const ptBR = {
   audit,
   consumer,
   admin,
+  errors,
 };

@@ -1,0 +1,7 @@
+{
+  "common": {
+    "forbiddenRole": "Not permitted: your role cannot perform this action.",
+    "unauthorized": "Please sign in.",
+    "unexpected": "Something went wrong."
+  }
+}

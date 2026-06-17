@@ -1,0 +1,7 @@
+{
+  "common": {
+    "forbiddenRole": "Sem permissão: seu papel não pode executar esta ação.",
+    "unauthorized": "Faça login.",
+    "unexpected": "Algo deu errado."
+  }
+}

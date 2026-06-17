@@ -17,10 +17,14 @@ export function ErrorNotice({
   const { t } = useTranslation();
   let message: string;
   if (error instanceof ApiError) {
-    if (error.isForbidden) {
-      message = t("common.errors.forbidden");
-    } else if (error.isUnauthorized) {
+    if (error.isUnauthorized) {
+      // A 401 is treated as a session concern regardless of the backend code (client UX).
       message = t("common.errors.sessionExpired");
+    } else if (error.code !== undefined) {
+      // Translate the backend's stable error code (ADR-026); fall back to its English message.
+      message = t("errors." + error.code, { ...(error.params ?? {}), defaultValue: error.message });
+    } else if (error.isForbidden) {
+      message = t("common.errors.forbidden");
     } else {
       message = error.message;
     }

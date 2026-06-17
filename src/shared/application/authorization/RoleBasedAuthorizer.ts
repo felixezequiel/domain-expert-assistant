@@ -1,10 +1,16 @@
 import type { AuthorizerPort } from "../../ports/AuthorizerPort.ts";
 import type { Role } from "../../domain/Role.ts";
+import { DomainError } from "../../domain/errors/DomainError.ts";
 import { getCurrentActor } from "../context/ActorContext.ts";
 
-export class UnauthorizedError extends Error {
+export class UnauthorizedError extends DomainError {
   constructor(requiredRoles: ReadonlyArray<Role>) {
-    super("Forbidden: requires one of the roles [" + requiredRoles.join(", ") + "].");
+    super(
+      "common.forbiddenRole",
+      "forbidden",
+      { roles: requiredRoles.join(", ") },
+      "Forbidden: requires one of the roles [" + requiredRoles.join(", ") + "].",
+    );
     this.name = "UnauthorizedError";
   }
 }

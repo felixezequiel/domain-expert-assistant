@@ -27,7 +27,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = await readPayload(response);
 
   if (!response.ok) {
-    throw new ApiError(response.status, extractMessage(payload, response.status));
+    const { code, message, params } = extractError(payload, response.status);
+    throw new ApiError(response.status, message, code, params);
   }
 
   return payload as T;
@@ -59,14 +60,32 @@ async function readPayload(response: Response): Promise<unknown> {
   }
 }
 
-function extractMessage(payload: unknown, status: number): string {
-  if (payload !== null && typeof payload === "object" && "error" in payload) {
-    const error = (payload as { error: unknown }).error;
-    if (typeof error === "string" && error.length > 0) {
-      return error;
+interface ExtractedError {
+  readonly code: string | undefined;
+  readonly message: string;
+  readonly params: Record<string, string | number> | undefined;
+}
+
+// Backend error shape (ADR-026): { error: "<code>", message: "<english>", params?: {...} }.
+// A migrated response has both `error` (the stable code) and `message` (English fallback);
+// a legacy response sent only `error` as an English string.
+function extractError(payload: unknown, status: number): ExtractedError {
+  if (payload !== null && typeof payload === "object") {
+    const shape = payload as { error?: unknown; message?: unknown; params?: unknown };
+    const errorText = typeof shape.error === "string" && shape.error.length > 0 ? shape.error : undefined;
+    const messageText = typeof shape.message === "string" && shape.message.length > 0 ? shape.message : undefined;
+    const params =
+      shape.params !== null && typeof shape.params === "object"
+        ? (shape.params as Record<string, string | number>)
+        : undefined;
+    if (messageText !== undefined) {
+      return { code: errorText, message: messageText, params };
+    }
+    if (errorText !== undefined) {
+      return { code: undefined, message: errorText, params: undefined };
     }
   }
-  return `Request failed with status ${status}`;
+  return { code: undefined, message: `Request failed with status ${status}`, params: undefined };
 }
 
 function get<T>(path: string, query?: RequestOptions["query"]): Promise<T> {

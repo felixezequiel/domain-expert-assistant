@@ -7,6 +7,7 @@ import review from "./review.json";
 import audit from "./audit.json";
 import consumer from "./consumer.json";
 import admin from "./admin.json";
+import errors from "./errors.json";
 
 // en-US values are the verbatim original UI copy, so component tests (pinned to en-US) keep
 // asserting the same strings. Keys mirror pt-BR. Dotted keys: t("nav.links.home").
@@ -20,4 +21,5 @@ export const enUS = {
   audit,
   consumer,
   admin,
+  errors,
 };
