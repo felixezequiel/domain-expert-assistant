@@ -26,11 +26,27 @@ they're committed on purpose, so we don't have to recreate or remember them each
 The admin can reach every screen (admin implies all capabilities); the others exercise the
 role-tailored navigation and the curation → review → publish lifecycle.
 
+## Demo knowledge items (all lifecycle states)
+
+The seed also creates a **"Knowledge Lifecycle Demo"** collection with one item in **each**
+state, so a dev sees the whole system at a glance:
+
+| State | Item |
+|-------|------|
+| `draft` | Release Notes — Q3 (draft) |
+| `in_review` | Refund Policy |
+| `published` | Customer Onboarding Guide — **4 different versions**, to exercise the Monaco version-compare diff |
+| `deprecated` | Incident Response Runbook |
+| `archived` | Legacy Billing Flow (sunset) |
+
+Authored by the curator and approved by the reviewer (honours `requireSeparateReviewer`).
+
 ## Seeding them
 
-The seed is **idempotent** — if the admin can already log in it does nothing. Against a fresh
-database it provisions the org + admin (operator endpoint) and then invites + activates the
-members.
+The seed runs **two idempotent steps**: (1) accounts — if the admin can already log in it
+reuses them, otherwise it provisions the org + admin (operator endpoint) and invites +
+activates the members; (2) demo items — if the "Knowledge Lifecycle Demo" collection exists it
+skips, otherwise it creates the items above.
 
 ```bash
 docker compose up -d
