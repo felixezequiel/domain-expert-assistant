@@ -1,4 +1,5 @@
 import { ValueObject } from "../../../../shared/domain/valueObjects/ValueObject.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 interface MimeTypeProps {
   readonly value: string;
@@ -23,7 +24,12 @@ export class MimeType extends ValueObject<MimeTypeProps> {
   constructor(value: string) {
     const normalized = value.trim().toLowerCase();
     if (!SUPPORTED_MIMES.includes(normalized)) {
-      throw new Error("Unsupported document mime type: " + value);
+      throw new DomainError(
+        "ingestion.unsupportedMimeType",
+        "validation",
+        { mimeType: value },
+        "Unsupported document mime type: " + value,
+      );
     }
     super({ value: normalized });
   }

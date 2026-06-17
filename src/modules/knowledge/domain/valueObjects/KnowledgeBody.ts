@@ -1,4 +1,5 @@
 import { ValueObject } from "../../../../shared/domain/valueObjects/ValueObject.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 interface KnowledgeBodyProps {
   readonly value: string;
@@ -16,7 +17,7 @@ export class KnowledgeBody extends ValueObject<KnowledgeBodyProps> {
   constructor(value: string) {
     const trimmed = value.trim();
     if (trimmed.length === 0) {
-      throw new Error("Body cannot be empty");
+      throw new DomainError("knowledge.bodyEmpty", "validation", undefined, "Body cannot be empty");
     }
     super({ value: trimmed });
   }

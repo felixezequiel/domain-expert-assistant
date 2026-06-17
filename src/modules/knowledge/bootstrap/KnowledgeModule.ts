@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
 import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
 import { readSessionToken } from "../../identity/infrastructure/http/SessionCookie.ts";
@@ -49,10 +51,6 @@ import type {
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
-const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
-const HTTP_INTERNAL_ERROR = 500;
 
 interface RouteResult {
   readonly statusCode: number;
@@ -173,7 +171,7 @@ export class KnowledgeModule {
     const token = readSessionToken(request.headers.cookie);
     const principal = token === null ? null : await this.deps.resolveSession.execute(token);
     if (principal === null) {
-      this.respond(response, { statusCode: HTTP_UNAUTHORIZED, body: { error: "Unauthorized" } });
+      this.respondError(response, new DomainError("common.unauthorized", "unauthorized", undefined, "Unauthorized"));
       return;
     }
     const actor: Actor = {
@@ -291,7 +289,13 @@ export class KnowledgeModule {
   private async handleGetItem(itemId: string): Promise<RouteResult> {
     const item = await this.deps.applicationService.execute(this.deps.getKnowledgeItem, itemId);
     if (item === null) {
-      return { statusCode: HTTP_BAD_REQUEST, body: { error: "Knowledge item not found: " + itemId } };
+      // Kept at 400 (not 404) to preserve the current status — this ADR migrates the code, not the status.
+      throw new DomainError(
+        "knowledge.itemNotFound",
+        "validation",
+        { id: itemId },
+        "Knowledge item not found: " + itemId,
+      );
     }
     return { statusCode: HTTP_OK, body: item };
   }
@@ -356,29 +360,7 @@ export class KnowledgeModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    this.respond(response, { statusCode: KnowledgeModule.statusForError(message), body: { error: message } });
-  }
-
-  private static statusForError(message: string): number {
-    // A role-gated use case rejects with "Forbidden: requires one of the roles [...]"
-    // (ApplicationService/AuthorizerPort) — that is a 403, not a server error.
-    if (message.startsWith("Forbidden")) {
-      return HTTP_FORBIDDEN;
-    }
-    if (
-      message.includes("not found") ||
-      message.includes("already") ||
-      message.includes("Invalid") ||
-      message.includes("invalid") ||
-      message.includes("required") ||
-      message.includes("Cannot") ||
-      message.includes("cannot") ||
-      message.includes("must")
-    ) {
-      return HTTP_BAD_REQUEST;
-    }
-    return HTTP_INTERNAL_ERROR;
+    this.respond(response, toErrorResponse(error));
   }
 
   // --- body parsing helpers ---
@@ -386,7 +368,7 @@ export class KnowledgeModule {
   private static requireString(body: Record<string, unknown>, field: string): string {
     const value = body[field];
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error("Field '" + field + "' is required");
+      throw new DomainError("common.fieldRequired", "validation", { field }, "Field '" + field + "' is required");
     }
     return value;
   }
@@ -399,7 +381,12 @@ export class KnowledgeModule {
   private static requireNumber(body: Record<string, unknown>, field: string): number {
     const value = body[field];
     if (typeof value !== "number") {
-      throw new Error("Field '" + field + "' is required (number)");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required (number)",
+      );
     }
     return value;
   }
@@ -407,12 +394,22 @@ export class KnowledgeModule {
   private static requireStringArray(body: Record<string, unknown>, field: string): ReadonlyArray<string> {
     const value = body[field];
     if (!Array.isArray(value)) {
-      throw new Error("Field '" + field + "' is required (array)");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required (array)",
+      );
     }
     const result: Array<string> = [];
     for (const item of value) {
       if (typeof item !== "string") {
-        throw new Error("Field '" + field + "' must contain only strings");
+        throw new DomainError(
+          "common.fieldInvalid",
+          "validation",
+          { field },
+          "Field '" + field + "' must contain only strings",
+        );
       }
       result.push(item);
     }

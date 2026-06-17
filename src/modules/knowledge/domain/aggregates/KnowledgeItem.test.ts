@@ -7,6 +7,7 @@ import { TagId } from "../identifiers/TagId.ts";
 import { Title } from "../valueObjects/Title.ts";
 import { KnowledgeBody } from "../valueObjects/KnowledgeBody.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 function title(value = "Refund policy"): Title {
   return new Title(value);
@@ -62,6 +63,62 @@ describe("KnowledgeItem lifecycle", () => {
 
     assert.throws(() => item.approve("author-1", true), /different from the author/);
     assert.doesNotThrow(() => item.approve("author-1", false));
+  });
+
+  it("throws coded DomainErrors for the lifecycle invariants", () => {
+    const forReviewer = draftItem("author-1");
+    forReviewer.submitForReview();
+    assert.throws(
+      () => forReviewer.approve("author-1", true),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.approvalRequiresSeparateReviewer");
+        assert.equal(error.kind, "validation");
+        assert.equal(error.message, "Approval requires a reviewer different from the author/last editor");
+        return true;
+      },
+    );
+
+    const forReason = draftItem();
+    forReason.submitForReview();
+    assert.throws(
+      () => forReason.reject("   "),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.rejectionReasonRequired");
+        assert.equal(error.kind, "validation");
+        assert.equal(error.message, "A rejection reason is required");
+        return true;
+      },
+    );
+
+    assert.throws(
+      () => draftItem().deprecate(),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.invalidStatusTransition");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { action: "deprecate", status: "draft" });
+        assert.equal(error.message, "Cannot deprecate a knowledge item in status 'draft'");
+        return true;
+      },
+    );
+
+    const published = draftItem();
+    published.submitForReview();
+    published.approve("reviewer-1", true);
+    published.archive();
+    assert.throws(
+      () => published.moveToCollection(new CollectionId("c")),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.cannotModifyArchived");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { action: "move to another collection" });
+        assert.equal(error.message, "Cannot move to another collection an archived knowledge item");
+        return true;
+      },
+    );
   });
 
   it("keeps the published version serving while a new revision is edited (ADR-012)", () => {

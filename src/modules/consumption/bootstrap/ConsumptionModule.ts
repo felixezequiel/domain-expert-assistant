@@ -11,15 +11,13 @@ import type { RecordCredentialUsageUseCase } from "../application/usecase/Record
 import type { FixedWindowRateLimiter } from "../infrastructure/http/RateLimiter.ts";
 import { ConsumptionMcpTools } from "../infrastructure/mcp/ConsumptionMcpTools.ts";
 import { buildConsumptionMcpServer } from "../infrastructure/mcp/buildConsumptionMcpServer.ts";
-import { ScopeViolationError, RateLimitExceededError } from "../application/errors.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_TOO_MANY_REQUESTS = 429;
-const HTTP_INTERNAL_ERROR = 500;
 
 const BEARER_PREFIX = "Bearer ";
 
@@ -115,7 +113,7 @@ export class ConsumptionModule {
     if (credential === null) {
       this.respond(response, {
         statusCode: HTTP_UNAUTHORIZED,
-        body: { error: "Invalid or revoked API key" },
+        body: { error: "common.unauthorized", message: "Invalid or revoked API key" },
       });
       return;
     }
@@ -124,7 +122,11 @@ export class ConsumptionModule {
       response.setHeader("Retry-After", String(limit.retryAfterSeconds));
       this.respond(response, {
         statusCode: HTTP_TOO_MANY_REQUESTS,
-        body: { error: "Rate limit exceeded", retryAfterSeconds: limit.retryAfterSeconds },
+        body: {
+          error: "consumption.rateLimitExceeded",
+          message: "Rate limit exceeded",
+          params: { retryAfterSeconds: limit.retryAfterSeconds },
+        },
       });
       return;
     }
@@ -196,7 +198,10 @@ export class ConsumptionModule {
   private async handleGetItem(credential: ConsumerCredential, itemId: string): Promise<RouteResult> {
     const item = await this.deps.knowledgeQueryFacade.getItem(credential.scope, itemId);
     if (item === null) {
-      return { statusCode: HTTP_NOT_FOUND, body: { error: "Item not found" } };
+      return {
+        statusCode: HTTP_NOT_FOUND,
+        body: { error: "consumption.itemNotFound", message: "Item not found" },
+      };
     }
     return { statusCode: HTTP_OK, body: item };
   }
@@ -208,7 +213,7 @@ export class ConsumptionModule {
     if (credential === null) {
       // v1 returns a clean 401 (ADR-021); RFC 9728 discovery hook is a Phase-2 TODO, no impl.
       response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ error: "Invalid or revoked API key" }));
+      response.end(JSON.stringify({ error: "common.unauthorized", message: "Invalid or revoked API key" }));
       return;
     }
     const limit = this.deps.rateLimiter.check(credential.id.value);
@@ -217,7 +222,13 @@ export class ConsumptionModule {
         "Content-Type": "application/json",
         "Retry-After": String(limit.retryAfterSeconds),
       });
-      response.end(JSON.stringify({ error: "Rate limit exceeded", retryAfterSeconds: limit.retryAfterSeconds }));
+      response.end(
+        JSON.stringify({
+          error: "consumption.rateLimitExceeded",
+          message: "Rate limit exceeded",
+          params: { retryAfterSeconds: limit.retryAfterSeconds },
+        }),
+      );
       return;
     }
 
@@ -227,7 +238,13 @@ export class ConsumptionModule {
         body = await HttpServer.readJsonBody(request);
       } catch {
         response.writeHead(HTTP_BAD_REQUEST, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ error: "Invalid JSON body" }));
+        response.end(
+          JSON.stringify({
+            error: "common.fieldInvalid",
+            message: "Invalid JSON body",
+            params: { field: "body" },
+          }),
+        );
         return;
       }
     }
@@ -277,24 +294,6 @@ export class ConsumptionModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    if (error instanceof ScopeViolationError) {
-      this.respond(response, { statusCode: HTTP_FORBIDDEN, body: { error: error.message } });
-      return;
-    }
-    if (error instanceof RateLimitExceededError) {
-      this.respond(response, { statusCode: HTTP_TOO_MANY_REQUESTS, body: { error: error.message } });
-      return;
-    }
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    // An authorization failure ("Forbidden: requires one of the roles […]") is a 403, not a
-    // bad request — mirror the other modules. Checked first because the message also contains
-    // "required" and would otherwise fall into the 400 client-error branch.
-    if (message.startsWith("Forbidden")) {
-      this.respond(response, { statusCode: HTTP_FORBIDDEN, body: { error: message } });
-      return;
-    }
-    const isClientError = message.includes("required") || message.includes("Unknown sensitivity");
-    const statusCode = isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
-    this.respond(response, { statusCode, body: { error: message } });
+    this.respond(response, toErrorResponse(error));
   }
 }

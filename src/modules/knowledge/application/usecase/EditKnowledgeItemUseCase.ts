@@ -5,6 +5,7 @@ import type { KnowledgeItemRepositoryPort, KnowledgeVersionRepositoryPort } from
 import type { EditKnowledgeItemCommand } from "../command/EditKnowledgeItemCommand.ts";
 import type { KnowledgeItem } from "../../domain/aggregates/KnowledgeItem.ts";
 import { snapshotOf } from "../knowledgeVersionSnapshot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Curator edits an item's content, creating a new working version. If the item was
@@ -31,11 +32,21 @@ export class EditKnowledgeItemUseCase implements UseCase<EditKnowledgeItemComman
   public async execute(command: EditKnowledgeItemCommand): Promise<KnowledgeItem> {
     const editorId = getCurrentActor()?.actorId ?? null;
     if (editorId === null) {
-      throw new Error("Cannot edit without an actor in the context");
+      throw new DomainError(
+        "knowledge.missingActor",
+        "validation",
+        undefined,
+        "Cannot edit without an actor in the context",
+      );
     }
     const item = await this.itemRepository.findById(command.itemId);
     if (item === null) {
-      throw new Error("Knowledge item not found: " + command.itemId.value);
+      throw new DomainError(
+        "knowledge.itemNotFound",
+        "validation",
+        { id: command.itemId.value },
+        "Knowledge item not found: " + command.itemId.value,
+      );
     }
 
     const changed = item.edit(command.title, command.body, command.sensitivity, command.tagIds, editorId);

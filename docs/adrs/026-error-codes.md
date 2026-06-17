@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito — fundação implementada (2026-06-17); migração dos `throw` por módulo em andamento.
+Aceito — implementado (2026-06-17). Todos os módulos migrados (Identity, Knowledge, Ingestion, Retrieval, Consumption, Audit + shared kernel); cada edge serializa via `toErrorResponse` e o `statusForError` por substring foi removido.
 
 ## Data
 

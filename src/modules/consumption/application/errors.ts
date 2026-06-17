@@ -1,15 +1,21 @@
 /**
- * Application errors for the Consumption Gateway (PRD-5). These map to HTTP/MCP status at
- * the edge: a `ScopeViolationError` is a 403 (the request named a collection outside the
- * credential's allowlist — the request may only narrow, never widen, ADR-022); a
- * `RateLimitExceededError` is a 429.
+ * Application errors for the Consumption Gateway (PRD-5). These carry a stable code + kind
+ * (ADR-026) the edge serializes via `toErrorResponse`: a `ScopeViolationError` is a 403
+ * (`forbidden` — the request named a collection outside the credential's allowlist; the
+ * request may only narrow, never widen, ADR-022); a `RateLimitExceededError` is a 429
+ * (`rate_limited`).
  */
 
-export class ScopeViolationError extends Error {
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
+
+export class ScopeViolationError extends DomainError {
   public readonly collectionId: string;
 
   constructor(collectionId: string) {
     super(
+      "consumption.scopeViolation",
+      "forbidden",
+      { collectionId },
       "Scope violation: collection '" +
         collectionId +
         "' is outside the credential's allowed scope.",
@@ -19,11 +25,16 @@ export class ScopeViolationError extends Error {
   }
 }
 
-export class RateLimitExceededError extends Error {
+export class RateLimitExceededError extends DomainError {
   public readonly retryAfterSeconds: number;
 
   constructor(retryAfterSeconds: number) {
-    super("Rate limit exceeded. Retry after " + String(retryAfterSeconds) + " seconds.");
+    super(
+      "consumption.rateLimitExceeded",
+      "rate_limited",
+      { retryAfterSeconds },
+      "Rate limit exceeded. Retry after " + String(retryAfterSeconds) + " seconds.",
+    );
     this.name = "RateLimitExceededError";
     this.retryAfterSeconds = retryAfterSeconds;
   }

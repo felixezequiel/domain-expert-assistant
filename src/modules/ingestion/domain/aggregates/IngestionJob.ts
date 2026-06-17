@@ -1,5 +1,6 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
 import type { TenantScoped } from "../../../../shared/domain/TenantScoped.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { IngestionJobId } from "../identifiers/IngestionJobId.ts";
 import type { MimeType } from "../valueObjects/MimeType.ts";
 import type { IngestionStatus } from "../valueObjects/IngestionStatus.ts";
@@ -142,7 +143,12 @@ export class IngestionJob extends AggregateRoot<IngestionJobId, IngestionJobProp
 
   public fail(reason: string): void {
     if (this.props.status !== "pending" && this.props.status !== "processing") {
-      throw new Error("Cannot fail an ingestion job in status '" + this.props.status + "'");
+      throw new DomainError(
+        "ingestion.invalidJobTransition",
+        "validation",
+        { action: "fail", status: this.props.status },
+        "Cannot fail an ingestion job in status '" + this.props.status + "'",
+      );
     }
     this.props.status = "failed";
     this.props.failureReason = reason;
@@ -158,7 +164,12 @@ export class IngestionJob extends AggregateRoot<IngestionJobId, IngestionJobProp
 
   private assertStatus(expected: IngestionStatus, action: string): void {
     if (this.props.status !== expected) {
-      throw new Error("Cannot " + action + " an ingestion job in status '" + this.props.status + "'");
+      throw new DomainError(
+        "ingestion.invalidJobTransition",
+        "validation",
+        { action, status: this.props.status },
+        "Cannot " + action + " an ingestion job in status '" + this.props.status + "'",
+      );
     }
   }
 }

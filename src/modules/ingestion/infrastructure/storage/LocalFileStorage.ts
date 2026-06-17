@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { FileStoragePort } from "../../application/types.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const STORAGE_ROOT = "data/ingestion";
 
@@ -21,14 +22,24 @@ export class LocalFileStorage implements FileStoragePort {
   public async read(companyId: string, storageRef: string): Promise<Buffer> {
     const actorCompanyId = getCurrentActor()?.companyId ?? null;
     if (actorCompanyId !== companyId) {
-      throw new Error("Fail-closed: cannot read a file outside the current tenant scope");
+      throw new DomainError(
+        "ingestion.crossTenantRead",
+        "internal",
+        undefined,
+        "Fail-closed: cannot read a file outside the current tenant scope",
+      );
     }
     return readFile(LocalFileStorage.pathFor(companyId, storageRef));
   }
 
   private static pathFor(companyId: string, storageRef: string): string {
     if (storageRef.includes("..") || companyId.includes("..")) {
-      throw new Error("Invalid storage reference");
+      throw new DomainError(
+        "ingestion.invalidStorageReference",
+        "internal",
+        undefined,
+        "Invalid storage reference",
+      );
     }
     return resolve(STORAGE_ROOT, storageRef);
   }

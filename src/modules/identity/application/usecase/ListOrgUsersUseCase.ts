@@ -2,6 +2,7 @@ import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import type { UserRepositoryPort } from "../types.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /** A user row for the admin roster — never includes the password hash. */
 export interface OrgUserView {
@@ -28,7 +29,12 @@ export class ListOrgUsersUseCase implements UseCase<void, ReadonlyArray<OrgUserV
   public async execute(): Promise<ReadonlyArray<OrgUserView>> {
     const companyId = getCurrentActor()?.companyId ?? null;
     if (companyId === null) {
-      throw new Error("Cannot list users without a tenant in the context");
+      throw new DomainError(
+        "identity.listUsersWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot list users without a tenant in the context",
+      );
     }
 
     const users = await this.userRepository.listByCompany(companyId);

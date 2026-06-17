@@ -4,6 +4,7 @@ import { KnowledgeVersionRepository } from "./KnowledgeVersionRepository.ts";
 import { createFakeEntityManagerProvider } from "./testing/index.ts";
 import { runWithTenant } from "../../../../../../shared/infrastructure/http/context/TenantContext.ts";
 import { KnowledgeVersion } from "../../../../domain/entities/KnowledgeVersion.ts";
+import { DomainError } from "../../../../../../shared/domain/errors/DomainError.ts";
 
 function buildVersion(itemId: string, versionNumber: number): KnowledgeVersion {
   return new KnowledgeVersion({
@@ -52,6 +53,15 @@ describe("KnowledgeVersionRepository", () => {
   it("requires a tenant in context to append", async () => {
     const repo = new KnowledgeVersionRepository(createFakeEntityManagerProvider());
 
-    await assert.rejects(() => repo.append(buildVersion("item-1", 1)), /tenant/i);
+    await assert.rejects(
+      () => repo.append(buildVersion("item-1", 1)),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.missingTenant");
+        assert.equal(error.kind, "validation");
+        assert.equal(error.message, "Cannot append a knowledge version without a tenant in context");
+        return true;
+      },
+    );
   });
 });

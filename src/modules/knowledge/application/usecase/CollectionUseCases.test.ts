@@ -6,6 +6,7 @@ import { FakeCollectionRepository } from "../testDoubles/index.ts";
 import { Collection } from "../../domain/aggregates/Collection.ts";
 import { CollectionId } from "../../domain/identifiers/CollectionId.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const ADMIN = { companyId: "company-1", actorId: "admin-1", actorType: "user" as const, roles: ["admin" as const] };
 
@@ -27,7 +28,13 @@ describe("CollectionUseCases", () => {
 
     await assert.rejects(
       () => runWithActor(ADMIN, () => useCase.execute(CreateCollectionCommand.of("c1", "Policies", null))),
-      /already exists/,
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.collectionNameExists");
+        assert.equal(error.kind, "validation");
+        assert.equal(error.message, "A collection with this name already exists");
+        return true;
+      },
     );
   });
 

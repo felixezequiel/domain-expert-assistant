@@ -17,6 +17,9 @@ function loginErrorMessage(error: unknown, t: Translate): string {
     if (error.isUnauthorized) {
       return t("auth.errors.invalidCredentials");
     }
+    if (error.code !== undefined) {
+      return t("errors." + error.code, { ...error.params, defaultValue: error.message });
+    }
     return error.message;
   }
   return error instanceof Error ? error.message : t("auth.errors.generic");

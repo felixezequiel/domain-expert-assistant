@@ -7,6 +7,7 @@ import type {
 } from "../types.ts";
 import type { ProcessIngestionJobCommand } from "../command/IngestionCommands.ts";
 import type { IngestionJob } from "../../domain/aggregates/IngestionJob.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 // Keep the derived title within the Knowledge Title value object's bound (1..200 chars).
 const MAX_DERIVED_TITLE_LENGTH = 200;
@@ -69,7 +70,12 @@ export class ProcessIngestionJobUseCase implements UseCase<ProcessIngestionJobCo
         return extractor;
       }
     }
-    throw new Error("No extractor available for mime type: " + mimeType);
+    throw new DomainError(
+      "ingestion.noExtractorAvailable",
+      "internal",
+      { mimeType },
+      "No extractor available for mime type: " + mimeType,
+    );
   }
 
   /**

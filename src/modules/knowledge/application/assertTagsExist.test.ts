@@ -4,6 +4,7 @@ import { assertTagsExist } from "./assertTagsExist.ts";
 import { FakeTagRepository } from "./testDoubles/index.ts";
 import { Tag } from "../domain/aggregates/Tag.ts";
 import { TagId } from "../domain/identifiers/TagId.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 
 describe("assertTagsExist", () => {
   it("passes when every tag exists", async () => {
@@ -22,6 +23,16 @@ describe("assertTagsExist", () => {
     const repo = new FakeTagRepository();
     await repo.save(Tag.createTenantTag(new TagId("t1"), "company-1", "Refunds"));
 
-    await assert.rejects(() => assertTagsExist(repo, [new TagId("t1"), new TagId("ghost")]), /ghost/);
+    await assert.rejects(
+      () => assertTagsExist(repo, [new TagId("t1"), new TagId("ghost")]),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.unknownTags");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { tags: "ghost" });
+        assert.equal(error.message, "Unknown tag(s) for this organization: ghost");
+        return true;
+      },
+    );
   });
 });

@@ -6,6 +6,7 @@ import type { Organization } from "../../domain/aggregates/Organization.ts";
 import { OrganizationId } from "../../domain/identifiers/OrganizationId.ts";
 import { OrganizationPolicy } from "../../domain/valueObjects/OrganizationPolicy.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Admin toggles their own org's governance policy. The org id is the actor context tenant
@@ -25,12 +26,22 @@ export class SetOrganizationPolicyUseCase
   public async execute(command: SetOrganizationPolicyCommand): Promise<Organization> {
     const companyId = getCurrentActor()?.companyId;
     if (companyId === null || companyId === undefined) {
-      throw new Error("Cannot change policy without a tenant in the actor context");
+      throw new DomainError(
+        "identity.policyChangeWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot change policy without a tenant in the actor context",
+      );
     }
 
     const organization = await this.organizationRepository.findById(new OrganizationId(companyId));
     if (organization === null) {
-      throw new Error("Organization not found: " + companyId);
+      throw new DomainError(
+        "identity.organizationNotFound",
+        "validation",
+        { id: companyId },
+        "Organization not found: " + companyId,
+      );
     }
 
     organization.changePolicy(OrganizationPolicy.of(command.requireSeparateReviewer));

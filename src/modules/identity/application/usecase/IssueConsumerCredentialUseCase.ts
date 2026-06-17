@@ -4,6 +4,7 @@ import type { ConsumerCredentialRepositoryPort, OpaqueSecretPort } from "../type
 import type { IssueConsumerCredentialCommand } from "../command/IssueConsumerCredentialCommand.ts";
 import { ConsumerCredential } from "../../domain/aggregates/ConsumerCredential.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export interface IssueConsumerCredentialResult {
   readonly credential: ConsumerCredential;
@@ -34,7 +35,12 @@ export class IssueConsumerCredentialUseCase
     const companyId = actor?.companyId ?? null;
     const createdBy = actor?.actorId ?? null;
     if (companyId === null || createdBy === null) {
-      throw new Error("Cannot issue a credential without a tenant/actor in the context");
+      throw new DomainError(
+        "identity.issueCredentialWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot issue a credential without a tenant/actor in the context",
+      );
     }
 
     const secret = this.opaqueSecret.generate();

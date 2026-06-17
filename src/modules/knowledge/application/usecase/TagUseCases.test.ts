@@ -12,6 +12,7 @@ import { Title } from "../../domain/valueObjects/Title.ts";
 import { KnowledgeBody } from "../../domain/valueObjects/KnowledgeBody.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const ADMIN = { companyId: "company-1", actorId: "admin-1", actorType: "user" as const, roles: ["admin" as const] };
 
@@ -33,7 +34,14 @@ describe("TagUseCases", () => {
 
     await assert.rejects(
       () => runWithActor(ADMIN, () => useCase.execute(CreateTenantTagCommand.of("t1", "Refund Policy"))),
-      /already exists/,
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.tagSlugExists");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { slug: "refund-policy" });
+        assert.equal(error.message, "A tag with this slug already exists: refund-policy");
+        return true;
+      },
     );
   });
 
@@ -60,6 +68,15 @@ describe("TagUseCases", () => {
         "author-1",
       ),
     );
-    await assert.rejects(() => useCase.execute(RemoveTenantTagCommand.of("t2")), /in use/);
+    await assert.rejects(
+      () => useCase.execute(RemoveTenantTagCommand.of("t2")),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.tagInUse");
+        assert.equal(error.kind, "validation");
+        assert.equal(error.message, "Cannot remove a tag that is in use");
+        return true;
+      },
+    );
   });
 });

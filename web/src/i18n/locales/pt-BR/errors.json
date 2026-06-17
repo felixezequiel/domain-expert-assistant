@@ -2,6 +2,94 @@
   "common": {
     "forbiddenRole": "Sem permissão: seu papel não pode executar esta ação.",
     "unauthorized": "Faça login.",
-    "unexpected": "Algo deu errado."
+    "unexpected": "Algo deu errado.",
+    "fieldRequired": "O campo '{{field}}' é obrigatório.",
+    "fieldInvalid": "O campo '{{field}}' é inválido.",
+    "unknownSensitivityLevel": "Nível de sensibilidade desconhecido: {{name}}",
+    "unknownRole": "Papel desconhecido: {{value}}",
+    "identifierEmpty": "O identificador não pode ser vazio."
+  },
+  "tenancy": {
+    "envelopeMismatch": "Escrita entre organizações bloqueada: este registro pertence a outra organização.",
+    "missingContext": "Acesso negado: nenhuma organização no contexto atual.",
+    "requestMismatch": "Organização incompatível: a requisição não corresponde à sua organização."
+  },
+  "identity": {
+    "lastAdmin": "Operação recusada: a organização precisa manter ao menos um administrador ativo.",
+    "invalidInvitation": "Convite inválido ou já utilizado.",
+    "invalidCredentials": "Credenciais inválidas.",
+    "displayNameLength": "O nome de exibição deve ter entre 1 e {{max}} caracteres.",
+    "organizationNameLength": "O nome da organização deve ter entre 1 e {{max}} caracteres.",
+    "invalidEmailFormat": "Formato de e-mail inválido: {{value}}",
+    "userNotInvited": "Usuário não foi convidado; não é possível ativar.",
+    "userRequiresRole": "Um usuário precisa ter ao menos um papel.",
+    "rotateRevokedCredential": "Não é possível rotacionar uma credencial revogada.",
+    "credentialNameRequired": "O nome da credencial é obrigatório.",
+    "invitationTokenRequired": "O token do convite é obrigatório.",
+    "passwordRequired": "A senha é obrigatória.",
+    "policyChangeWithoutTenant": "Não é possível alterar a política sem uma organização no contexto.",
+    "organizationNotFound": "Organização não encontrada.",
+    "describeCurrentUserWithoutActor": "Não é possível descrever o usuário atual sem um ator no contexto.",
+    "currentUserNotFound": "Usuário atual não encontrado.",
+    "userNotFound": "Usuário não encontrado.",
+    "inviteWithoutTenant": "Não é possível convidar um usuário sem uma organização no contexto.",
+    "emailAlreadyInUse": "E-mail já em uso: {{email}}",
+    "organizationNameTaken": "Nome de organização já utilizado: {{name}}",
+    "credentialNotFound": "Credencial não encontrada.",
+    "listUsersWithoutTenant": "Não é possível listar usuários sem uma organização no contexto.",
+    "readPolicyWithoutTenant": "Não é possível ler a política sem uma organização no contexto.",
+    "listCredentialsWithoutTenant": "Não é possível listar credenciais sem uma organização no contexto.",
+    "issueCredentialWithoutTenant": "Não é possível emitir uma credencial sem uma organização no contexto.",
+    "operatorProvisioningDisabled": "O provisionamento por operador está desabilitado.",
+    "forbidden": "Você não tem permissão para executar esta ação.",
+    "invitationNotFound": "Convite não encontrado."
+  },
+  "knowledge": {
+    "titleLength": "O título deve ter entre 1 e {{max}} caracteres.",
+    "bodyEmpty": "O conteúdo não pode ser vazio.",
+    "tagLabelEmptySlug": "O rótulo da tag deve gerar um slug não vazio.",
+    "cannotRemoveSystemTag": "Não é possível remover uma tag do sistema: {{slug}}",
+    "collectionNameLength": "O nome da coleção deve ter entre 1 e {{max}} caracteres.",
+    "approvalRequiresSeparateReviewer": "A aprovação exige um revisor diferente do autor ou do último editor.",
+    "rejectionReasonRequired": "É obrigatório informar um motivo para a rejeição.",
+    "invalidStatusTransition": "Não é possível {{action}} um item de conhecimento no status '{{status}}'.",
+    "cannotModifyArchived": "Não é possível {{action}} um item de conhecimento arquivado.",
+    "versionNumberInvalid": "O número da versão deve ser um inteiro positivo.",
+    "tagLabelRequired": "O rótulo da tag é obrigatório.",
+    "unknownTags": "Tag(s) desconhecida(s) para esta organização: {{tags}}",
+    "missingTenant": "Não é possível executar esta ação sem uma organização no contexto.",
+    "tagSlugExists": "Já existe uma tag com este slug: {{slug}}",
+    "tagNotFound": "Tag não encontrada.",
+    "tagInUse": "Não é possível remover uma tag que está em uso.",
+    "itemNotFound": "Item de conhecimento não encontrado.",
+    "versionNotFound": "Versão não encontrada: {{versionNumber}}",
+    "collectionNotFound": "Coleção não encontrada.",
+    "collectionNameExists": "Já existe uma coleção com este nome.",
+    "missingTenantActor": "Não é possível executar esta ação sem uma organização no contexto.",
+    "missingActor": "Não é possível executar esta ação sem um ator no contexto."
+  },
+  "ingestion": {
+    "unsupportedMimeType": "Tipo de documento não suportado: {{mimeType}}",
+    "invalidJobTransition": "Não é possível {{action}} um job de ingestão no status '{{status}}'.",
+    "emptyContent": "O conteúdo do documento está vazio.",
+    "contentTooLarge": "O documento é grande demais: {{size}} bytes excede o limite de {{maxBytes}} bytes.",
+    "missingActorContext": "Não é possível enviar um documento sem uma organização no contexto.",
+    "noExtractorAvailable": "Nenhum extrator disponível para o tipo: {{mimeType}}",
+    "crossTenantRead": "Acesso negado: não é possível ler um arquivo fora do escopo da organização atual.",
+    "invalidStorageReference": "Referência de armazenamento inválida.",
+    "jobNotFound": "Job de ingestão não encontrado."
+  },
+  "retrieval": {
+    "tenantScopeRequired": "É necessária uma sessão vinculada a uma organização.",
+    "adminRoleRequired": "É necessário o papel de administrador para esta ação.",
+    "embeddingModelUnavailable": "Não foi possível carregar o modelo de embedding '{{modelName}}': {{reason}}"
+  },
+  "consumption": {
+    "scopeViolation": "Violação de escopo: a coleção '{{collectionId}}' está fora do escopo permitido da credencial.",
+    "rateLimitExceeded": "Limite de requisições excedido. Tente novamente em {{retryAfterSeconds}} segundos.",
+    "itemNotFound": "Item não encontrado."
+  },
+  "audit": {
+    "invalidDate": "Data inválida na consulta da trilha de auditoria: {{value}}"
   }
 }

@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { AuditModule, type AuditModuleDeps } from "./AuditModule.ts";
 import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { UnauthorizedError } from "../../../shared/application/authorization/RoleBasedAuthorizer.ts";
 
 class FakeHttpServer {
   public readonly routes = new Map<string, RawRouteHandler>();
@@ -74,6 +75,7 @@ describe("AuditModule routes", () => {
     new AuditModule(deps({})).registerRoutes(httpServer as never);
     const response = await invoke(httpServer.routes.get("GET /audit/events")!, fakeRequest({}));
     assert.equal(response.statusCode, 401);
+    assert.equal(JSON.parse(response.payload).error, "common.unauthorized");
   });
 
   it("returns the trail for an authenticated auditor (200)", async () => {
@@ -90,7 +92,7 @@ describe("AuditModule routes", () => {
   it("maps a use-case authorization error to 403", async () => {
     const applicationService = {
       execute: async () => {
-        throw new Error("Forbidden: requires one of the roles [auditor, admin].");
+        throw new UnauthorizedError(["auditor", "admin"]);
       },
     } as unknown as AuditModuleDeps["applicationService"];
     new AuditModule(deps({ applicationService })).registerRoutes(httpServer as never);
@@ -99,5 +101,6 @@ describe("AuditModule routes", () => {
       fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good" }),
     );
     assert.equal(response.statusCode, 403);
+    assert.equal(JSON.parse(response.payload).error, "common.forbiddenRole");
   });
 });

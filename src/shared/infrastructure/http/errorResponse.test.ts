@@ -10,6 +10,7 @@ describe("errorResponse", () => {
     assert.equal(httpStatusForKind("forbidden"), 403);
     assert.equal(httpStatusForKind("not_found"), 404);
     assert.equal(httpStatusForKind("conflict"), 409);
+    assert.equal(httpStatusForKind("rate_limited"), 429);
     assert.equal(httpStatusForKind("unavailable"), 503);
     assert.equal(httpStatusForKind("internal"), 500);
   });

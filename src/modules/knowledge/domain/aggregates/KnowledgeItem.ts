@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { TenantScoped } from "../../../../shared/domain/TenantScoped.ts";
 import type { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
 import type { KnowledgeItemId } from "../identifiers/KnowledgeItemId.ts";
@@ -255,7 +256,12 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
   public approve(reviewerId: string, requireSeparateReviewer: boolean): void {
     this.assertStatusIn(["in_review"], "approve");
     if (requireSeparateReviewer && (reviewerId === this.props.lastEditorId || reviewerId === this.props.authorId)) {
-      throw new Error("Approval requires a reviewer different from the author/last editor");
+      throw new DomainError(
+        "knowledge.approvalRequiresSeparateReviewer",
+        "validation",
+        undefined,
+        "Approval requires a reviewer different from the author/last editor",
+      );
     }
     this.props.status = "published";
     this.props.publishedVersionNumber = this.props.currentVersionNumber;
@@ -266,7 +272,12 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     this.assertStatusIn(["in_review"], "reject");
     const trimmedReason = reason.trim();
     if (trimmedReason.length === 0) {
-      throw new Error("A rejection reason is required");
+      throw new DomainError(
+        "knowledge.rejectionReasonRequired",
+        "validation",
+        undefined,
+        "A rejection reason is required",
+      );
     }
     this.props.status = "draft";
     this.props.lastRejectionReason = trimmedReason;
@@ -312,13 +323,23 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
 
   private assertStatusIn(allowed: ReadonlyArray<LifecycleStatus>, action: string): void {
     if (!allowed.includes(this.props.status)) {
-      throw new Error("Cannot " + action + " a knowledge item in status '" + this.props.status + "'");
+      throw new DomainError(
+        "knowledge.invalidStatusTransition",
+        "validation",
+        { action, status: this.props.status },
+        "Cannot " + action + " a knowledge item in status '" + this.props.status + "'",
+      );
     }
   }
 
   private assertNotArchived(action: string): void {
     if (this.props.status === "archived") {
-      throw new Error("Cannot " + action + " an archived knowledge item");
+      throw new DomainError(
+        "knowledge.cannotModifyArchived",
+        "validation",
+        { action },
+        "Cannot " + action + " an archived knowledge item",
+      );
     }
   }
 }

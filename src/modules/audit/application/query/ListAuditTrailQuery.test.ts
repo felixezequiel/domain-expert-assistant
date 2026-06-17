@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ListAuditTrailQuery, DEFAULT_AUDIT_LIMIT, MAX_AUDIT_LIMIT } from "./ListAuditTrailQuery.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 describe("ListAuditTrailQuery", () => {
   it("defaults all filters to null and uses the default limit", () => {
@@ -43,7 +44,17 @@ describe("ListAuditTrailQuery", () => {
     assert.equal(ListAuditTrailQuery.of({ limit: -3 }).filter.limit, DEFAULT_AUDIT_LIMIT);
   });
 
-  it("rejects an unparseable date", () => {
-    assert.throws(() => ListAuditTrailQuery.of({ from: "not-a-date" }), /Invalid date/);
+  it("rejects an unparseable date with a coded validation error", () => {
+    assert.throws(
+      () => ListAuditTrailQuery.of({ from: "not-a-date" }),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "audit.invalidDate");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { value: "not-a-date" });
+        assert.equal(error.message, "Invalid date in audit trail query: not-a-date");
+        return true;
+      },
+    );
   });
 });

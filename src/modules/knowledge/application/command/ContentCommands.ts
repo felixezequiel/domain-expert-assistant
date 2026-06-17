@@ -1,6 +1,7 @@
 import { KnowledgeItemId } from "../../domain/identifiers/KnowledgeItemId.ts";
 import { CollectionId } from "../../domain/identifiers/CollectionId.ts";
 import { TagId } from "../../domain/identifiers/TagId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export class RollbackToVersionCommand {
   public readonly itemId: KnowledgeItemId;
@@ -13,7 +14,12 @@ export class RollbackToVersionCommand {
 
   public static of(itemId: string, versionNumber: number): RollbackToVersionCommand {
     if (!Number.isInteger(versionNumber) || versionNumber < 1) {
-      throw new Error("Version number must be a positive integer");
+      throw new DomainError(
+        "knowledge.versionNumberInvalid",
+        "validation",
+        undefined,
+        "Version number must be a positive integer",
+      );
     }
     return new RollbackToVersionCommand(new KnowledgeItemId(itemId), versionNumber);
   }

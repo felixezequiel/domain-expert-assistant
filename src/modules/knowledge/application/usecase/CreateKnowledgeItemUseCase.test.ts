@@ -13,6 +13,7 @@ import { CollectionId } from "../../domain/identifiers/CollectionId.ts";
 import { Tag } from "../../domain/aggregates/Tag.ts";
 import { TagId } from "../../domain/identifiers/TagId.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const CURATOR = { companyId: "company-1", actorId: "curator-1", actorType: "user" as const, roles: ["curator" as const] };
 
@@ -55,13 +56,33 @@ describe("CreateKnowledgeItemUseCase", () => {
     const { useCase } = await build();
     const command = CreateKnowledgeItemCommand.of("i1", "missing", "T", "B", ["t1"], "internal");
 
-    await assert.rejects(() => runWithActor(CURATOR, () => useCase.execute(command)), /Collection not found/);
+    await assert.rejects(
+      () => runWithActor(CURATOR, () => useCase.execute(command)),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.collectionNotFound");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { id: "missing" });
+        assert.equal(error.message, "Collection not found: missing");
+        return true;
+      },
+    );
   });
 
   it("rejects an unknown tag", async () => {
     const { useCase } = await build();
     const command = CreateKnowledgeItemCommand.of("i1", "c1", "T", "B", ["ghost"], "internal");
 
-    await assert.rejects(() => runWithActor(CURATOR, () => useCase.execute(command)), /Unknown tag/);
+    await assert.rejects(
+      () => runWithActor(CURATOR, () => useCase.execute(command)),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.unknownTags");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { tags: "ghost" });
+        assert.equal(error.message, "Unknown tag(s) for this organization: ghost");
+        return true;
+      },
+    );
   });
 });

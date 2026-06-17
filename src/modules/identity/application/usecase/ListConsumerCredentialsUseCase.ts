@@ -3,6 +3,7 @@ import type { Role } from "../../../../shared/domain/Role.ts";
 import type { ConsumerCredentialRepositoryPort, ConsumerCredentialView } from "../types.ts";
 import type { ConsumerCredential } from "../../domain/aggregates/ConsumerCredential.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Admin lists their org's credentials — never exposing the secret or its hash, only the
@@ -22,7 +23,12 @@ export class ListConsumerCredentialsUseCase
   public async execute(): Promise<ReadonlyArray<ConsumerCredentialView>> {
     const companyId = getCurrentActor()?.companyId ?? null;
     if (companyId === null) {
-      throw new Error("Cannot list credentials without a tenant in the context");
+      throw new DomainError(
+        "identity.listCredentialsWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot list credentials without a tenant in the context",
+      );
     }
 
     const credentials = await this.credentialRepository.listByCompany(companyId);

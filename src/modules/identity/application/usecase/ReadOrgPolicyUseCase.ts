@@ -3,6 +3,7 @@ import type { Role } from "../../../../shared/domain/Role.ts";
 import type { OrganizationRepositoryPort } from "../types.ts";
 import { OrganizationId } from "../../domain/identifiers/OrganizationId.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /** The tenant's current governance policy, so the console can pre-fill the toggle. */
 export interface OrgPolicyView {
@@ -27,12 +28,22 @@ export class ReadOrgPolicyUseCase implements UseCase<void, OrgPolicyView> {
   public async execute(): Promise<OrgPolicyView> {
     const companyId = getCurrentActor()?.companyId ?? null;
     if (companyId === null) {
-      throw new Error("Cannot read the policy without a tenant in the context");
+      throw new DomainError(
+        "identity.readPolicyWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot read the policy without a tenant in the context",
+      );
     }
 
     const organization = await this.organizationRepository.findById(new OrganizationId(companyId));
     if (organization === null) {
-      throw new Error("Organization not found: " + companyId);
+      throw new DomainError(
+        "identity.organizationNotFound",
+        "validation",
+        { id: companyId },
+        "Organization not found: " + companyId,
+      );
     }
 
     return {

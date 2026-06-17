@@ -56,4 +56,17 @@ describe("resolveTenantScope", () => {
 
     assert.throws(() => resolveTenantScope(actor), MissingTenantContextError);
   });
+
+  it("carries the stable code and kind, with no params (ADR-026)", () => {
+    try {
+      resolveTenantScope(null);
+      assert.fail("expected MissingTenantContextError");
+    } catch (error) {
+      assert.ok(error instanceof MissingTenantContextError);
+      assert.equal(error.code, "tenancy.missingContext");
+      assert.equal(error.kind, "internal");
+      assert.equal(error.params, undefined);
+      assert.match(error.message, /Tenant-scoped access denied/);
+    }
+  });
 });

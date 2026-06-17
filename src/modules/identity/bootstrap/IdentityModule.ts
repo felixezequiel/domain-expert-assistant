@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HttpServer } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 import type { ApplicationService } from "../../../shared/application/ApplicationService.ts";
 import { runWithActor, type Actor } from "../../../shared/application/context/ActorContext.ts";
 import {
@@ -41,12 +43,7 @@ import type { DescribeInvitationUseCase } from "../application/usecase/DescribeI
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
-const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
-const HTTP_NOT_FOUND = 404;
-const HTTP_INTERNAL_ERROR = 500;
-const HTTP_SERVICE_UNAVAILABLE = 503;
 
 interface RouteResult {
   readonly statusCode: number;
@@ -156,7 +153,10 @@ export class IdentityModule {
     const token = readSessionToken(request.headers.cookie);
     const principal = token === null ? null : await this.deps.resolveSession.execute(token);
     if (principal === null) {
-      this.respond(response, { statusCode: HTTP_UNAUTHORIZED, body: { error: "Unauthorized" } });
+      this.respond(response, {
+        statusCode: HTTP_UNAUTHORIZED,
+        body: { error: "common.unauthorized", message: "Unauthorized" },
+      });
       return;
     }
     const actor: Actor = {
@@ -211,22 +211,22 @@ export class IdentityModule {
   }
 
   private async handleProvision(request: IncomingMessage, response: ServerResponse): Promise<void> {
-    if (this.deps.operatorSecret === null) {
-      this.respond(response, {
-        statusCode: HTTP_SERVICE_UNAVAILABLE,
-        body: { error: "Operator provisioning is disabled (no operator secret configured)" },
-      });
-      return;
-    }
-    const presented = request.headers[OPERATOR_SECRET_HEADER];
-    if (presented !== this.deps.operatorSecret) {
-      this.respond(response, { statusCode: HTTP_FORBIDDEN, body: { error: "Forbidden" } });
-      return;
-    }
-
     const operator: Actor = { companyId: null, actorId: "operator", actorType: "operator" };
     await this.runAndRespond(response, () =>
       runWithActor(operator, async () => {
+        if (this.deps.operatorSecret === null) {
+          throw new DomainError(
+            "identity.operatorProvisioningDisabled",
+            "unavailable",
+            undefined,
+            "Operator provisioning is disabled (no operator secret configured)",
+          );
+        }
+        const presented = request.headers[OPERATOR_SECRET_HEADER];
+        if (presented !== this.deps.operatorSecret) {
+          throw new DomainError("identity.forbidden", "forbidden", undefined, "Forbidden");
+        }
+
         const body = await HttpServer.readJsonBody(request);
         const organizationId = IdentityModule.optionalString(body, "organizationId") ?? randomUUID();
         const command = ProvisionOrganizationCommand.of(
@@ -254,7 +254,12 @@ export class IdentityModule {
           token,
         );
         if (invitation === null) {
-          return { statusCode: HTTP_NOT_FOUND, body: { error: "Invitation not found" } };
+          throw new DomainError(
+            "identity.invitationNotFound",
+            "not_found",
+            undefined,
+            "Invitation not found",
+          );
         }
         return { statusCode: HTTP_OK, body: invitation };
       }),
@@ -379,31 +384,18 @@ export class IdentityModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    const statusCode = IdentityModule.statusForError(message);
-    this.respond(response, { statusCode, body: { error: message } });
-  }
-
-  private static statusForError(message: string): number {
-    if (message === "Invalid credentials" || message.startsWith("Forbidden")) {
-      return message === "Invalid credentials" ? HTTP_UNAUTHORIZED : HTTP_FORBIDDEN;
-    }
-    if (
-      message.includes("not found") ||
-      message.includes("already") ||
-      message.includes("Invalid") ||
-      message.includes("required") ||
-      message.includes("at least one")
-    ) {
-      return HTTP_BAD_REQUEST;
-    }
-    return HTTP_INTERNAL_ERROR;
+    this.respond(response, toErrorResponse(error));
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {
     const value = body[field];
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error("Field '" + field + "' is required");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required",
+      );
     }
     return value;
   }
@@ -416,7 +408,12 @@ export class IdentityModule {
   private static requireBoolean(body: Record<string, unknown>, field: string): boolean {
     const value = body[field];
     if (typeof value !== "boolean") {
-      throw new Error("Field '" + field + "' is required (boolean)");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required (boolean)",
+      );
     }
     return value;
   }
@@ -424,12 +421,24 @@ export class IdentityModule {
   private static requireStringArray(body: Record<string, unknown>, field: string): ReadonlyArray<string> {
     const value = body[field];
     if (!Array.isArray(value)) {
-      throw new Error("Field '" + field + "' is required (array)");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required (array)",
+      );
     }
     const result: Array<string> = [];
     for (const item of value) {
       if (typeof item !== "string") {
-        throw new Error("Field '" + field + "' must contain only strings");
+        // No substring match in the old `statusForError` → 500; `kind: "internal"` preserves
+        // it (ADR-026 migrates codes, not statuses).
+        throw new DomainError(
+          "common.fieldInvalid",
+          "internal",
+          { field },
+          "Field '" + field + "' must contain only strings",
+        );
       }
       result.push(item);
     }

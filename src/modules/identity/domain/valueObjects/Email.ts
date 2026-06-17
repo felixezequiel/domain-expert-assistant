@@ -1,4 +1,5 @@
 import { ValueObject } from "../../../../shared/domain/valueObjects/ValueObject.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 interface EmailProps {
   readonly value: string;
@@ -28,7 +29,12 @@ export class Email extends ValueObject<EmailProps> {
       domainPart.length > 0;
 
     if (!isValid) {
-      throw new Error("Invalid email format: " + value);
+      throw new DomainError(
+        "identity.invalidEmailFormat",
+        "validation",
+        { value },
+        "Invalid email format: " + value,
+      );
     }
 
     super({ value: normalized });

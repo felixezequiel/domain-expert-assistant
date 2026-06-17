@@ -1,5 +1,6 @@
 import { MimeType } from "../../domain/valueObjects/MimeType.ts";
 import { IngestionJobId } from "../../domain/identifiers/IngestionJobId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const BYTES_PER_KIBIBYTE = 1024;
 const KIBIBYTES_PER_MEBIBYTE = 1024;
@@ -49,16 +50,24 @@ export class UploadDocumentCommand {
     maxBytes: number = MAX_UPLOAD_BYTES,
   ): UploadDocumentCommand {
     if (collectionId.trim().length === 0) {
-      throw new Error("collectionId is required");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field: "collectionId" },
+        "collectionId is required",
+      );
     }
     if (filename.trim().length === 0) {
-      throw new Error("filename is required");
+      throw new DomainError("common.fieldRequired", "validation", { field: "filename" }, "filename is required");
     }
     if (content.length === 0) {
-      throw new Error("Document content is empty");
+      throw new DomainError("ingestion.emptyContent", "validation", undefined, "Document content is empty");
     }
     if (content.length > maxBytes) {
-      throw new Error(
+      throw new DomainError(
+        "ingestion.contentTooLarge",
+        "validation",
+        { size: content.length, maxBytes },
         "Document content is too large: " + content.length + " bytes exceeds the limit of " + maxBytes + " bytes",
       );
     }

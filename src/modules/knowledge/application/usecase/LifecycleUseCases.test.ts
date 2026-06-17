@@ -23,6 +23,7 @@ import { Title } from "../../domain/valueObjects/Title.ts";
 import { KnowledgeBody } from "../../domain/valueObjects/KnowledgeBody.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const REVIEWER = { companyId: "company-1", actorId: "reviewer-1", actorType: "user" as const, roles: ["reviewer" as const] };
 
@@ -100,6 +101,16 @@ describe("Lifecycle use cases", () => {
 
   it("throws when the item does not exist", async () => {
     const repo = new FakeKnowledgeItemRepository();
-    await assert.rejects(() => new SubmitForReviewUseCase(repo).execute(SubmitForReviewCommand.of("ghost")), /not found/);
+    await assert.rejects(
+      () => new SubmitForReviewUseCase(repo).execute(SubmitForReviewCommand.of("ghost")),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.itemNotFound");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { id: "ghost" });
+        assert.equal(error.message, "Knowledge item not found: ghost");
+        return true;
+      },
+    );
   });
 });

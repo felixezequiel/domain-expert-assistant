@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { TransformersEmbedder } from "./TransformersEmbedder.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 describe("TransformersEmbedder", () => {
   it("exposes the 1024-dim BGE-M3 width without loading the model", () => {
@@ -13,11 +14,18 @@ describe("TransformersEmbedder", () => {
     assert.deepEqual(await embedder.embed([]), []);
   });
 
-  it("throws a clear runtime error when the model cannot be loaded", async () => {
+  it("throws a clear coded runtime error when the model cannot be loaded", async () => {
     const embedder = new TransformersEmbedder("does-not-exist/model-xyz");
     await assert.rejects(
       () => embedder.embed(["hello"]),
-      (error: Error) => error.message.includes("could not be loaded"),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "retrieval.embeddingModelUnavailable");
+        assert.equal(error.kind, "internal");
+        assert.equal(error.params?.modelName, "does-not-exist/model-xyz");
+        assert.ok(error.message.includes("could not be loaded"));
+        return true;
+      },
     );
   });
 });

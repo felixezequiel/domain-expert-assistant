@@ -4,16 +4,29 @@ import type { AggregateRoot } from "../../domain/aggregates/AggregateRoot.ts";
 import type { Identifier } from "../../domain/identifiers/Identifier.ts";
 import { isTenantScoped } from "../../domain/TenantScoped.ts";
 import { isPrivilegedActorType, type Actor } from "../context/ActorContext.ts";
+import { DomainError } from "../../domain/errors/DomainError.ts";
 
 /**
  * Raised when an event originated from a tenant-scoped aggregate whose `companyId`
  * does not match the actor context tenant (ADR-008). This is the write-path defence
  * the MikroORM read filter cannot provide: it turns a silent cross-tenant write into
  * a deterministic abort before anything is persisted.
+ *
+ * `kind` is "internal" to preserve the pre-ADR-026 status: this error never matched
+ * the edges' substring `statusForError`, so it always became a 500 and no test pinned
+ * a different status. The main agent should decide whether a cross-tenant write should
+ * instead be a 403 (ADR-026 §3 discrepancy note).
  */
-export class EnvelopeTenantMismatchError extends Error {
+export class EnvelopeTenantMismatchError extends DomainError {
   constructor(aggregateId: string, aggregateCompanyId: string, contextCompanyId: string | null) {
     super(
+      "tenancy.envelopeMismatch",
+      "internal",
+      {
+        aggregateId,
+        aggregateCompanyId,
+        contextCompanyId: contextCompanyId ?? "none",
+      },
       `Cross-tenant write blocked: aggregate ${aggregateId} belongs to company ` +
         `${aggregateCompanyId} but the actor context tenant is ${contextCompanyId ?? "none"}.`,
     );

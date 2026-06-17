@@ -11,6 +11,7 @@ export type ErrorKind =
   | "forbidden"
   | "not_found"
   | "conflict"
+  | "rate_limited"
   | "unavailable"
   | "internal";
 

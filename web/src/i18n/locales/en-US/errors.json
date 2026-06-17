@@ -2,6 +2,94 @@
   "common": {
     "forbiddenRole": "Not permitted: your role cannot perform this action.",
     "unauthorized": "Please sign in.",
-    "unexpected": "Something went wrong."
+    "unexpected": "Something went wrong.",
+    "fieldRequired": "The field '{{field}}' is required.",
+    "fieldInvalid": "The field '{{field}}' is invalid.",
+    "unknownSensitivityLevel": "Unknown sensitivity level: {{name}}",
+    "unknownRole": "Unknown role: {{value}}",
+    "identifierEmpty": "The identifier value cannot be empty."
+  },
+  "tenancy": {
+    "envelopeMismatch": "Cross-tenant write blocked: this record belongs to another organization.",
+    "missingContext": "Access denied: no tenant in the current context.",
+    "requestMismatch": "Tenant mismatch: the request does not match your organization."
+  },
+  "identity": {
+    "lastAdmin": "Operation refused: an organization must keep at least one active admin.",
+    "invalidInvitation": "Invalid or already-used invitation.",
+    "invalidCredentials": "Invalid credentials.",
+    "displayNameLength": "Display name must be between 1 and {{max}} characters.",
+    "organizationNameLength": "Organization name must be between 1 and {{max}} characters.",
+    "invalidEmailFormat": "Invalid email format: {{value}}",
+    "userNotInvited": "User is not invited; cannot activate.",
+    "userRequiresRole": "A user must have at least one role.",
+    "rotateRevokedCredential": "Cannot rotate a revoked credential.",
+    "credentialNameRequired": "Credential name is required.",
+    "invitationTokenRequired": "Invitation token is required.",
+    "passwordRequired": "Password is required.",
+    "policyChangeWithoutTenant": "Cannot change the policy without a tenant in the context.",
+    "organizationNotFound": "Organization not found.",
+    "describeCurrentUserWithoutActor": "Cannot describe the current user without an actor in the context.",
+    "currentUserNotFound": "Current user not found.",
+    "userNotFound": "User not found.",
+    "inviteWithoutTenant": "Cannot invite a user without a tenant in the context.",
+    "emailAlreadyInUse": "Email already in use: {{email}}",
+    "organizationNameTaken": "Organization name already taken: {{name}}",
+    "credentialNotFound": "Credential not found.",
+    "listUsersWithoutTenant": "Cannot list users without a tenant in the context.",
+    "readPolicyWithoutTenant": "Cannot read the policy without a tenant in the context.",
+    "listCredentialsWithoutTenant": "Cannot list credentials without a tenant in the context.",
+    "issueCredentialWithoutTenant": "Cannot issue a credential without a tenant in the context.",
+    "operatorProvisioningDisabled": "Operator provisioning is disabled.",
+    "forbidden": "You are not allowed to perform this action.",
+    "invitationNotFound": "Invitation not found."
+  },
+  "knowledge": {
+    "titleLength": "Title must be between 1 and {{max}} characters.",
+    "bodyEmpty": "Body cannot be empty.",
+    "tagLabelEmptySlug": "Tag label must produce a non-empty slug.",
+    "cannotRemoveSystemTag": "Cannot remove a system tag: {{slug}}",
+    "collectionNameLength": "Collection name must be between 1 and {{max}} characters.",
+    "approvalRequiresSeparateReviewer": "Approval requires a reviewer different from the author or last editor.",
+    "rejectionReasonRequired": "A rejection reason is required.",
+    "invalidStatusTransition": "Cannot {{action}} a knowledge item in status '{{status}}'.",
+    "cannotModifyArchived": "Cannot {{action}} an archived knowledge item.",
+    "versionNumberInvalid": "Version number must be a positive integer.",
+    "tagLabelRequired": "Tag label is required.",
+    "unknownTags": "Unknown tag(s) for this organization: {{tags}}",
+    "missingTenant": "Cannot perform this action without a tenant in the context.",
+    "tagSlugExists": "A tag with this slug already exists: {{slug}}",
+    "tagNotFound": "Tag not found.",
+    "tagInUse": "Cannot remove a tag that is in use.",
+    "itemNotFound": "Knowledge item not found.",
+    "versionNotFound": "Version not found: {{versionNumber}}",
+    "collectionNotFound": "Collection not found.",
+    "collectionNameExists": "A collection with this name already exists.",
+    "missingTenantActor": "Cannot perform this action without a tenant in the context.",
+    "missingActor": "Cannot perform this action without an actor in the context."
+  },
+  "ingestion": {
+    "unsupportedMimeType": "Unsupported document type: {{mimeType}}",
+    "invalidJobTransition": "Cannot {{action}} an ingestion job in status '{{status}}'.",
+    "emptyContent": "Document content is empty.",
+    "contentTooLarge": "Document is too large: {{size}} bytes exceeds the limit of {{maxBytes}} bytes.",
+    "missingActorContext": "Cannot upload a document without a tenant in the context.",
+    "noExtractorAvailable": "No extractor available for type: {{mimeType}}",
+    "crossTenantRead": "Access denied: cannot read a file outside the current tenant scope.",
+    "invalidStorageReference": "Invalid storage reference.",
+    "jobNotFound": "Ingestion job not found."
+  },
+  "retrieval": {
+    "tenantScopeRequired": "A tenant-scoped session is required.",
+    "adminRoleRequired": "Admin role is required for this action.",
+    "embeddingModelUnavailable": "The embedding model '{{modelName}}' could not be loaded: {{reason}}"
+  },
+  "consumption": {
+    "scopeViolation": "Scope violation: collection '{{collectionId}}' is outside the credential's allowed scope.",
+    "rateLimitExceeded": "Rate limit exceeded. Retry after {{retryAfterSeconds}} seconds.",
+    "itemNotFound": "Item not found."
+  },
+  "audit": {
+    "invalidDate": "Invalid date in the audit trail query: {{value}}"
   }
 }

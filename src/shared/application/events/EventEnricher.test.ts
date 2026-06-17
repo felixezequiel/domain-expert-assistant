@@ -81,6 +81,39 @@ describe("enrichDomainEvents", () => {
     );
   });
 
+  it("carries the stable code, kind and the ids as params (ADR-026)", () => {
+    const aggregate = TenantAggregate.make("agg-1", "company-OTHER");
+    const event = new SampleEvent("agg-1");
+
+    try {
+      enrichDomainEvents([event], TENANT_USER, [aggregate]);
+      assert.fail("expected EnvelopeTenantMismatchError");
+    } catch (error) {
+      assert.ok(error instanceof EnvelopeTenantMismatchError);
+      assert.equal(error.code, "tenancy.envelopeMismatch");
+      assert.equal(error.kind, "internal");
+      assert.deepEqual(error.params, {
+        aggregateId: "agg-1",
+        aggregateCompanyId: "company-OTHER",
+        contextCompanyId: "company-1",
+      });
+      assert.match(error.message, /Cross-tenant write blocked/);
+    }
+  });
+
+  it("renders a null context tenant as 'none' in the params", () => {
+    const aggregate = TenantAggregate.make("agg-1", "company-1");
+    const event = new SampleEvent("agg-1");
+
+    try {
+      enrichDomainEvents([event], null, [aggregate]);
+      assert.fail("expected EnvelopeTenantMismatchError");
+    } catch (error) {
+      assert.ok(error instanceof EnvelopeTenantMismatchError);
+      assert.equal(error.params?.["contextCompanyId"], "none");
+    }
+  });
+
   it("throws fail-closed when a tenant aggregate is touched without a tenant context", () => {
     const aggregate = TenantAggregate.make("agg-1", "company-1");
     const event = new SampleEvent("agg-1");

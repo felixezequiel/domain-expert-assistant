@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { TenantScoped } from "../../../../shared/domain/TenantScoped.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import type { UserId } from "../identifiers/UserId.ts";
@@ -110,7 +111,12 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
 
   public activate(passwordHash: PasswordHash): void {
     if (this.props.status !== "invited") {
-      throw new Error("User is not invited; cannot activate: " + this.id.value);
+      throw new DomainError(
+        "identity.userNotInvited",
+        "internal",
+        { id: this.id.value },
+        "User is not invited; cannot activate: " + this.id.value,
+      );
     }
     this.props.passwordHash = passwordHash;
     this.props.status = "active";
@@ -135,7 +141,12 @@ export class User extends AggregateRoot<UserId, UserProps> implements TenantScop
   private static requireAtLeastOneRole(roles: ReadonlyArray<Role>): ReadonlyArray<Role> {
     const deduped = User.dedupe(roles);
     if (deduped.length === 0) {
-      throw new Error("A user must have at least one role");
+      throw new DomainError(
+        "identity.userRequiresRole",
+        "validation",
+        undefined,
+        "A user must have at least one role",
+      );
     }
     return deduped;
   }

@@ -27,6 +27,7 @@ import { KnowledgeBody } from "../../domain/valueObjects/KnowledgeBody.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
 import { KnowledgeVersion } from "../../domain/entities/KnowledgeVersion.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const CURATOR = { companyId: "company-1", actorId: "curator-1", actorType: "user" as const, roles: ["curator" as const] };
 
@@ -95,6 +96,34 @@ describe("ItemContentUseCases", () => {
     const result = await useCase.execute(MoveItemToCollectionCommand.of("i1", "c2"));
     assert.equal(result.collectionId.value, "c2");
 
-    await assert.rejects(() => useCase.execute(MoveItemToCollectionCommand.of("i1", "missing")), /Collection not found/);
+    await assert.rejects(
+      () => useCase.execute(MoveItemToCollectionCommand.of("i1", "missing")),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.collectionNotFound");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { id: "missing" });
+        assert.equal(error.message, "Collection not found: missing");
+        return true;
+      },
+    );
+  });
+
+  it("throws a coded version-not-found error on rollback to a missing version", async () => {
+    const itemRepository = new FakeKnowledgeItemRepository();
+    await itemRepository.save(item());
+    const useCase = new RollbackToVersionUseCase(itemRepository, new FakeKnowledgeVersionRepository());
+
+    await assert.rejects(
+      () => runWithActor(CURATOR, () => useCase.execute(RollbackToVersionCommand.of("i1", 9))),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.versionNotFound");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { versionNumber: 9 });
+        assert.equal(error.message, "Version not found: 9");
+        return true;
+      },
+    );
   });
 });

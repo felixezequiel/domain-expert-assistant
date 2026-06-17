@@ -4,6 +4,7 @@ import { UploadDocumentUseCase } from "./UploadDocumentUseCase.ts";
 import { UploadDocumentCommand } from "../command/IngestionCommands.ts";
 import { FakeFileStorage } from "../testDoubles/index.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const CURATOR = { companyId: "company-1", actorId: "curator-1", actorType: "user" as const, roles: ["curator" as const] };
 
@@ -23,9 +24,18 @@ describe("UploadDocumentUseCase", () => {
     assert.equal((await storage.read("company-1", job.storageRef)).toString(), "# Hi");
   });
 
-  it("requires a tenant/actor in the context", async () => {
+  it("requires a tenant/actor in the context (coded internal guard)", async () => {
     const useCase = new UploadDocumentUseCase(new FakeFileStorage());
     const command = UploadDocumentCommand.of("col-1", "policy.md", "text/markdown", Buffer.from("x"));
-    await assert.rejects(() => useCase.execute(command), /without a tenant\/actor/);
+    await assert.rejects(
+      () => useCase.execute(command),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "ingestion.missingActorContext");
+        assert.equal(error.kind, "internal");
+        assert.equal(error.message, "Cannot upload a document without a tenant/actor in the context");
+        return true;
+      },
+    );
   });
 });

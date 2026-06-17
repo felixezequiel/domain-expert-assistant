@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { TenantScoped } from "../../../../shared/domain/TenantScoped.ts";
 import type { CollectionId } from "../identifiers/CollectionId.ts";
 import { CollectionCreatedEvent } from "../events/CollectionCreatedEvent.ts";
@@ -70,7 +71,12 @@ export class Collection extends AggregateRoot<CollectionId, CollectionProps> imp
   private static validateName(name: string): string {
     const trimmed = name.trim();
     if (trimmed.length === 0 || trimmed.length > MAX_COLLECTION_NAME_LENGTH) {
-      throw new Error("Collection name must be 1.." + MAX_COLLECTION_NAME_LENGTH + " characters");
+      throw new DomainError(
+        "knowledge.collectionNameLength",
+        "validation",
+        { max: MAX_COLLECTION_NAME_LENGTH },
+        "Collection name must be 1.." + MAX_COLLECTION_NAME_LENGTH + " characters",
+      );
     }
     return trimmed;
   }

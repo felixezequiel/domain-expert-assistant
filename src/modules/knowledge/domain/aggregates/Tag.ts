@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { TagId } from "../identifiers/TagId.ts";
 import { TenantTagCreatedEvent } from "../events/TenantTagCreatedEvent.ts";
 import { TenantTagRemovedEvent } from "../events/TenantTagRemovedEvent.ts";
@@ -44,7 +45,12 @@ export class Tag extends AggregateRoot<TagId, TagProps> {
     const cleanLabel = label.trim();
     const slug = Tag.slugify(cleanLabel);
     if (slug.length === 0) {
-      throw new Error("Tag label must produce a non-empty slug");
+      throw new DomainError(
+        "knowledge.tagLabelEmptySlug",
+        "validation",
+        undefined,
+        "Tag label must produce a non-empty slug",
+      );
     }
     const tag = new Tag(id, { companyId, slug, label: cleanLabel, scope: "tenant" });
     tag.addDomainEvent(new TenantTagCreatedEvent(id.value, slug, cleanLabel));
@@ -63,7 +69,12 @@ export class Tag extends AggregateRoot<TagId, TagProps> {
 
   public requestRemoval(): void {
     if (this.isSystem()) {
-      throw new Error("Cannot remove a system tag: " + this.props.slug);
+      throw new DomainError(
+        "knowledge.cannotRemoveSystemTag",
+        "validation",
+        { slug: this.props.slug },
+        "Cannot remove a system tag: " + this.props.slug,
+      );
     }
     this.markForDeletion();
     this.addDomainEvent(new TenantTagRemovedEvent(this.id.value));

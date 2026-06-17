@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { UseCase } from "../../../../shared/application/UseCase.ts";
 import type { Role } from "../../../../shared/domain/Role.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { FileStoragePort } from "../types.ts";
 import type { UploadDocumentCommand } from "../command/IngestionCommands.ts";
 import { IngestionJob } from "../../domain/aggregates/IngestionJob.ts";
@@ -26,7 +27,12 @@ export class UploadDocumentUseCase implements UseCase<UploadDocumentCommand, Ing
     const companyId = actor?.companyId ?? null;
     const createdBy = actor?.actorId ?? null;
     if (companyId === null || createdBy === null) {
-      throw new Error("Cannot upload a document without a tenant/actor in the context");
+      throw new DomainError(
+        "ingestion.missingActorContext",
+        "internal",
+        undefined,
+        "Cannot upload a document without a tenant/actor in the context",
+      );
     }
 
     const jobId = new IngestionJobId(randomUUID());

@@ -4,6 +4,7 @@ import type { UserRepositoryPort, OpaqueSecretPort } from "../types.ts";
 import type { InviteUserCommand } from "../command/InviteUserCommand.ts";
 import { User } from "../../domain/aggregates/User.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export interface InviteUserResult {
   readonly user: User;
@@ -29,10 +30,20 @@ export class InviteUserUseCase implements UseCase<InviteUserCommand, InviteUserR
   public async execute(command: InviteUserCommand): Promise<InviteUserResult> {
     const companyId = getCurrentActor()?.companyId;
     if (companyId === null || companyId === undefined) {
-      throw new Error("Cannot invite a user without a tenant in the actor context");
+      throw new DomainError(
+        "identity.inviteWithoutTenant",
+        "internal",
+        undefined,
+        "Cannot invite a user without a tenant in the actor context",
+      );
     }
     if (await this.userRepository.existsByEmail(command.email.value)) {
-      throw new Error("Email already in use: " + command.email.value);
+      throw new DomainError(
+        "identity.emailAlreadyInUse",
+        "validation",
+        { email: command.email.value },
+        "Email already in use: " + command.email.value,
+      );
     }
 
     const secret = this.opaqueSecret.generate();

@@ -4,6 +4,7 @@ import type { ProvisionOrganizationCommand } from "../command/ProvisionOrganizat
 import { Organization } from "../../domain/aggregates/Organization.ts";
 import { User } from "../../domain/aggregates/User.ts";
 import { PasswordHash } from "../../domain/valueObjects/PasswordHash.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Operator-only (runs in a privileged scope opened at the internal operator edge — no
@@ -30,10 +31,20 @@ export class ProvisionOrganizationUseCase
 
   public async execute(command: ProvisionOrganizationCommand): Promise<Organization> {
     if (await this.organizationRepository.existsByName(command.organizationName.value)) {
-      throw new Error("Organization name already taken: " + command.organizationName.value);
+      throw new DomainError(
+        "identity.organizationNameTaken",
+        "validation",
+        { name: command.organizationName.value },
+        "Organization name already taken: " + command.organizationName.value,
+      );
     }
     if (await this.userRepository.existsByEmail(command.adminEmail.value)) {
-      throw new Error("Email already in use: " + command.adminEmail.value);
+      throw new DomainError(
+        "identity.emailAlreadyInUse",
+        "validation",
+        { email: command.adminEmail.value },
+        "Email already in use: " + command.adminEmail.value,
+      );
     }
 
     const organization = Organization.provision(command.organizationId, command.organizationName);

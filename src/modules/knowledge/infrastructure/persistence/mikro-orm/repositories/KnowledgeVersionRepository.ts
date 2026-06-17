@@ -4,6 +4,7 @@ import { getCurrentCompanyId } from "../../../../../../shared/infrastructure/htt
 import type { KnowledgeVersion } from "../../../../domain/entities/KnowledgeVersion.ts";
 import { KnowledgeVersionEntity } from "../entities/KnowledgeVersionEntity.ts";
 import { KnowledgeVersionMapper } from "../mappers/KnowledgeVersionMapper.ts";
+import { DomainError } from "../../../../../../shared/domain/errors/DomainError.ts";
 
 export class KnowledgeVersionRepository implements KnowledgeVersionRepositoryPort {
   private readonly entityManagerProvider: EntityManagerProvider;
@@ -20,7 +21,12 @@ export class KnowledgeVersionRepository implements KnowledgeVersionRepositoryPor
   public async append(version: KnowledgeVersion): Promise<void> {
     const companyId = getCurrentCompanyId();
     if (companyId === null) {
-      throw new Error("Cannot append a knowledge version without a tenant in context");
+      throw new DomainError(
+        "knowledge.missingTenant",
+        "validation",
+        undefined,
+        "Cannot append a knowledge version without a tenant in context",
+      );
     }
     const entityManager = this.entityManagerProvider.getEntityManager();
     entityManager.persist(KnowledgeVersionMapper.toOrmEntity(version, companyId));

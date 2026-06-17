@@ -120,6 +120,31 @@ describe("KnowledgeModule routes", () => {
     const response = await invoke(httpServer.routes.get("GET /tags")!, fakeRequest({}));
 
     assert.equal(response.statusCode, 401);
+    assert.deepEqual(JSON.parse(response.payload), { error: "common.unauthorized", message: "Unauthorized" });
+  });
+
+  it("serializes a domain error as a coded body, preserving its status", async () => {
+    const resolveSession = {
+      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
+    } as unknown as KnowledgeModuleDeps["resolveSession"];
+    const applicationService = {
+      execute: async () => null,
+    } as unknown as KnowledgeModuleDeps["applicationService"];
+
+    new KnowledgeModule(baseDeps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+
+    const response = await invoke(
+      httpServer.routes.get("GET /items/:id")!,
+      fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good" }),
+      { id: "missing" },
+    );
+
+    assert.equal(response.statusCode, 400);
+    assert.deepEqual(JSON.parse(response.payload), {
+      error: "knowledge.itemNotFound",
+      message: "Knowledge item not found: missing",
+      params: { id: "missing" },
+    });
   });
 
   it("allows an authed route when the session resolves to a principal", async () => {

@@ -1,4 +1,5 @@
 import type { AuditTrailFilter } from "../types.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export const DEFAULT_AUDIT_LIMIT = 100;
 export const MAX_AUDIT_LIMIT = 1000;
@@ -46,7 +47,12 @@ export class ListAuditTrailQuery {
     }
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-      throw new Error("Invalid date in audit trail query: " + value);
+      throw new DomainError(
+        "audit.invalidDate",
+        "validation",
+        { value },
+        "Invalid date in audit trail query: " + value,
+      );
     }
     return date;
   }

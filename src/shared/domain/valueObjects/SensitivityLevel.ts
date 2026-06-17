@@ -1,4 +1,5 @@
 import { ValueObject } from "./ValueObject.ts";
+import { DomainError } from "../errors/DomainError.ts";
 
 /**
  * Three fixed, ordered sensitivity levels (`public < internal < confidential`), shared
@@ -29,7 +30,15 @@ export class SensitivityLevel extends ValueObject<SensitivityLevelProps> {
 
   public static of(name: string): SensitivityLevel {
     if (!(SENSITIVITY_LEVELS as ReadonlyArray<string>).includes(name)) {
-      throw new Error("Unknown sensitivity level: " + name);
+      // kind "internal" preserves the pre-ADR-026 status: this message matched no edge's
+      // substring `statusForError`, so it became a 500. Semantically this is a user-facing
+      // validation failure (400) — flagged for the main agent (ADR-026 §3 keep-status rule).
+      throw new DomainError(
+        "common.unknownSensitivityLevel",
+        "internal",
+        { name },
+        "Unknown sensitivity level: " + name,
+      );
     }
     return new SensitivityLevel(name as SensitivityLevelName);
   }

@@ -1,4 +1,5 @@
 import type { EmbedderPort } from "../../application/types.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Local, free, multilingual embedder (ADR-017): BGE-M3 (1024-dim, no query prefix) run in
@@ -55,7 +56,10 @@ export class TransformersEmbedder implements EmbedderPort {
       return pipe as unknown as FeatureExtractor;
     } catch (error) {
       const reason = error instanceof Error ? error.message : "unknown error";
-      throw new Error(
+      throw new DomainError(
+        "retrieval.embeddingModelUnavailable",
+        "internal",
+        { modelName: this.modelName, reason },
         "Local embedding model '" + this.modelName + "' could not be loaded: " + reason,
       );
     }

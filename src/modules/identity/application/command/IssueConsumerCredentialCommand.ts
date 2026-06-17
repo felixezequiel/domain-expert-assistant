@@ -1,6 +1,7 @@
 import { CredentialId } from "../../domain/identifiers/CredentialId.ts";
 import { CredentialScope } from "../../domain/valueObjects/CredentialScope.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Issue a consumer API key. Collection ids reference Knowledge collections (PRD-2) by id;
@@ -26,7 +27,12 @@ export class IssueConsumerCredentialCommand {
   ): IssueConsumerCredentialCommand {
     const trimmedName = name.trim();
     if (trimmedName.length === 0) {
-      throw new Error("Credential name is required");
+      throw new DomainError(
+        "identity.credentialNameRequired",
+        "validation",
+        undefined,
+        "Credential name is required",
+      );
     }
     return new IssueConsumerCredentialCommand(
       new CredentialId(credentialId),

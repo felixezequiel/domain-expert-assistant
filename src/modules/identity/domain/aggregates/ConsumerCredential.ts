@@ -1,4 +1,5 @@
 import { AggregateRoot } from "../../../../shared/domain/aggregates/AggregateRoot.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 import type { TenantScoped } from "../../../../shared/domain/TenantScoped.ts";
 import type { CredentialId } from "../identifiers/CredentialId.ts";
 import type { CredentialScope } from "../valueObjects/CredentialScope.ts";
@@ -121,7 +122,12 @@ export class ConsumerCredential
 
   public rotate(keyPrefix: string, secretHash: string): void {
     if (this.props.status === "revoked") {
-      throw new Error("Cannot rotate a revoked credential: " + this.id.value);
+      throw new DomainError(
+        "identity.rotateRevokedCredential",
+        "internal",
+        { id: this.id.value },
+        "Cannot rotate a revoked credential: " + this.id.value,
+      );
     }
     this.props.keyPrefix = keyPrefix;
     this.props.secretHash = secretHash;

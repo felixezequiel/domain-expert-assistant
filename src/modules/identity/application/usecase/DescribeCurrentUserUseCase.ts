@@ -3,6 +3,7 @@ import type { Role } from "../../../../shared/domain/Role.ts";
 import type { UserRepositoryPort } from "../types.ts";
 import { UserId } from "../../domain/identifiers/UserId.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /** "Who am I" for the authenticated session — id, name, email, roles and status. */
 export interface CurrentUserView {
@@ -30,12 +31,22 @@ export class DescribeCurrentUserUseCase implements UseCase<void, CurrentUserView
   public async execute(): Promise<CurrentUserView> {
     const actorId = getCurrentActor()?.actorId ?? null;
     if (actorId === null) {
-      throw new Error("Cannot describe the current user without an actor in the context");
+      throw new DomainError(
+        "identity.describeCurrentUserWithoutActor",
+        "internal",
+        undefined,
+        "Cannot describe the current user without an actor in the context",
+      );
     }
 
     const user = await this.userRepository.findById(new UserId(actorId));
     if (user === null) {
-      throw new Error("Current user not found: " + actorId);
+      throw new DomainError(
+        "identity.currentUserNotFound",
+        "validation",
+        { id: actorId },
+        "Current user not found: " + actorId,
+      );
     }
 
     return {

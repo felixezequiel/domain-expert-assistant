@@ -1,4 +1,5 @@
 import { KnowledgeItemId } from "../../domain/identifiers/KnowledgeItemId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /** Thin id-only (and reason) lifecycle commands, grouped since they share construction. */
 abstract class ItemCommand {
@@ -44,7 +45,12 @@ export class RejectItemCommand {
   public static of(itemId: string, reason: string): RejectItemCommand {
     const trimmed = reason.trim();
     if (trimmed.length === 0) {
-      throw new Error("A rejection reason is required");
+      throw new DomainError(
+        "knowledge.rejectionReasonRequired",
+        "validation",
+        undefined,
+        "A rejection reason is required",
+      );
     }
     return new RejectItemCommand(new KnowledgeItemId(itemId), trimmed);
   }

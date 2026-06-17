@@ -4,6 +4,7 @@ import type { UserRepositoryPort, SessionRepositoryPort } from "../types.ts";
 import type { DisableUserCommand } from "../command/DisableUserCommand.ts";
 import type { User } from "../../domain/aggregates/User.ts";
 import { LastAdminError } from "../errors.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Admin disables a user. Refuses to disable the org's last active admin. Disabling
@@ -24,7 +25,12 @@ export class DisableUserUseCase implements UseCase<DisableUserCommand, User> {
   public async execute(command: DisableUserCommand): Promise<User> {
     const user = await this.userRepository.findById(command.userId);
     if (user === null) {
-      throw new Error("User not found: " + command.userId.value);
+      throw new DomainError(
+        "identity.userNotFound",
+        "validation",
+        { id: command.userId.value },
+        "User not found: " + command.userId.value,
+      );
     }
 
     if (user.isAdmin() && user.status === "active") {

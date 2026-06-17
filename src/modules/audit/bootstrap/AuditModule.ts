@@ -6,12 +6,10 @@ import { readSessionToken } from "../../identity/infrastructure/http/SessionCook
 import type { ResolveSessionUseCase } from "../../identity/application/usecase/ResolveSessionUseCase.ts";
 import type { ListAuditTrailUseCase } from "../application/usecase/ListAuditTrailUseCase.ts";
 import { ListAuditTrailQuery } from "../application/query/ListAuditTrailQuery.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
-const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
-const HTTP_INTERNAL_ERROR = 500;
 
 interface RouteResult {
   readonly statusCode: number;
@@ -51,7 +49,10 @@ export class AuditModule {
     const token = readSessionToken(request.headers.cookie);
     const principal = token === null ? null : await this.deps.resolveSession.execute(token);
     if (principal === null) {
-      this.respond(response, { statusCode: HTTP_UNAUTHORIZED, body: { error: "Unauthorized" } });
+      this.respond(response, {
+        statusCode: HTTP_UNAUTHORIZED,
+        body: { error: "common.unauthorized", message: "Unauthorized" },
+      });
       return;
     }
     const actor: Actor = {
@@ -118,13 +119,6 @@ export class AuditModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    let statusCode = HTTP_INTERNAL_ERROR;
-    if (message.startsWith("Forbidden")) {
-      statusCode = HTTP_FORBIDDEN;
-    } else if (message.includes("Invalid") || message.includes("required")) {
-      statusCode = HTTP_BAD_REQUEST;
-    }
-    this.respond(response, { statusCode, body: { error: message } });
+    this.respond(response, toErrorResponse(error));
   }
 }

@@ -11,6 +11,7 @@ import type { CreateKnowledgeItemCommand } from "../command/CreateKnowledgeItemC
 import { KnowledgeItem } from "../../domain/aggregates/KnowledgeItem.ts";
 import { snapshotOf } from "../knowledgeVersionSnapshot.ts";
 import { assertTagsExist } from "../assertTagsExist.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Curator creates a draft item (v1) in a collection of their own org, validating that the
@@ -45,11 +46,21 @@ export class CreateKnowledgeItemUseCase implements UseCase<CreateKnowledgeItemCo
     const companyId = actor?.companyId ?? null;
     const authorId = actor?.actorId ?? null;
     if (companyId === null || authorId === null) {
-      throw new Error("Cannot create a knowledge item without a tenant/actor in the context");
+      throw new DomainError(
+        "knowledge.missingTenantActor",
+        "validation",
+        undefined,
+        "Cannot create a knowledge item without a tenant/actor in the context",
+      );
     }
 
     if ((await this.collectionRepository.findById(command.collectionId)) === null) {
-      throw new Error("Collection not found: " + command.collectionId.value);
+      throw new DomainError(
+        "knowledge.collectionNotFound",
+        "validation",
+        { id: command.collectionId.value },
+        "Collection not found: " + command.collectionId.value,
+      );
     }
     await assertTagsExist(this.tagRepository, command.tagIds);
 

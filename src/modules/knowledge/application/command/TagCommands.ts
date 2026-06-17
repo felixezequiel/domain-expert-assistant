@@ -1,4 +1,5 @@
 import { TagId } from "../../domain/identifiers/TagId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export class CreateTenantTagCommand {
   public readonly tagId: TagId;
@@ -11,7 +12,7 @@ export class CreateTenantTagCommand {
 
   public static of(tagId: string, label: string): CreateTenantTagCommand {
     if (label.trim().length === 0) {
-      throw new Error("Tag label is required");
+      throw new DomainError("knowledge.tagLabelRequired", "validation", undefined, "Tag label is required");
     }
     return new CreateTenantTagCommand(new TagId(tagId), label);
   }

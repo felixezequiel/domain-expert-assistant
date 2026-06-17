@@ -7,12 +7,12 @@ import type { ResolveSessionUseCase } from "../../identity/application/usecase/R
 import type { SemanticSearchUseCase } from "../application/usecase/SemanticSearchUseCase.ts";
 import type { RebuildIndexUseCase } from "../application/usecase/IndexingUseCases.ts";
 import { SemanticSearchCommand, RebuildIndexCommand } from "../application/command/RetrievalCommands.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
-const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
-const HTTP_INTERNAL_ERROR = 500;
 
 interface RouteResult {
   readonly statusCode: number;
@@ -57,7 +57,10 @@ export class RetrievalModule {
     const token = readSessionToken(request.headers.cookie);
     const principal = token === null ? null : await this.deps.resolveSession.execute(token);
     if (principal === null) {
-      this.respond(response, { statusCode: HTTP_UNAUTHORIZED, body: { error: "Unauthorized" } });
+      this.respond(response, {
+        statusCode: HTTP_UNAUTHORIZED,
+        body: { error: "common.unauthorized", message: "Unauthorized" },
+      });
       return;
     }
     const actor: Actor = {
@@ -75,7 +78,10 @@ export class RetrievalModule {
 
   private async handleSearch(request: IncomingMessage, actor: Actor): Promise<RouteResult> {
     if (actor.companyId === null) {
-      return { statusCode: HTTP_FORBIDDEN, body: { error: "A tenant-scoped session is required" } };
+      return {
+        statusCode: HTTP_FORBIDDEN,
+        body: { error: "retrieval.tenantScopeRequired", message: "A tenant-scoped session is required" },
+      };
     }
     const body = await HttpServer.readJsonBody(request);
     const query = RetrievalModule.requireString(body, "query");
@@ -92,10 +98,16 @@ export class RetrievalModule {
 
   private async handleRebuild(actor: Actor): Promise<RouteResult> {
     if (actor.companyId === null) {
-      return { statusCode: HTTP_FORBIDDEN, body: { error: "A tenant-scoped session is required" } };
+      return {
+        statusCode: HTTP_FORBIDDEN,
+        body: { error: "retrieval.tenantScopeRequired", message: "A tenant-scoped session is required" },
+      };
     }
     if (actor.roles === undefined || !actor.roles.includes("admin")) {
-      return { statusCode: HTTP_FORBIDDEN, body: { error: "Forbidden: admin role required" } };
+      return {
+        statusCode: HTTP_FORBIDDEN,
+        body: { error: "retrieval.adminRoleRequired", message: "Forbidden: admin role required" },
+      };
     }
     const reprojected = await this.deps.applicationService.execute(
       this.deps.rebuildIndex,
@@ -110,28 +122,13 @@ export class RetrievalModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    this.respond(response, { statusCode: RetrievalModule.statusForError(message), body: { error: message } });
-  }
-
-  private static statusForError(message: string): number {
-    // An authorization failure ("Forbidden: requires one of the roles […]", thrown by the
-    // ApplicationService's authorizer before execute) is a 403 — a real "you lack the role",
-    // not a server fault. Checked before the generic client-error branch because the message
-    // also contains the word "required" and would otherwise be mis-mapped to 400.
-    if (message.startsWith("Forbidden")) {
-      return HTTP_FORBIDDEN;
-    }
-    if (message.includes("required")) {
-      return HTTP_BAD_REQUEST;
-    }
-    return HTTP_INTERNAL_ERROR;
+    this.respond(response, toErrorResponse(error));
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {
     const value = body[field];
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error("Field '" + field + "' is required");
+      throw new DomainError("common.fieldRequired", "validation", { field }, "Field '" + field + "' is required");
     }
     return value;
   }
@@ -142,7 +139,12 @@ export class RetrievalModule {
       return null;
     }
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error("Field '" + field + "' must be a non-empty string when present");
+      throw new DomainError(
+        "common.fieldInvalid",
+        "validation",
+        { field },
+        "Field '" + field + "' must be a non-empty string when present",
+      );
     }
     return value;
   }

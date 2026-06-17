@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { LocalFileStorage } from "./LocalFileStorage.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 function scope(companyId: string) {
   return { companyId, actorId: "system", actorType: "system" as const };
@@ -27,7 +28,13 @@ describe("LocalFileStorage", () => {
 
     await assert.rejects(
       () => runWithActor(scope("another-company"), () => storage.read(company, ref)),
-      /Fail-closed/,
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "ingestion.crossTenantRead");
+        assert.equal(error.kind, "internal");
+        assert.equal(error.message, "Fail-closed: cannot read a file outside the current tenant scope");
+        return true;
+      },
     );
   });
 
@@ -35,7 +42,13 @@ describe("LocalFileStorage", () => {
     const storage = new LocalFileStorage();
     await assert.rejects(
       () => runWithActor(scope("c1"), () => storage.read("c1", "../../etc/passwd")),
-      /Invalid storage reference/,
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "ingestion.invalidStorageReference");
+        assert.equal(error.kind, "internal");
+        assert.equal(error.message, "Invalid storage reference");
+        return true;
+      },
     );
   });
 });

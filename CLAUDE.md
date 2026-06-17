@@ -121,6 +121,10 @@ GET  /users/:userId             # Get user by ID
 POST /users/:userId/addresses   # Add address to user
 ```
 
+### Error Codes (ADR-026)
+
+Domain/application errors carry a **stable code** (a translation key), never English prose meant for the user. Throw `DomainError(code, kind, params?, message)` from `shared/domain/errors/` (or subclass it — e.g. `UnauthorizedError`, `RateLimitExceededError` — keeping the class name + signature): `code` is the stable dotted key (`knowledge.collectionNameExists`); `kind ∈ {validation, unauthorized, forbidden, not_found, conflict, rate_limited, unavailable, internal}` maps to the HTTP status; `params` is the flat record the SPA interpolates; `message` is the verbatim English fallback. Every module edge's `respondError` delegates to `toErrorResponse(error)` (`shared/infrastructure/http/`) — `{ error: <code>, message, params? }` at `kind`'s status; a non-`DomainError` → `common.unexpected` (500). There is **no** `statusForError` substring matching. Pick `kind` to **preserve the current status** (this is about codes, not re-statusing). Pure programmer-guard throws may stay bare `Error` (→ 500). The SPA translates `t("errors." + code, { ...params, defaultValue: message })` (`web/src/i18n/locales/*/errors.json`, ADR-025) — an untranslated code degrades to the English `message`, so pt-BR/en-US coverage can lag the backend.
+
 ### Persistence Layer (MikroORM)
 
 - **ORM entities** are plain classes (no domain coupling) in `persistence/mikro-orm/entities/`

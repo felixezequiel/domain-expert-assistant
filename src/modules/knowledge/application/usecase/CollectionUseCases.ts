@@ -4,6 +4,7 @@ import { getCurrentActor } from "../../../../shared/application/context/ActorCon
 import type { CollectionRepositoryPort } from "../types.ts";
 import type { CreateCollectionCommand, RenameCollectionCommand } from "../command/CollectionCommands.ts";
 import { Collection } from "../../domain/aggregates/Collection.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export class CreateCollectionUseCase implements UseCase<CreateCollectionCommand, Collection> {
   public readonly requiredRoles: ReadonlyArray<Role> = ["admin"];
@@ -14,10 +15,20 @@ export class CreateCollectionUseCase implements UseCase<CreateCollectionCommand,
     const companyId = actor?.companyId ?? null;
     const createdBy = actor?.actorId ?? null;
     if (companyId === null || createdBy === null) {
-      throw new Error("Cannot create a collection without a tenant/actor in the context");
+      throw new DomainError(
+        "knowledge.missingTenantActor",
+        "validation",
+        undefined,
+        "Cannot create a collection without a tenant/actor in the context",
+      );
     }
     if (await this.collectionRepository.existsByName(command.name.trim())) {
-      throw new Error("A collection with this name already exists");
+      throw new DomainError(
+        "knowledge.collectionNameExists",
+        "validation",
+        undefined,
+        "A collection with this name already exists",
+      );
     }
     return Collection.create(command.collectionId, companyId, command.name, command.description, createdBy);
   }
@@ -30,11 +41,21 @@ export class RenameCollectionUseCase implements UseCase<RenameCollectionCommand,
   public async execute(command: RenameCollectionCommand): Promise<Collection> {
     const collection = await this.collectionRepository.findById(command.collectionId);
     if (collection === null) {
-      throw new Error("Collection not found: " + command.collectionId.value);
+      throw new DomainError(
+        "knowledge.collectionNotFound",
+        "validation",
+        { id: command.collectionId.value },
+        "Collection not found: " + command.collectionId.value,
+      );
     }
     const newName = command.name.trim();
     if (newName !== collection.name && (await this.collectionRepository.existsByName(newName))) {
-      throw new Error("A collection with this name already exists");
+      throw new DomainError(
+        "knowledge.collectionNameExists",
+        "validation",
+        undefined,
+        "A collection with this name already exists",
+      );
     }
     collection.rename(command.name);
     return collection;

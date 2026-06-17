@@ -20,6 +20,7 @@ import type {
 } from "../command/ContentCommands.ts";
 import { snapshotOf } from "../knowledgeVersionSnapshot.ts";
 import { assertTagsExist } from "../assertTagsExist.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 function requireActorId(): string {
   const actorId = getCurrentActor()?.actorId ?? null;
@@ -35,7 +36,12 @@ async function loadItem(
 ): Promise<KnowledgeItem> {
   const item = await repository.findById(itemId);
   if (item === null) {
-    throw new Error("Knowledge item not found: " + itemId.value);
+    throw new DomainError(
+      "knowledge.itemNotFound",
+      "validation",
+      { id: itemId.value },
+      "Knowledge item not found: " + itemId.value,
+    );
   }
   return item;
 }
@@ -53,7 +59,12 @@ export class RollbackToVersionUseCase implements UseCase<RollbackToVersionComman
     const item = await loadItem(this.itemRepository, command.itemId);
     const snapshot = await this.versionRepository.findByItemAndNumber(item.id.value, command.versionNumber);
     if (snapshot === null) {
-      throw new Error("Version not found: " + command.versionNumber);
+      throw new DomainError(
+        "knowledge.versionNotFound",
+        "validation",
+        { versionNumber: command.versionNumber },
+        "Version not found: " + command.versionNumber,
+      );
     }
     const tagIds: Array<TagId> = [];
     for (const tagId of snapshot.tagIds) {
@@ -100,7 +111,12 @@ export class MoveItemToCollectionUseCase implements UseCase<MoveItemToCollection
 
   public async execute(command: MoveItemToCollectionCommand): Promise<KnowledgeItem> {
     if ((await this.collectionRepository.findById(command.collectionId)) === null) {
-      throw new Error("Collection not found: " + command.collectionId.value);
+      throw new DomainError(
+        "knowledge.collectionNotFound",
+        "validation",
+        { id: command.collectionId.value },
+        "Collection not found: " + command.collectionId.value,
+      );
     }
     const item = await loadItem(this.itemRepository, command.itemId);
     item.moveToCollection(command.collectionId);

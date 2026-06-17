@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { ConsumptionModule, type ConsumptionModuleDeps } from "./ConsumptionModule.ts";
 import { ScopeViolationError } from "../application/errors.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { UnauthorizedError } from "../../../shared/application/authorization/RoleBasedAuthorizer.ts";
 
 class FakeHttpServer {
   public readonly routes = new Map<string, RawRouteHandler>();
@@ -115,6 +116,7 @@ describe("ConsumptionModule routes", () => {
       fakeRequest({ authorization: "Bearer bad-key" }),
     );
     assert.equal(response.statusCode, 401);
+    assert.equal(JSON.parse(response.payload).error, "common.unauthorized");
   });
 
   it("serves a search (200) for a valid key and echoes the effective scope", async () => {
@@ -137,6 +139,9 @@ describe("ConsumptionModule routes", () => {
     );
     assert.equal(response.statusCode, 429);
     assert.equal(response.headers["Retry-After"], "30");
+    const body = JSON.parse(response.payload);
+    assert.equal(body.error, "consumption.rateLimitExceeded");
+    assert.deepEqual(body.params, { retryAfterSeconds: 30 });
   });
 
   it("maps a ScopeViolationError to 403", async () => {
@@ -151,12 +156,15 @@ describe("ConsumptionModule routes", () => {
       fakeRequest({ authorization: "Bearer good-key", url: "/v1/search?q=x&collection=col-forbidden" }),
     );
     assert.equal(response.statusCode, 403);
+    const body = JSON.parse(response.payload);
+    assert.equal(body.error, "consumption.scopeViolation");
+    assert.deepEqual(body.params, { collectionId: "col-forbidden" });
   });
 
   it("maps a Forbidden authorization error to 403, not 400/500", async () => {
     const knowledgeQueryFacade = {
       search: async () => {
-        throw new Error("Forbidden: requires one of the roles [admin].");
+        throw new UnauthorizedError(["admin"]);
       },
     } as unknown as ConsumptionModuleDeps["knowledgeQueryFacade"];
     new ConsumptionModule(deps({ knowledgeQueryFacade })).registerRoutes(httpServer as never);
@@ -165,6 +173,7 @@ describe("ConsumptionModule routes", () => {
       fakeRequest({ authorization: "Bearer good-key", url: "/v1/search?q=x" }),
     );
     assert.equal(response.statusCode, 403);
+    assert.equal(JSON.parse(response.payload).error, "common.forbiddenRole");
   });
 
   it("accepts `query` as an alias for `q` (P4 — no silent empty result)", async () => {
@@ -193,5 +202,6 @@ describe("ConsumptionModule routes", () => {
       { itemId: "missing" },
     );
     assert.equal(response.statusCode, 404);
+    assert.equal(JSON.parse(response.payload).error, "consumption.itemNotFound");
   });
 });

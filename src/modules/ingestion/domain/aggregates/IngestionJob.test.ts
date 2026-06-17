@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { IngestionJob } from "./IngestionJob.ts";
 import { IngestionJobId } from "../identifiers/IngestionJobId.ts";
 import { MimeType } from "../valueObjects/MimeType.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 function uploaded(): IngestionJob {
   return IngestionJob.upload(
@@ -67,6 +68,33 @@ describe("IngestionJob", () => {
     job.complete("item-1");
     assert.throws(() => job.fail("late"), /Cannot fail/); // already done
     assert.throws(() => job.markForRetry(), /Cannot requeue/);
+  });
+
+  it("invalid transitions throw a coded DomainError preserving the message + params", () => {
+    const job = uploaded();
+    try {
+      job.complete("x");
+      assert.fail("expected DomainError");
+    } catch (error) {
+      assert.ok(error instanceof DomainError);
+      assert.equal(error.code, "ingestion.invalidJobTransition");
+      assert.equal(error.kind, "validation");
+      assert.deepEqual(error.params, { action: "complete", status: "pending" });
+      assert.equal(error.message, "Cannot complete an ingestion job in status 'pending'");
+    }
+
+    job.startProcessing();
+    job.complete("item-1");
+    try {
+      job.fail("late");
+      assert.fail("expected DomainError");
+    } catch (error) {
+      assert.ok(error instanceof DomainError);
+      assert.equal(error.code, "ingestion.invalidJobTransition");
+      assert.equal(error.kind, "validation");
+      assert.deepEqual(error.params, { action: "fail", status: "done" });
+      assert.equal(error.message, "Cannot fail an ingestion job in status 'done'");
+    }
   });
 
   it("reconstitutes without events", () => {

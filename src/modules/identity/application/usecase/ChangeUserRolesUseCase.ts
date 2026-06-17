@@ -4,6 +4,7 @@ import type { UserRepositoryPort } from "../types.ts";
 import type { ChangeUserRolesCommand } from "../command/ChangeUserRolesCommand.ts";
 import type { User } from "../../domain/aggregates/User.ts";
 import { LastAdminError } from "../errors.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Admin changes a user's roles. Refuses to strip admin from the org's last active admin
@@ -22,7 +23,12 @@ export class ChangeUserRolesUseCase implements UseCase<ChangeUserRolesCommand, U
   public async execute(command: ChangeUserRolesCommand): Promise<User> {
     const user = await this.userRepository.findById(command.userId);
     if (user === null) {
-      throw new Error("User not found: " + command.userId.value);
+      throw new DomainError(
+        "identity.userNotFound",
+        "validation",
+        { id: command.userId.value },
+        "User not found: " + command.userId.value,
+      );
     }
 
     const losesAdmin = user.isAdmin() && !command.roles.includes("admin");

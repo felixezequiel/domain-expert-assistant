@@ -1,5 +1,6 @@
 import type { TagRepositoryPort } from "./types.ts";
 import type { TagId } from "../domain/identifiers/TagId.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Validates that every requested tag exists in the tenant's taxonomy (own ∪ system,
@@ -24,6 +25,11 @@ export async function assertTagsExist(
     }
   }
   if (missing.length > 0) {
-    throw new Error("Unknown tag(s) for this organization: " + missing.join(", "));
+    throw new DomainError(
+      "knowledge.unknownTags",
+      "validation",
+      { tags: missing.join(", ") },
+      "Unknown tag(s) for this organization: " + missing.join(", "),
+    );
   }
 }

@@ -4,6 +4,7 @@ import type { ConsumerCredentialRepositoryPort, OpaqueSecretPort } from "../type
 import type { RotateConsumerCredentialCommand } from "../command/RotateConsumerCredentialCommand.ts";
 import type { ConsumerCredential } from "../../domain/aggregates/ConsumerCredential.ts";
 import { getCurrentActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 export interface RotateConsumerCredentialResult {
   readonly credential: ConsumerCredential;
@@ -43,7 +44,12 @@ export class RotateConsumerCredentialUseCase
     const credential = await this.credentialRepository.findById(command.credentialId);
     const companyId = getCurrentActor()?.companyId ?? null;
     if (credential === null || credential.companyId !== companyId) {
-      throw new Error("Credential not found: " + command.credentialId.value);
+      throw new DomainError(
+        "identity.credentialNotFound",
+        "validation",
+        { id: command.credentialId.value },
+        "Credential not found: " + command.credentialId.value,
+      );
     }
     return credential;
   }

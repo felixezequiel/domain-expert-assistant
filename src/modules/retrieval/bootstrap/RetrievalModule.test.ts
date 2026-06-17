@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { RetrievalModule, type RetrievalModuleDeps } from "./RetrievalModule.ts";
 import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { UnauthorizedError } from "../../../shared/application/authorization/RoleBasedAuthorizer.ts";
 
 class FakeHttpServer {
   public readonly routes = new Map<string, RawRouteHandler>();
@@ -86,6 +87,7 @@ describe("RetrievalModule routes", () => {
       fakeRequest({ body: { query: "refund" } }),
     );
     assert.equal(response.statusCode, 401);
+    assert.equal(JSON.parse(response.payload).error, "common.unauthorized");
   });
 
   it("returns ranked results for an authenticated search", async () => {
@@ -125,12 +127,15 @@ describe("RetrievalModule routes", () => {
       fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", body: {} }),
     );
     assert.equal(response.statusCode, 400);
+    const body = JSON.parse(response.payload);
+    assert.equal(body.error, "common.fieldRequired");
+    assert.deepEqual(body.params, { field: "query" });
   });
 
   it("maps a Forbidden authorization error to 403, not 500/400", async () => {
     const semanticSearch = {
       execute: async () => {
-        throw new Error("Forbidden: requires one of the roles [admin].");
+        throw new UnauthorizedError(["admin"]);
       },
     } as unknown as RetrievalModuleDeps["semanticSearch"];
     new RetrievalModule(deps({ resolveSession: principal(["curator"]), semanticSearch })).registerRoutes(
@@ -143,6 +148,7 @@ describe("RetrievalModule routes", () => {
     );
 
     assert.equal(response.statusCode, 403);
+    assert.equal(JSON.parse(response.payload).error, "common.forbiddenRole");
   });
 
   it("forbids rebuild for a non-admin (403)", async () => {
@@ -152,6 +158,7 @@ describe("RetrievalModule routes", () => {
       fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", body: {} }),
     );
     assert.equal(response.statusCode, 403);
+    assert.equal(JSON.parse(response.payload).error, "retrieval.adminRoleRequired");
   });
 
   it("allows rebuild for an admin (200)", async () => {

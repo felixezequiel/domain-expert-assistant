@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { IngestionModule, type IngestionModuleDeps } from "./IngestionModule.ts";
 import { SESSION_COOKIE_NAME } from "../../identity/infrastructure/http/SessionCookie.ts";
 import type { RawRouteHandler } from "../../../shared/infrastructure/http/HttpServer.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
 
 class FakeHttpServer {
   public readonly routes = new Map<string, RawRouteHandler>();
@@ -71,13 +72,14 @@ describe("IngestionModule routes", () => {
     assert.ok(httpServer.routes.has("GET /ingestion/jobs/:id"));
   });
 
-  it("rejects upload with no session cookie (401)", async () => {
+  it("rejects upload with no session cookie (401) with a coded body", async () => {
     new IngestionModule(deps({})).registerRoutes(httpServer as never);
     const response = await invoke(
       httpServer.routes.get("POST /ingestion/uploads")!,
       fakeRequest({ body: { collectionId: "c", filename: "f", mimeType: "text/markdown", contentBase64: "aGk=" } }),
     );
     assert.equal(response.statusCode, 401);
+    assert.deepEqual(JSON.parse(response.payload), { error: "common.unauthorized", message: "Unauthorized" });
   });
 
   it("accepts an upload (202) when the session resolves", async () => {
@@ -98,13 +100,18 @@ describe("IngestionModule routes", () => {
     assert.deepEqual(JSON.parse(response.payload), { jobId: "job-1", status: "pending" });
   });
 
-  it("maps an authorization failure (Forbidden) to 403, not 500", async () => {
+  it("maps an authorization failure (forbidden) to 403 with a coded body", async () => {
     const resolveSession = {
       execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["reviewer"] }),
     } as unknown as IngestionModuleDeps["resolveSession"];
     const applicationService = {
       execute: async () => {
-        throw new Error("Forbidden: requires one of the roles [curator].");
+        throw new DomainError(
+          "common.forbiddenRole",
+          "forbidden",
+          { roles: "curator" },
+          "Forbidden: requires one of the roles [curator].",
+        );
       },
     } as unknown as IngestionModuleDeps["applicationService"];
     new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
@@ -118,15 +125,22 @@ describe("IngestionModule routes", () => {
     );
 
     assert.equal(response.statusCode, 403);
+    assert.equal(JSON.parse(response.payload).error, "common.forbiddenRole");
+    assert.equal(JSON.parse(response.payload).message, "Forbidden: requires one of the roles [curator].");
   });
 
-  it("maps an oversize-upload rejection to 400", async () => {
+  it("maps an oversize-upload rejection to 400 with a coded body", async () => {
     const resolveSession = {
       execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
     } as unknown as IngestionModuleDeps["resolveSession"];
     const applicationService = {
       execute: async () => {
-        throw new Error("Document content is too large: 11 bytes exceeds the limit of 4 bytes");
+        throw new DomainError(
+          "ingestion.contentTooLarge",
+          "validation",
+          { size: 11, maxBytes: 4 },
+          "Document content is too large: 11 bytes exceeds the limit of 4 bytes",
+        );
       },
     } as unknown as IngestionModuleDeps["applicationService"];
     new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
@@ -140,5 +154,41 @@ describe("IngestionModule routes", () => {
     );
 
     assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.payload).error, "ingestion.contentTooLarge");
+    assert.deepEqual(JSON.parse(response.payload).params, { size: 11, maxBytes: 4 });
+  });
+
+  it("maps a missing required field to 400 with the shared fieldRequired code", async () => {
+    const resolveSession = {
+      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
+    } as unknown as IngestionModuleDeps["resolveSession"];
+    new IngestionModule(deps({ resolveSession })).registerRoutes(httpServer as never);
+
+    const response = await invoke(
+      httpServer.routes.get("POST /ingestion/uploads")!,
+      fakeRequest({
+        cookie: SESSION_COOKIE_NAME + "=good",
+        body: { filename: "f.md", mimeType: "text/markdown", contentBase64: "aGk=" },
+      }),
+    );
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.payload).error, "common.fieldRequired");
+    assert.deepEqual(JSON.parse(response.payload).params, { field: "collectionId" });
+  });
+
+  it("maps a missing job to 404 with a coded body", async () => {
+    const resolveSession = {
+      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
+    } as unknown as IngestionModuleDeps["resolveSession"];
+    const applicationService = { execute: async () => null } as unknown as IngestionModuleDeps["applicationService"];
+    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+
+    const response = await invoke(httpServer.routes.get("GET /ingestion/jobs/:id")!, fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good" }), {
+      id: "missing",
+    });
+
+    assert.equal(response.statusCode, 404);
+    assert.deepEqual(JSON.parse(response.payload), { error: "ingestion.jobNotFound", message: "Ingestion job not found" });
   });
 });

@@ -11,6 +11,7 @@ import type {
 } from "../command/LifecycleCommands.ts";
 import type { KnowledgeItem } from "../../domain/aggregates/KnowledgeItem.ts";
 import type { KnowledgeItemId } from "../../domain/identifiers/KnowledgeItemId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Thin lifecycle-transition use cases (load → guarded domain method). Grouped because they
@@ -23,7 +24,12 @@ async function loadItem(
 ): Promise<KnowledgeItem> {
   const item = await repository.findById(itemId);
   if (item === null) {
-    throw new Error("Knowledge item not found: " + itemId.value);
+    throw new DomainError(
+      "knowledge.itemNotFound",
+      "validation",
+      { id: itemId.value },
+      "Knowledge item not found: " + itemId.value,
+    );
   }
   return item;
 }
@@ -47,7 +53,12 @@ export class ApproveItemUseCase implements UseCase<ApproveItemCommand, Knowledge
   public async execute(command: ApproveItemCommand): Promise<KnowledgeItem> {
     const reviewerId = getCurrentActor()?.actorId ?? null;
     if (reviewerId === null) {
-      throw new Error("Cannot approve without an actor in the context");
+      throw new DomainError(
+        "knowledge.missingActor",
+        "validation",
+        undefined,
+        "Cannot approve without an actor in the context",
+      );
     }
     const item = await loadItem(this.itemRepository, command.itemId);
     const requireSeparateReviewer = await this.organizationPolicy.requireSeparateReviewer(item.companyId);

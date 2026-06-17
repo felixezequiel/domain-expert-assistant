@@ -11,6 +11,7 @@ import { Title } from "../../domain/valueObjects/Title.ts";
 import { KnowledgeBody } from "../../domain/valueObjects/KnowledgeBody.ts";
 import { SensitivityLevel } from "../../../../shared/domain/valueObjects/SensitivityLevel.ts";
 import { runWithActor } from "../../../../shared/application/context/ActorContext.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 const CURATOR = { companyId: "company-1", actorId: "curator-2", actorType: "user" as const, roles: ["curator" as const] };
 
@@ -53,7 +54,14 @@ describe("EditKnowledgeItemUseCase", () => {
     const useCase = new EditKnowledgeItemUseCase(new FakeKnowledgeItemRepository(), new FakeKnowledgeVersionRepository());
     await assert.rejects(
       () => runWithActor(CURATOR, () => useCase.execute(EditKnowledgeItemCommand.of("ghost", "T", "B", "internal", []))),
-      /not found/,
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.itemNotFound");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { id: "ghost" });
+        assert.equal(error.message, "Knowledge item not found: ghost");
+        return true;
+      },
     );
   });
 });

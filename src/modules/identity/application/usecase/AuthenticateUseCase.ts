@@ -9,14 +9,19 @@ import type {
 import type { AuthenticateCommand } from "../command/AuthenticateCommand.ts";
 import { Session } from "../../domain/entities/Session.ts";
 import { SessionId } from "../../domain/identifiers/SessionId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 /**
  * Single error for every failure mode (unknown email, wrong password, disabled user) so
  * the response never reveals whether an account exists (ADR-010).
+ *
+ * `kind: "unauthorized"` preserves the 401 the old `statusForError` returned for this exact
+ * message (it special-cased "Invalid credentials" to 401 before any substring check) — ADR-026
+ * migrates codes, not statuses.
  */
-export class InvalidCredentialsError extends Error {
+export class InvalidCredentialsError extends DomainError {
   constructor() {
-    super("Invalid credentials");
+    super("identity.invalidCredentials", "unauthorized", undefined, "Invalid credentials");
     this.name = "InvalidCredentialsError";
   }
 }

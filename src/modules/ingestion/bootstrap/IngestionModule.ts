@@ -7,14 +7,13 @@ import type { ResolveSessionUseCase } from "../../identity/application/usecase/R
 import type { UploadDocumentUseCase } from "../application/usecase/UploadDocumentUseCase.ts";
 import type { GetIngestionJobUseCase } from "../application/usecase/GetIngestionJobUseCase.ts";
 import { UploadDocumentCommand } from "../application/command/IngestionCommands.ts";
+import { DomainError } from "../../../shared/domain/errors/DomainError.ts";
+import { toErrorResponse } from "../../../shared/infrastructure/http/errorResponse.ts";
 
 const HTTP_OK = 200;
 const HTTP_ACCEPTED = 202;
-const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
-const HTTP_INTERNAL_ERROR = 500;
 
 interface RouteResult {
   readonly statusCode: number;
@@ -56,7 +55,10 @@ export class IngestionModule {
     const token = readSessionToken(request.headers.cookie);
     const principal = token === null ? null : await this.deps.resolveSession.execute(token);
     if (principal === null) {
-      this.respond(response, { statusCode: HTTP_UNAUTHORIZED, body: { error: "Unauthorized" } });
+      this.respond(response, {
+        statusCode: HTTP_UNAUTHORIZED,
+        body: { error: "common.unauthorized", message: "Unauthorized" },
+      });
       return;
     }
     const actor: Actor = {
@@ -88,7 +90,10 @@ export class IngestionModule {
   private async handleGetJob(jobId: string): Promise<RouteResult> {
     const view = await this.deps.applicationService.execute(this.deps.getIngestionJob, jobId);
     if (view === null) {
-      return { statusCode: HTTP_NOT_FOUND, body: { error: "Ingestion job not found" } };
+      return {
+        statusCode: HTTP_NOT_FOUND,
+        body: { error: "ingestion.jobNotFound", message: "Ingestion job not found" },
+      };
     }
     return { statusCode: HTTP_OK, body: view };
   }
@@ -99,27 +104,18 @@ export class IngestionModule {
   }
 
   private respondError(response: ServerResponse, error: unknown): void {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    this.respond(response, { statusCode: IngestionModule.statusForError(message), body: { error: message } });
-  }
-
-  private static statusForError(message: string): number {
-    if (message.startsWith("Forbidden")) {
-      return HTTP_FORBIDDEN;
-    }
-    const isClientError =
-      message.includes("required") ||
-      message.includes("Unsupported") ||
-      message.includes("empty") ||
-      message.includes("too large") ||
-      message.includes("not found");
-    return isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
+    this.respond(response, toErrorResponse(error));
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {
     const value = body[field];
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error("Field '" + field + "' is required");
+      throw new DomainError(
+        "common.fieldRequired",
+        "validation",
+        { field },
+        "Field '" + field + "' is required",
+      );
     }
     return value;
   }

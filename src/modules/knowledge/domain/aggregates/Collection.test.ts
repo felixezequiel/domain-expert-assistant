@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Collection } from "./Collection.ts";
 import { CollectionId } from "../identifiers/CollectionId.ts";
+import { DomainError } from "../../../../shared/domain/errors/DomainError.ts";
 
 function create(): Collection {
   return Collection.create(new CollectionId("col-1"), "company-1", "Policies", "Company policies", "user-1");
@@ -22,6 +23,20 @@ describe("Collection", () => {
     assert.throws(
       () => Collection.create(new CollectionId("c"), "company-1", "x".repeat(201), null, "u"),
       /name/,
+    );
+  });
+
+  it("throws a coded DomainError on a name-length violation", () => {
+    assert.throws(
+      () => Collection.create(new CollectionId("c"), "company-1", "  ", null, "u"),
+      (error: unknown) => {
+        assert.ok(error instanceof DomainError);
+        assert.equal(error.code, "knowledge.collectionNameLength");
+        assert.equal(error.kind, "validation");
+        assert.deepEqual(error.params, { max: 150 });
+        assert.equal(error.message, "Collection name must be 1..150 characters");
+        return true;
+      },
     );
   });
 

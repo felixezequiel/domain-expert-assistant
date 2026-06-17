@@ -15,6 +15,9 @@ export class PasswordHash extends ValueObject<PasswordHashProps> {
 
   constructor(value: string) {
     if (value.length === 0) {
+      // Programmer guard, never user-triggered: the hash always comes from the
+      // PasswordHasherPort, never from request input. Left as a plain Error → 500 (ADR-026
+      // exempts pure internal guards).
       throw new Error("Password hash cannot be empty");
     }
     super({ value });
