@@ -1,9 +1,69 @@
 import { useState } from "react";
+import { KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import { collectionsApi, credentialsApi } from "../../api/resources.ts";
 import { SENSITIVITY_LEVELS, type ConsumerCredentialView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary, ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
 import { SecretRevealDialog } from "../../components/SecretRevealDialog.tsx";
+import { formatDateTime } from "../../lib/format.ts";
+import { Badge } from "../../components/ui/badge.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
+import { Checkbox } from "../../components/ui/checkbox.tsx";
+import { Label } from "../../components/ui/label.tsx";
+import { Input } from "../../components/ui/input.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog.tsx";
+import { toast } from "../../components/ui/sonner.tsx";
+
+function errorMessage(caught: unknown): string {
+  if (caught instanceof Error) {
+    return caught.message;
+  }
+  return "Something went wrong.";
+}
+
+function statusBadgeVariant(status: string): "success" | "secondary" {
+  if (status === "active") {
+    return "success";
+  }
+  return "secondary";
+}
+
+function lastUsedLabel(lastUsedAt: string | null): string {
+  if (lastUsedAt === null) {
+    return "never";
+  }
+  return formatDateTime(lastUsedAt);
+}
+
+function scopeLabel(collectionIds: ReadonlyArray<string>): string {
+  if (collectionIds.length === 0) {
+    return "all";
+  }
+  return String(collectionIds.length);
+}
 
 export function CredentialsPage(): JSX.Element {
   const credentials = useAsync(() => credentialsApi.list(), []);
@@ -13,130 +73,219 @@ export function CredentialsPage(): JSX.Element {
   const [collectionIds, setCollectionIds] = useState<ReadonlyArray<string>>([]);
   const [ceiling, setCeiling] = useState<string>("internal");
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ConsumerCredentialView | null>(null);
 
   const issue = async (): Promise<void> => {
-    setError(null);
     try {
       const result = await credentialsApi.issue(name, collectionIds, ceiling);
-      setRevealedSecret(result.secret);
       setName("");
       setCollectionIds([]);
+      setCeiling("internal");
+      setRevealedSecret(result.secret);
+      toast.success("Credential issued");
       credentials.reload();
     } catch (caught) {
-      setError(caught);
+      toast.error(errorMessage(caught));
     }
   };
 
   const rotate = async (id: string): Promise<void> => {
-    setError(null);
     try {
       const result = await credentialsApi.rotate(id);
       setRevealedSecret(result.secret);
+      toast.success("Credential rotated");
       credentials.reload();
     } catch (caught) {
-      setError(caught);
+      toast.error(errorMessage(caught));
     }
   };
 
-  const revoke = async (id: string): Promise<void> => {
-    setError(null);
+  const confirmRevoke = async (): Promise<void> => {
+    if (revokeTarget === null) {
+      return;
+    }
     try {
-      await credentialsApi.revoke(id);
+      await credentialsApi.revoke(revokeTarget.id);
+      setRevokeTarget(null);
+      toast.success("Credential revoked");
       credentials.reload();
     } catch (caught) {
-      setError(caught);
+      setRevokeTarget(null);
+      toast.error(errorMessage(caught));
     }
   };
 
   const toggleCollection = (id: string): void => {
-    if (collectionIds.includes(id)) {
-      setCollectionIds(collectionIds.filter((value) => value !== id));
-    } else {
-      setCollectionIds([...collectionIds, id]);
-    }
+    setCollectionIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
   };
 
+  const rows = credentials.data?.credentials ?? [];
+  const availableCollections = collections.data?.collections ?? [];
+
   return (
-    <section>
-      <h2>Consumer credentials</h2>
-      {error !== null ? <ErrorNotice error={error} /> : null}
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Consumer credentials</h1>
 
-      <div className="card">
-        <h3>Issue credential</h3>
-        <label htmlFor="cred-name">Name</label>
-        <input id="cred-name" value={name} onChange={(event) => setName(event.target.value)} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Issue credential</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="cred-name">Name</Label>
+            <Input id="cred-name" value={name} onChange={(event) => setName(event.target.value)} />
+          </div>
 
-        <fieldset className="roles">
-          <legend>Scoped collections</legend>
-          {(collections.data?.collections ?? []).map((collection) => (
-            <label key={collection.id} htmlFor={`cred-coll-${collection.id}`}>
-              <input
-                id={`cred-coll-${collection.id}`}
-                type="checkbox"
-                checked={collectionIds.includes(collection.id)}
-                onChange={() => toggleCollection(collection.id)}
-              />
-              {collection.name}
-            </label>
-          ))}
-        </fieldset>
+          <div className="space-y-2">
+            <Label>Scoped collections (none selected = all)</Label>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {availableCollections.map((collection) => (
+                <label
+                  key={collection.id}
+                  className="flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Checkbox
+                    checked={collectionIds.includes(collection.id)}
+                    onCheckedChange={() => toggleCollection(collection.id)}
+                  />
+                  {collection.name}
+                </label>
+              ))}
+            </div>
+          </div>
 
-        <label htmlFor="cred-ceiling">Sensitivity ceiling</label>
-        <select id="cred-ceiling" value={ceiling} onChange={(event) => setCeiling(event.target.value)}>
-          {SENSITIVITY_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
+          <div className="space-y-1.5">
+            <Label htmlFor="cred-ceiling">Sensitivity ceiling</Label>
+            <Select value={ceiling} onValueChange={setCeiling}>
+              <SelectTrigger id="cred-ceiling" className="sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SENSITIVITY_LEVELS.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <button type="button" onClick={() => void issue()}>
-          Issue
-        </button>
-      </div>
+          <Button type="button" onClick={() => void issue()} disabled={name === ""}>
+            <KeyRound className="mr-2 h-4 w-4" />
+            Issue
+          </Button>
+        </CardContent>
+      </Card>
 
       <AsyncBoundary loading={credentials.loading} error={credentials.error}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Prefix</th>
-              <th>Scope</th>
-              <th>Ceiling</th>
-              <th>Status</th>
-              <th>Last used</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {(credentials.data?.credentials ?? []).map((credential: ConsumerCredentialView) => (
-              <tr key={credential.id}>
-                <td>{credential.name}</td>
-                <td>
-                  <code>{credential.keyPrefix}</code>
-                </td>
-                <td>{credential.collectionIds.length === 0 ? "all" : credential.collectionIds.join(", ")}</td>
-                <td>{credential.sensitivityCeiling}</td>
-                <td>{credential.status}</td>
-                <td>{credential.lastUsedAt ?? "never"}</td>
-                <td>
-                  <button type="button" onClick={() => void rotate(credential.id)}>
-                    Rotate
-                  </button>
-                  <button type="button" onClick={() => void revoke(credential.id)}>
-                    Revoke
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <CredentialsTable rows={rows} onRotate={rotate} onRevoke={setRevokeTarget} />
       </AsyncBoundary>
 
       {revealedSecret !== null ? (
         <SecretRevealDialog secret={revealedSecret} onClose={() => setRevealedSecret(null)} />
       ) : null}
-    </section>
+
+      <Dialog
+        open={revokeTarget !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setRevokeTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Revoke this credential?</DialogTitle>
+            <DialogDescription>
+              Applications using it will stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void confirmRevoke()}>
+              Revoke
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CredentialsTable({
+  rows,
+  onRotate,
+  onRevoke,
+}: {
+  readonly rows: ReadonlyArray<ConsumerCredentialView>;
+  onRotate(id: string): void;
+  onRevoke(credential: ConsumerCredentialView): void;
+}): JSX.Element {
+  if (rows.length === 0) {
+    return <p className="py-8 text-center text-sm text-muted-foreground">No credentials yet.</p>;
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Prefix</TableHead>
+          <TableHead>Scope</TableHead>
+          <TableHead>Ceiling</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Last used</TableHead>
+          <TableHead className="w-0" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((credential) => (
+          <TableRow key={credential.id}>
+            <TableCell className="font-medium">{credential.name}</TableCell>
+            <TableCell>
+              <code className="font-mono text-xs text-muted-foreground">{credential.keyPrefix}</code>
+            </TableCell>
+            <TableCell>{scopeLabel(credential.collectionIds)}</TableCell>
+            <TableCell>{credential.sensitivityCeiling}</TableCell>
+            <TableCell>
+              <Badge variant={statusBadgeVariant(credential.status)}>{credential.status}</Badge>
+            </TableCell>
+            <TableCell>{lastUsedLabel(credential.lastUsedAt)}</TableCell>
+            <TableCell>
+              <CredentialActions credential={credential} onRotate={onRotate} onRevoke={onRevoke} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function CredentialActions({
+  credential,
+  onRotate,
+  onRevoke,
+}: {
+  readonly credential: ConsumerCredentialView;
+  onRotate(id: string): void;
+  onRevoke(credential: ConsumerCredentialView): void;
+}): JSX.Element | null {
+  if (credential.status !== "active") {
+    return null;
+  }
+  return (
+    <div className="flex gap-2">
+      <Button type="button" variant="outline" size="sm" onClick={() => onRotate(credential.id)}>
+        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        Rotate
+      </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => onRevoke(credential)}>
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+        Revoke
+      </Button>
+    </div>
   );
 }

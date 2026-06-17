@@ -17,9 +17,10 @@ describe("App routing", () => {
   });
 
   it("shows the accept-invitation screen for an invitation hash route", async () => {
-    installFetch(mockFetchSequence([{ status: 200, body: {} }]));
+    // The invitation route is public; the boot /auth/me probe returns 401 (no session needed).
+    installFetch(mockFetchSequence([{ status: 401, body: { error: "Unauthorized" } }]));
     window.location.hash = "#/invitations/tok-1";
     render(<App />);
-    await waitFor(() => expect(screen.getByText("Accept invitation")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Accept your invitation")).toBeInTheDocument());
   });
 });

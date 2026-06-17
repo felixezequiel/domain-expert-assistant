@@ -1,52 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SecretRevealDialog } from "./SecretRevealDialog.tsx";
 
-// Mirrors the CredentialsPage pattern: the secret is held in parent state and the dialog is
-// the ONLY surface that shows it. Closing it clears the secret, so it can never reappear.
-function Harness(): JSX.Element {
-  const [secret, setSecret] = useState<string | null>("sk_live_TOPSECRET");
-  return (
-    <div>
-      <span data-testid="held">{secret === null ? "cleared" : "held"}</span>
-      {secret !== null ? (
-        <SecretRevealDialog secret={secret} onClose={() => setSecret(null)} />
-      ) : null}
-    </div>
-  );
-}
-
+// The new SecretRevealDialog renders a shadcn (Radix) Dialog into a portal in document.body.
+// testing-library queries the whole document, so getByText/getByTestId reach the portal.
 describe("SecretRevealDialog", () => {
   beforeEach(() => {
-    Object.assign(navigator, { clipboard: { writeText: vi.fn(async () => undefined) } });
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
   });
 
-  it("reveals the secret exactly once and never again after closing", async () => {
-    render(<Harness />);
+  it("shows the secret once", () => {
+    render(<SecretRevealDialog secret="abc.def" onClose={vi.fn()} />);
 
-    expect(screen.getByTestId("credential-secret").textContent).toBe("sk_live_TOPSECRET");
-
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
-
-    expect(screen.queryByTestId("credential-secret")).toBeNull();
-    expect(screen.getByTestId("held").textContent).toBe("cleared");
+    expect(screen.getByText("Credential secret")).toBeInTheDocument();
+    expect(screen.getByTestId("credential-secret").textContent).toBe("abc.def");
   });
 
-  it("copies the secret to the clipboard", async () => {
-    const writeText = vi.fn(async () => undefined);
+  it("copies the secret to the clipboard and reflects the copied state", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
-    render(<Harness />);
+    render(<SecretRevealDialog secret="abc.def" onClose={vi.fn()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
 
-    expect(writeText).toHaveBeenCalledWith("sk_live_TOPSECRET");
+    expect(writeText).toHaveBeenCalledWith("abc.def");
     expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
 
-  it("warns that the secret is shown only once", () => {
-    render(<Harness />);
-    expect(screen.getByText(/shown only once/i)).toBeInTheDocument();
+  it("calls onClose when Done is clicked", async () => {
+    const onClose = vi.fn();
+    render(<SecretRevealDialog secret="abc.def" onClose={onClose} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -66,6 +66,9 @@ function baseDeps(overrides: Partial<IdentityModuleDeps>): IdentityModuleDeps {
     rotateConsumerCredential: notUsed,
     revokeConsumerCredential: notUsed,
     listConsumerCredentials: notUsed,
+    describeCurrentUser: notUsed,
+    listOrgUsers: notUsed,
+    readOrgPolicy: notUsed,
     operatorSecret: null,
     sessionTtlSeconds: 3600,
     cookieSecure: false,
@@ -93,6 +96,9 @@ describe("IdentityModule routes", () => {
 
     assert.ok(httpServer.routes.has("POST /auth/login"));
     assert.ok(httpServer.routes.has("POST /auth/logout"));
+    assert.ok(httpServer.routes.has("GET /auth/me"));
+    assert.ok(httpServer.routes.has("GET /organizations/:orgId/users"));
+    assert.ok(httpServer.routes.has("GET /organizations/:orgId/policy"));
     assert.ok(httpServer.routes.has("POST /operator/organizations"));
     assert.ok(httpServer.routes.has("POST /invitations/:token/accept"));
     assert.ok(httpServer.routes.has("POST /organizations/:orgId/users/invite"));

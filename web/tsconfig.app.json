@@ -10,6 +10,8 @@
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] },
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,

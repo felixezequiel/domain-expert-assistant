@@ -4,6 +4,8 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./Layout.tsx";
 import { AuthContext, type Session } from "../auth/AuthContext.tsx";
+import { capabilitiesForRoles } from "../auth/capabilities.ts";
+import type { Role } from "../api/types.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -21,6 +23,7 @@ function AuthContextStub({
       value={{
         session,
         isAuthenticated: session !== null,
+        loading: false,
         login: async () => undefined,
         logout: async () => undefined,
       }}
@@ -30,16 +33,20 @@ function AuthContextStub({
   );
 }
 
-function renderNav(canAdminister: boolean, canAudit: boolean): void {
+function renderNavForRoles(roles: ReadonlyArray<Role>): void {
+  const session: Session = {
+    user: {
+      userId: "u1",
+      companyId: "c1",
+      email: "person@acme.com",
+      displayName: "Test Person",
+      roles,
+      status: "active",
+    },
+    capabilities: capabilitiesForRoles(roles),
+  };
   render(
-    <AuthContextStub
-      session={{
-        userId: "u1",
-        companyId: "c1",
-        expiresAt: "2030-01-01T00:00:00.000Z",
-        capabilities: { canAdminister, canAudit },
-      }}
-    >
+    <AuthContextStub session={session}>
       <MemoryRouter initialEntries={["/search"]}>
         <Routes>
           <Route element={<Layout />}>
@@ -51,27 +58,34 @@ function renderNav(canAdminister: boolean, canAudit: boolean): void {
   );
 }
 
-describe("Layout role-gated nav", () => {
-  it("always shows the open sections (search, items, review)", () => {
-    renderNav(false, false);
+describe("Layout role-tailored nav", () => {
+  it("always shows Search and Catalog", () => {
+    renderNavForRoles(["consumer"]);
     expect(screen.getByRole("link", { name: "Search" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Items" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review queue" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Catalog" })).toBeInTheDocument();
   });
 
-  it("hides admin + audit nav when those capabilities are absent", () => {
-    renderNav(false, false);
+  it("hides curation/admin/audit nav for a consumer-only session", () => {
+    renderNavForRoles(["consumer"]);
+    expect(screen.queryByRole("link", { name: "Items" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review queue" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Credentials" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Audit trail" })).not.toBeInTheDocument();
   });
 
-  it("shows admin nav when canAdminister and audit nav when canAudit", () => {
-    renderNav(true, true);
-    expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Collections" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Credentials" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Org policy" })).toBeInTheDocument();
+  it("shows Items/Upload for a curator and Review queue for a reviewer", () => {
+    renderNavForRoles(["curator"]);
+    expect(screen.getByRole("link", { name: "Items" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Upload" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review queue" })).not.toBeInTheDocument();
+  });
+
+  it("shows a single consolidated Settings entry + Audit trail for an admin", () => {
+    renderNavForRoles(["admin"]);
+    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Audit trail" })).toBeInTheDocument();
+    // The five loose admin links are gone — they live as tabs inside Settings now.
+    expect(screen.queryByRole("link", { name: "Collections" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Org policy" })).not.toBeInTheDocument();
   });
 });

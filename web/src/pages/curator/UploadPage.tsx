@@ -1,10 +1,25 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import { collectionsApi, ingestionApi } from "../../api/resources.ts";
 import type { IngestionJobView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { FileDropzone } from "../../components/FileDropzone.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
+import { Label } from "../../components/ui/label.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select.tsx";
+import { Skeleton } from "../../components/ui/skeleton.tsx";
 
-const TERMINAL_STATUSES = ["completed", "failed"];
+// Ingestion job lifecycle is pending -> processing -> done | failed (IngestionJob aggregate).
+const TERMINAL_STATUSES = ["done", "failed"];
 const POLL_INTERVAL_MS = 1500;
 
 // Reads a chosen file, strips the data-URL prefix, and POSTs the base64 body to the
@@ -34,6 +49,8 @@ export function UploadPage(): JSX.Element {
   const [job, setJob] = useState<IngestionJobView | null>(null);
   const [error, setError] = useState<unknown>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const processing = jobId !== null && (job === null || !TERMINAL_STATUSES.includes(job.status));
 
   const upload = async (): Promise<void> => {
     setError(null);
@@ -83,47 +100,98 @@ export function UploadPage(): JSX.Element {
   }, [jobId]);
 
   return (
-    <section>
-      <h2>Upload document</h2>
-      {error !== null ? <ErrorNotice error={error} /> : null}
-      <div className="card">
-        <label htmlFor="upload-collection">Collection</label>
-        <select id="upload-collection" value={collectionId} onChange={(event) => setCollectionId(event.target.value)}>
-          <option value="">Select…</option>
-          {(collections.data?.collections ?? []).map((collection) => (
-            <option key={collection.id} value={collection.id}>
-              {collection.name}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="upload-file">File</label>
-        <input
-          id="upload-file"
-          type="file"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-        <button type="button" onClick={() => void upload()}>
-          Upload
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Upload document</h1>
+        <p className="text-sm text-muted-foreground">
+          Drop a file to ingest it into a collection — it becomes a draft item you can review.
+        </p>
       </div>
 
-      {job !== null ? (
-        <div className="card" data-testid="job-status">
-          <h3>Ingestion job</h3>
-          <p>
-            <strong>Status:</strong> {job.status}
-          </p>
-          <p>
-            <strong>File:</strong> {job.filename}
-          </p>
-          {job.createdItemId !== null ? (
-            <p>
-              Created item: <code>{job.createdItemId}</code>
+      {error !== null ? <ErrorNotice error={error} /> : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">New ingestion</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="upload-collection">Collection</Label>
+            <Select value={collectionId} onValueChange={setCollectionId}>
+              <SelectTrigger id="upload-collection" className="w-full sm:w-72">
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(collections.data?.collections ?? []).map((collection) => (
+                  <SelectItem key={collection.id} value={collection.id}>
+                    {collection.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="upload-file">File</Label>
+            <FileDropzone
+              id="upload-file"
+              file={file}
+              onFileChange={setFile}
+              hint="Markdown or plain text · a single document"
+              disabled={processing}
+            />
+          </div>
+
+          <Button type="button" onClick={() => void upload()} disabled={file === null || processing}>
+            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Upload
+          </Button>
+        </CardContent>
+      </Card>
+
+      {processing ? (
+        <Card data-testid="job-status">
+          <CardContent className="space-y-3 py-5">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Processing…
+            </div>
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {job !== null && job.status === "done" ? (
+        <Card data-testid="job-status" className="border-success/40">
+          <CardContent className="space-y-2 py-5">
+            <div className="flex items-center gap-2 text-sm font-medium text-success">
+              <CheckCircle2 className="h-4 w-4" />
+              Ingestion complete
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Created from <span className="font-medium text-foreground">{job.filename}</span>.
             </p>
-          ) : null}
-          {job.failureReason !== null ? <p className="notice notice--error">{job.failureReason}</p> : null}
+            {job.createdItemId !== null ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/items/${job.createdItemId}`}>Open created item</Link>
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {job !== null && job.status === "failed" ? (
+        <div
+          data-testid="job-status"
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
+        >
+          <span>
+            <span className="font-medium">Ingestion failed:</span> {job.failureReason ?? "Unknown error."}
+          </span>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

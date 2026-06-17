@@ -1,43 +1,38 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { probeCapabilities } from "./capabilities.ts";
-import { mockFetchSequence, installFetch } from "../test/index.ts";
+import { describe, it, expect } from "vitest";
+import { capabilitiesForRoles, NO_CAPABILITIES } from "./capabilities.ts";
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-// probeCapabilities issues two probes in order: GET /credentials, then GET /audit/events.
-describe("probeCapabilities", () => {
-  it("grants admin + audit when both probes return 200", async () => {
-    installFetch(
-      mockFetchSequence([
-        { status: 200, body: { credentials: [] } },
-        { status: 200, body: { events: [] } },
-      ]),
-    );
-    const capabilities = await probeCapabilities();
-    expect(capabilities).toEqual({ canAdminister: true, canAudit: true });
+describe("capabilitiesForRoles", () => {
+  it("grants every capability to an admin", () => {
+    expect(capabilitiesForRoles(["admin"])).toEqual({
+      canAdminister: true,
+      canAudit: true,
+      canCurate: true,
+      canReview: true,
+    });
   });
 
-  it("denies admin + audit when both probes return 403", async () => {
-    installFetch(
-      mockFetchSequence([
-        { status: 403, body: { error: "Forbidden" } },
-        { status: 403, body: { error: "Forbidden" } },
-      ]),
-    );
-    const capabilities = await probeCapabilities();
-    expect(capabilities).toEqual({ canAdminister: false, canAudit: false });
+  it("maps each non-admin role to exactly its capability", () => {
+    expect(capabilitiesForRoles(["curator"])).toEqual({
+      canAdminister: false,
+      canAudit: false,
+      canCurate: true,
+      canReview: false,
+    });
+    expect(capabilitiesForRoles(["reviewer"])).toEqual({
+      canAdminister: false,
+      canAudit: false,
+      canCurate: false,
+      canReview: true,
+    });
+    expect(capabilitiesForRoles(["auditor"])).toEqual({
+      canAdminister: false,
+      canAudit: true,
+      canCurate: false,
+      canReview: false,
+    });
   });
 
-  it("treats a non-authorization failure as available (lets the screen surface the error)", async () => {
-    installFetch(
-      mockFetchSequence([
-        { status: 500, body: { error: "boom" } },
-        { status: 500, body: { error: "boom" } },
-      ]),
-    );
-    const capabilities = await probeCapabilities();
-    expect(capabilities).toEqual({ canAdminister: true, canAudit: true });
+  it("grants nothing to a consumer-only session", () => {
+    expect(capabilitiesForRoles(["consumer"])).toEqual(NO_CAPABILITIES);
   });
 });

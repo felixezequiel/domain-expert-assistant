@@ -39,9 +39,32 @@ describe("ProcessIngestionJobUseCase", () => {
 
     assert.equal(job?.status, "done");
     assert.equal(job?.createdItemId, "item-42");
-    assert.equal(draft.lastInput?.title, "policy.md");
+    // Title prefers the document's first markdown heading over the raw filename (finding U9).
+    assert.equal(draft.lastInput?.title, "Refund policy");
     assert.equal(draft.lastInput?.body, "# Refund policy\n\nDetails.");
     assert.equal(draft.lastInput?.companyId, "company-1");
+  });
+
+  it("falls back to the filename without its extension when there is no heading", async () => {
+    const repo = new FakeIngestionJobRepository();
+    const storage = new FakeFileStorage();
+    const job = IngestionJob.upload(
+      new IngestionJobId("j2"),
+      "company-1",
+      "col-1",
+      "onboarding-guide.md",
+      new MimeType("text/markdown"),
+      "company-1/j2",
+      "curator-1",
+    );
+    await repo.save(job);
+    await storage.store("company-1", "company-1/j2", Buffer.from("Welcome aboard. No heading here."));
+    const draft = new FakeKnowledgeDraftCreation("item-7");
+    const useCase = new ProcessIngestionJobUseCase(repo, storage, [new FakePlainTextExtractor()], draft);
+
+    await useCase.execute(ProcessIngestionJobCommand.of("j2"));
+
+    assert.equal(draft.lastInput?.title, "onboarding-guide");
   });
 
   it("is idempotent — a non-pending job is returned unchanged", async () => {

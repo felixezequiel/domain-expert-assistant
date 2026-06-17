@@ -1,7 +1,7 @@
 import { diffLines, type Change } from "diff";
+import { cn } from "../lib/utils.ts";
 
 // Line-level diff between two version bodies (PRD-6: "UI mostra o diff entre versões").
-// Uses the `diff` lib's diffLines; each change is rendered as added/removed/unchanged.
 export function VersionDiff({
   oldText,
   newText,
@@ -16,12 +16,12 @@ export function VersionDiff({
   const changes: Change[] = diffLines(oldText, newText);
 
   return (
-    <div className="diff" data-testid="version-diff">
-      <div className="diff__header">
-        <span className="diff__label diff__label--old">{oldLabel}</span>
-        <span className="diff__label diff__label--new">{newLabel}</span>
+    <div className="overflow-hidden rounded-lg border border-border" data-testid="version-diff">
+      <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+        <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-destructive">− {oldLabel}</span>
+        <span className="rounded bg-success/15 px-1.5 py-0.5 text-success">+ {newLabel}</span>
       </div>
-      <pre className="diff__body">
+      <pre className="overflow-x-auto bg-card p-0 font-mono text-xs leading-relaxed">
         {changes.map((change, index) => (
           <DiffChange key={index} change={change} />
         ))}
@@ -32,22 +32,24 @@ export function VersionDiff({
 
 function DiffChange({ change }: { readonly change: Change }): JSX.Element {
   const lines = change.value.replace(/\n$/, "").split("\n");
-  let className = "diff__line";
+  let lineClass = "text-foreground/80";
   let prefix = "  ";
+  let kind = "context";
   if (change.added === true) {
-    className = "diff__line diff__line--added";
+    lineClass = "bg-success/10 text-success";
     prefix = "+ ";
+    kind = "+";
   } else if (change.removed === true) {
-    className = "diff__line diff__line--removed";
+    lineClass = "bg-destructive/10 text-destructive";
     prefix = "- ";
+    kind = "-";
   }
   return (
     <>
       {lines.map((line, index) => (
-        <span key={index} className={className} data-change={prefix.trim() === "" ? "context" : prefix.trim()}>
+        <span key={index} className={cn("block px-3", lineClass)} data-change={kind}>
           {prefix}
           {line}
-          {"\n"}
         </span>
       ))}
     </>

@@ -1,8 +1,11 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
+import { Eye, Pencil } from "lucide-react";
+import { Button } from "./ui/button.tsx";
+import { Label } from "./ui/label.tsx";
+import { Textarea } from "./ui/textarea.tsx";
 
-// Markdown body editor with a live preview toggle (ADR-023: the knowledge body is
-// markdown). The input is a plain textarea; preview renders via react-markdown.
+// Markdown body editor with a live preview toggle (ADR-023: the knowledge body is markdown).
 export function MarkdownEditor({
   value,
   onChange,
@@ -15,27 +18,33 @@ export function MarkdownEditor({
   const [showPreview, setShowPreview] = useState(false);
 
   return (
-    <div className="md-editor">
-      <div className="md-editor__toolbar">
-        <label htmlFor="md-body">{label}</label>
-        <button
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor="md-body">{label}</Label>
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setShowPreview((previous) => !previous)}
           aria-pressed={showPreview}
         >
+          {showPreview ? <Pencil className="mr-1.5 h-3.5 w-3.5" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
           {showPreview ? "Edit" : "Preview"}
-        </button>
+        </Button>
       </div>
       {showPreview ? (
-        <div className="md-editor__preview" data-testid="md-preview">
+        <div
+          className="markdown min-h-[16rem] rounded-md border border-input bg-card px-4 py-3"
+          data-testid="md-preview"
+        >
           <Markdown>{value}</Markdown>
         </div>
       ) : (
-        <textarea
+        <Textarea
           id="md-body"
-          className="md-editor__textarea"
           value={value}
           rows={16}
+          className="font-mono text-sm"
           onChange={(event) => onChange(event.target.value)}
         />
       )}

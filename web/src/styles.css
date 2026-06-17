@@ -1,323 +1,172 @@
-:root {
-  --bg: #0f1115;
-  --panel: #181b22;
-  --panel-2: #21252e;
-  --border: #2c313c;
-  --text: #e6e9ef;
-  --muted: #9aa3b2;
-  --accent: #4c8bf5;
-  --danger: #e5534b;
-  --warning: #d9a441;
-  --ok: #3fb950;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * "Governed Archive" — an editorial, authoritative console for curated knowledge. Single
+ * dark "ink" theme with depth and a refined blue action accent; the knowledge lifecycle is
+ * expressed through a deliberate semantic scale (success = published/vetted, warning =
+ * in-review, etc.). Tokens are HSL channel triplets so Tailwind's hsl(var(--token)) mapping
+ * derives every component colour — retune the brand from --primary / --ring alone.
+ */
+@layer base {
+  :root {
+    --background: 224 33% 6%;
+    --foreground: 210 28% 92%;
+
+    --card: 224 26% 9%;
+    --card-foreground: 210 28% 92%;
+
+    --popover: 224 30% 8%;
+    --popover-foreground: 210 28% 92%;
+
+    --primary: 213 94% 62%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 17% 16%;
+    --secondary-foreground: 210 26% 92%;
+
+    --muted: 222 16% 13%;
+    --muted-foreground: 218 13% 62%;
+
+    --accent: 222 17% 18%;
+    --accent-foreground: 210 30% 97%;
+
+    --destructive: 358 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 62% 45%;
+    --success-foreground: 158 70% 7%;
+
+    --warning: 36 96% 58%;
+    --warning-foreground: 36 96% 8%;
+
+    --border: 222 16% 17%;
+    --input: 222 16% 20%;
+    --ring: 213 94% 62%;
+
+    --radius: 0.625rem;
+
+    --sidebar: 226 40% 5%;
+    --sidebar-foreground: 215 18% 72%;
+    --sidebar-accent: 214 60% 16%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 223 22% 12%;
+
+    --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Fraunces", ui-serif, Georgia, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01" 1, "cv01" 1;
+  }
+
+  /* Editorial display face for page titles + the brand — authority without shouting. */
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  /* Atmosphere: a faint cool glow + grain so surfaces read as layered ink, not a flat slab. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(55rem 38rem at 14% -8%, hsl(213 94% 60% / 0.1), transparent 60%),
+      radial-gradient(48rem 36rem at 100% 0%, hsl(214 70% 42% / 0.07), transparent 55%);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.022;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  /* Gentle staggered entrance for screen content on navigation. */
+  .animate-page-in {
+    animation: page-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-  margin-right: 0.75rem;
-}
-
-button,
-.button {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  margin-right: 0.5rem;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-input,
-select,
-textarea {
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem;
-  font-size: 0.9rem;
-  margin: 0.25rem 0 0.75rem;
-  width: 100%;
-  max-width: 480px;
-  display: block;
-}
-
-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-.layout__sidebar {
-  width: 220px;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-  padding: 1rem;
-}
-
-.layout__brand {
-  font-size: 1.1rem;
-}
-
-.layout__sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.layout__sidebar li {
-  margin: 0.4rem 0;
-}
-
-.layout__sidebar a.active {
-  font-weight: 700;
-}
-
-.layout__main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.layout__topbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.layout__content {
-  padding: 1.5rem;
-}
-
-.auth-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
-  max-width: 720px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.filters input,
-.filters select {
-  width: auto;
-  margin: 0;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  text-align: left;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-}
-
-.notice {
-  padding: 0.6rem 0.8rem;
-  border-radius: 6px;
-  background: var(--panel-2);
-  font-size: 0.9rem;
-}
-
-.notice--error {
-  border-left: 3px solid var(--danger);
-}
-
-.notice--warning {
-  border-left: 3px solid var(--warning);
-}
-
-.notice--ok {
-  border-left: 3px solid var(--ok);
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-}
-
-.badge--stale {
-  background: var(--warning);
-  color: #1a1a1a;
-}
-
-.roles {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.roles label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-right: 1rem;
-  color: var(--text);
-}
-
-.roles input {
-  width: auto;
-  display: inline-block;
-  margin: 0;
-}
-
-.md-editor__toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.md-editor__preview {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.75rem;
-  background: var(--panel-2);
-}
-
-.md-editor__textarea {
-  max-width: none;
-  font-family: ui-monospace, monospace;
-}
-
-.diff__body {
-  background: var(--panel-2);
-  border-radius: 6px;
-  padding: 0.5rem;
-  overflow-x: auto;
-}
-
-.diff__line--added {
-  color: var(--ok);
-}
-
-.diff__line--removed {
-  color: var(--danger);
-}
-
-.diff__header {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 0.25rem;
-}
-
-.results {
-  list-style: none;
-  padding: 0;
-}
-
-.result {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.result__title {
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.result__meta {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.modal__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.25rem;
-  max-width: 520px;
-  width: 90%;
-}
-
-.modal__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.secret {
-  display: block;
-  background: var(--panel-2);
-  padding: 0.75rem;
-  border-radius: 6px;
-  word-break: break-all;
-  font-family: ui-monospace, monospace;
+/* Markdown rendering inside item bodies, previews and the review pane. */
+@layer components {
+  .markdown {
+    @apply text-sm leading-relaxed text-foreground/90;
+  }
+  /* Content headings stay in the sans UI face — the serif is reserved for app chrome. */
+  .markdown h1,
+  .markdown h2,
+  .markdown h3 {
+    font-family: var(--font-sans);
+  }
+  .markdown h1 {
+    @apply mb-3 mt-1 text-2xl font-semibold tracking-tight text-foreground;
+  }
+  .markdown h2 {
+    @apply mb-2 mt-5 text-xl font-semibold tracking-tight text-foreground;
+  }
+  .markdown h3 {
+    @apply mb-2 mt-4 text-lg font-semibold text-foreground;
+  }
+  .markdown p {
+    @apply my-3;
+  }
+  .markdown ul {
+    @apply my-3 list-disc space-y-1 pl-6;
+  }
+  .markdown ol {
+    @apply my-3 list-decimal space-y-1 pl-6;
+  }
+  .markdown a {
+    @apply text-primary underline underline-offset-4 hover:text-primary/80;
+  }
+  .markdown code {
+    @apply rounded bg-muted px-1.5 py-0.5 text-[0.85em] text-foreground;
+  }
+  .markdown pre {
+    @apply my-3 overflow-x-auto rounded-lg bg-muted p-4;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown blockquote {
+    @apply my-3 border-l-2 border-border pl-4 italic text-muted-foreground;
+  }
 }

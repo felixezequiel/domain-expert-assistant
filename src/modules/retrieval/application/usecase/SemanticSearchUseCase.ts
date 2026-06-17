@@ -29,6 +29,9 @@ export class SemanticSearchUseCase implements UseCase<SemanticSearchCommand, Rea
       sensitivityCeiling: command.sensitivityCeiling,
     };
     const [queryEmbedding] = await this.embedder.embed([query]);
+    // Deprecated items stay in the served index flagged `stale` (ADR-020) so a consumer can
+    // still find them and decide; the curation Catalog mirrors this by listing deprecated
+    // items with a "Deprecated" badge rather than hiding them (finding S3 resolved UI-side).
     return this.chunkIndex.search(queryEmbedding!, query, scope, command.limit);
   }
 }

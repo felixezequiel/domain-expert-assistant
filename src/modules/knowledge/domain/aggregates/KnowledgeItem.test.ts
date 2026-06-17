@@ -114,6 +114,16 @@ describe("KnowledgeItem lifecycle", () => {
     assert.throws(() => item.reject("   "), /reason is required/);
   });
 
+  it("surfaces the last rejection reason to the author and clears it on re-submit", () => {
+    const item = draftItem();
+    assert.equal(item.lastRejectionReason, null);
+    item.submitForReview();
+    item.reject("  Needs an owner and a last-reviewed date  ");
+    assert.equal(item.lastRejectionReason, "Needs an owner and a last-reviewed date");
+    item.submitForReview();
+    assert.equal(item.lastRejectionReason, null);
+  });
+
   it("retags as a new working version and moves collection without a new version", () => {
     const item = draftItem();
     item.submitForReview();

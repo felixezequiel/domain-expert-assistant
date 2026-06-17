@@ -23,6 +23,31 @@ export interface LoginResponse {
   readonly expiresAt: string;
 }
 
+/** GET /auth/me — restores the session on refresh and names the signed-in user. */
+export interface CurrentUser {
+  readonly userId: string;
+  readonly companyId: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly roles: ReadonlyArray<Role>;
+  readonly status: string;
+}
+
+/** A row in the admin user roster (GET /organizations/:orgId/users). */
+export interface OrgUser {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly roles: ReadonlyArray<string>;
+  readonly status: string;
+}
+
+/** GET /organizations/:orgId/policy — the live governance policy. */
+export interface OrgPolicyView {
+  readonly organizationId: string;
+  readonly requireSeparateReviewer: boolean;
+}
+
 export interface KnowledgeItemView {
   readonly id: string;
   readonly collectionId: string;
@@ -35,6 +60,7 @@ export interface KnowledgeItemView {
   readonly publishedVersionNumber: number | null;
   readonly isServed: boolean;
   readonly isStale: boolean;
+  readonly lastRejectionReason: string | null;
 }
 
 export interface KnowledgeItemListEntry {

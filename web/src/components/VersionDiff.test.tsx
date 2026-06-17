@@ -20,8 +20,8 @@ describe("VersionDiff", () => {
 
   it("shows both version labels", () => {
     render(<VersionDiff oldText="a" newText="b" oldLabel="v3" newLabel="v4" />);
-    expect(screen.getByText("v3")).toBeInTheDocument();
-    expect(screen.getByText("v4")).toBeInTheDocument();
+    expect(screen.getByText(/v3/)).toBeInTheDocument();
+    expect(screen.getByText(/v4/)).toBeInTheDocument();
   });
 
   it("renders only context lines when the texts are identical", () => {

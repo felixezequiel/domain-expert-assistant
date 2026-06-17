@@ -32,6 +32,7 @@ function itemView(item: KnowledgeItem): KnowledgeItemView {
     publishedVersionNumber: item.publishedVersionNumber,
     isServed: item.isServed(),
     isStale: item.isStale(),
+    lastRejectionReason: item.lastRejectionReason,
   };
 }
 

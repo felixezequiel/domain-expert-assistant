@@ -10,24 +10,29 @@ function Harness(): JSX.Element {
 }
 
 describe("MarkdownEditor", () => {
-  it("edits in a textarea by default", async () => {
+  it("renders the label and the body textarea in edit mode by default", () => {
     render(<Harness />);
-    const textarea = screen.getByLabelText("Body (markdown)") as HTMLTextAreaElement;
-    expect(textarea.value).toContain("# Heading");
+    expect(screen.getByText("Body (markdown)")).toBeInTheDocument();
+    const textarea = document.getElementById("md-body") as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toContain("# Heading");
+    expect(screen.queryByTestId("md-preview")).toBeNull();
   });
 
-  it("renders the markdown as HTML in preview mode", async () => {
+  it("renders the markdown in a preview div when toggled, then returns to the textarea", async () => {
     render(<Harness />);
+
     await userEvent.click(screen.getByRole("button", { name: "Preview" }));
+
     const preview = screen.getByTestId("md-preview");
+    expect(preview).toHaveClass("markdown");
     expect(preview.querySelector("h1")?.textContent).toBe("Heading");
     expect(preview.querySelector("strong")?.textContent).toBe("bold");
-  });
+    expect(document.getElementById("md-body")).toBeNull();
 
-  it("toggles back to edit mode", async () => {
-    render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: "Preview" }));
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    expect(screen.getByLabelText("Body (markdown)")).toBeInTheDocument();
+
+    expect(document.getElementById("md-body")).not.toBeNull();
+    expect(screen.queryByTestId("md-preview")).toBeNull();
   });
 });

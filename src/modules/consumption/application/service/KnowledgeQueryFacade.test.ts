@@ -48,6 +48,7 @@ function itemView(overrides: Partial<KnowledgeItemView> & { id: string }): Knowl
     publishedVersionNumber: 1,
     isServed: true,
     isStale: false,
+    lastRejectionReason: null,
     ...overrides,
   };
 }

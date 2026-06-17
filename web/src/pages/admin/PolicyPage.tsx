@@ -1,48 +1,81 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Loader2, Save } from "lucide-react";
 import { usersApi } from "../../api/resources.ts";
 import { useAuth } from "../../auth/AuthContext.tsx";
-import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { useAsync } from "../../hooks/useAsync.ts";
+import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
+import { Checkbox } from "../../components/ui/checkbox.tsx";
+import { toast } from "../../components/ui/sonner.tsx";
 
-// Org policy toggle. The backend has no "read policy" endpoint, so the toggle is a
-// write-only control: the admin sets requireSeparateReviewer and we confirm the saved
-// value from the PUT response.
+function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : "Something went wrong.";
+}
+
+// Org governance policy. The current policy is fetched on load and prefilled into the
+// toggle, so the admin always sees the live value rather than a write-only default.
 export function PolicyPage(): JSX.Element {
   const { session } = useAuth();
-  const orgId = session?.companyId ?? "";
+  const orgId = session?.user.companyId ?? "";
+
+  const policy = useAsync(() => usersApi.getPolicy(orgId), [orgId]);
+
   const [requireSeparateReviewer, setRequireSeparateReviewer] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (policy.data !== null) {
+      setRequireSeparateReviewer(policy.data.requireSeparateReviewer);
+    }
+  }, [policy.data]);
 
   const save = async (): Promise<void> => {
-    setError(null);
-    setNotice(null);
+    setSaving(true);
     try {
       await usersApi.setPolicy(orgId, requireSeparateReviewer);
-      setNotice(`Saved: require separate reviewer = ${String(requireSeparateReviewer)}.`);
+      toast.success("Policy saved");
     } catch (caught) {
-      setError(caught);
+      toast.error(errorMessage(caught));
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <section>
-      <h2>Org policy</h2>
-      {error !== null ? <ErrorNotice error={error} /> : null}
-      {notice !== null ? <p className="notice notice--ok">{notice}</p> : null}
-      <div className="card">
-        <label htmlFor="policy-reviewer">
-          <input
-            id="policy-reviewer"
-            type="checkbox"
-            checked={requireSeparateReviewer}
-            onChange={(event) => setRequireSeparateReviewer(event.target.checked)}
-          />
-          Require a separate reviewer (the approver must differ from the author)
-        </label>
-        <button type="button" onClick={() => void save()}>
-          Save policy
-        </button>
-      </div>
-    </section>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Org policy</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Governance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <AsyncBoundary loading={policy.loading} error={policy.error}>
+            <label
+              htmlFor="policy-reviewer"
+              className="flex cursor-pointer items-start gap-3 text-sm"
+            >
+              <Checkbox
+                id="policy-reviewer"
+                checked={requireSeparateReviewer}
+                onCheckedChange={(checked) => setRequireSeparateReviewer(checked === true)}
+              />
+              <span>
+                <span className="font-medium">Require a separate reviewer</span>
+                <span className="block text-muted-foreground">
+                  The approver must differ from the author.
+                </span>
+              </span>
+            </label>
+
+            <Button type="button" onClick={() => void save()} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save policy
+            </Button>
+          </AsyncBoundary>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -34,6 +34,9 @@ import type { IssueConsumerCredentialUseCase } from "../application/usecase/Issu
 import type { RotateConsumerCredentialUseCase } from "../application/usecase/RotateConsumerCredentialUseCase.ts";
 import type { RevokeConsumerCredentialUseCase } from "../application/usecase/RevokeConsumerCredentialUseCase.ts";
 import type { ListConsumerCredentialsUseCase } from "../application/usecase/ListConsumerCredentialsUseCase.ts";
+import type { DescribeCurrentUserUseCase } from "../application/usecase/DescribeCurrentUserUseCase.ts";
+import type { ListOrgUsersUseCase } from "../application/usecase/ListOrgUsersUseCase.ts";
+import type { ReadOrgPolicyUseCase } from "../application/usecase/ReadOrgPolicyUseCase.ts";
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
@@ -64,6 +67,9 @@ export interface IdentityModuleDeps {
   readonly rotateConsumerCredential: RotateConsumerCredentialUseCase;
   readonly revokeConsumerCredential: RevokeConsumerCredentialUseCase;
   readonly listConsumerCredentials: ListConsumerCredentialsUseCase;
+  readonly describeCurrentUser: DescribeCurrentUserUseCase;
+  readonly listOrgUsers: ListOrgUsersUseCase;
+  readonly readOrgPolicy: ReadOrgPolicyUseCase;
   readonly operatorSecret: string | null;
   readonly sessionTtlSeconds: number;
   readonly cookieSecure: boolean;
@@ -91,11 +97,20 @@ export class IdentityModule {
     httpServer.rawPost("/auth/logout", (request, response) => {
       void this.authed(request, response, async (actor) => this.handleLogout(actor));
     });
+    httpServer.rawGet("/auth/me", (request, response) => {
+      void this.authed(request, response, async () => this.handleMe());
+    });
     httpServer.rawPost("/operator/organizations", (request, response) => {
       void this.handleProvision(request, response);
     });
     httpServer.rawPost("/invitations/:token/accept", (request, response, params) => {
       void this.handleAcceptInvitation(request, response, params.token!);
+    });
+    httpServer.rawGet("/organizations/:orgId/users", (request, response) => {
+      void this.authed(request, response, async () => this.handleListUsers());
+    });
+    httpServer.rawGet("/organizations/:orgId/policy", (request, response) => {
+      void this.authed(request, response, async () => this.handleReadPolicy());
     });
     httpServer.rawPost("/organizations/:orgId/users/invite", (request, response) => {
       void this.authed(request, response, async (actor) => this.handleInvite(request, actor));
@@ -311,6 +326,21 @@ export class IdentityModule {
     const credentials: ReadonlyArray<ConsumerCredentialView> =
       await this.deps.applicationService.execute(this.deps.listConsumerCredentials, undefined);
     return { statusCode: HTTP_OK, body: { credentials } };
+  }
+
+  private async handleMe(): Promise<RouteResult> {
+    const user = await this.deps.applicationService.execute(this.deps.describeCurrentUser, undefined);
+    return { statusCode: HTTP_OK, body: user };
+  }
+
+  private async handleListUsers(): Promise<RouteResult> {
+    const users = await this.deps.applicationService.execute(this.deps.listOrgUsers, undefined);
+    return { statusCode: HTTP_OK, body: { users } };
+  }
+
+  private async handleReadPolicy(): Promise<RouteResult> {
+    const policy = await this.deps.applicationService.execute(this.deps.readOrgPolicy, undefined);
+    return { statusCode: HTTP_OK, body: policy };
   }
 
   // --- response helpers ---

@@ -32,6 +32,8 @@ export interface UserRepositoryPort {
   findByInvitationTokenHash(tokenHash: string): Promise<User | null>;
   // Backs the cross-aggregate "cannot remove/disable the last admin" rule (ADR-011).
   countActiveAdmins(companyId: string): Promise<number>;
+  // Admin roster: every user in the tenant (so the console can list/pick targets).
+  listByCompany(companyId: string): Promise<ReadonlyArray<User>>;
 }
 
 export interface ConsumerCredentialRepositoryPort {

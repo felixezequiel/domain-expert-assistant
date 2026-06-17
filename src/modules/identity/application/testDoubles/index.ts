@@ -85,6 +85,16 @@ export class FakeUserRepository implements UserRepositoryPort {
     }
     return count;
   }
+
+  public async listByCompany(companyId: string): Promise<ReadonlyArray<User>> {
+    const result: Array<User> = [];
+    for (const user of this.users.values()) {
+      if (user.companyId === companyId) {
+        result.push(user);
+      }
+    }
+    return result;
+  }
 }
 
 export class FakeConsumerCredentialRepository implements ConsumerCredentialRepositoryPort {

@@ -50,4 +50,28 @@ describe("SemanticSearchUseCase", () => {
     const { search } = await seededSearch();
     assert.equal((await search.execute(SemanticSearchCommand.of("company-1", ""))).length, 0);
   });
+
+  it("still returns deprecated items, flagged stale, so consumers can decide (ADR-020)", async () => {
+    const reader = new FakePublishedItemReader();
+    const embedder = new FakeEmbedder();
+    const index = new FakeChunkIndexRepository();
+    reader.add({
+      itemId: "item-1",
+      companyId: "company-1",
+      collectionId: "col-1",
+      title: "Refund policy",
+      body: "Customers may request a refund within 30 days of purchase.",
+      sensitivity: "internal",
+      publishedVersion: 1,
+      publishedAt: "2026-06-16T00:00:00.000Z",
+      stale: true,
+    });
+    await new ProjectItemUseCase(reader, embedder, index).execute(ProjectItemCommand.of("item-1"));
+    const search = new SemanticSearchUseCase(embedder, index);
+
+    const results = await search.execute(SemanticSearchCommand.of("company-1", "refund policy"));
+
+    assert.ok(results.length >= 1);
+    assert.equal(results[0]!.stale, true);
+  });
 });

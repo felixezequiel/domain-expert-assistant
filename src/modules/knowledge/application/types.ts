@@ -72,6 +72,8 @@ export interface KnowledgeItemView {
   readonly publishedVersionNumber: number | null;
   readonly isServed: boolean;
   readonly isStale: boolean;
+  // The reviewer's reason from the most recent rejection (null once re-submitted).
+  readonly lastRejectionReason: string | null;
 }
 
 export interface KnowledgeVersionView {

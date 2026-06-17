@@ -14,5 +14,6 @@ export class KnowledgeItemEntity extends PlainObject {
   public publishedVersionNumber!: number | null;
   public authorId!: string;
   public lastEditorId!: string;
+  public lastRejectionReason!: string | null;
   public createdAt!: string;
 }

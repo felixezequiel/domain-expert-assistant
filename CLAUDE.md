@@ -131,6 +131,16 @@ POST /users/:userId/addresses   # Add address to user
 - Domain `reconstitute()` factories hydrate aggregates from persistence without emitting domain events
 - Postgres is the single engine (domain + event store + derived vector index, ADR-018); connection via `POSTGRES_*` env vars (defaults match `docker-compose.yml`). pgvector extension lives in the same database. No SQLite in any environment.
 
+## Curation & Admin SPA (`web/`, ADR-023 + amendment)
+
+The human UI is a **React + Vite SPA** in `web/` — outside the hexagon, a pure REST client that never duplicates domain rules. Build it (`cd web && npm run build`) before serving; `SpaController` serves `web/dist` per request (no server restart needed for SPA-only changes).
+
+- **UI system:** shadcn/ui + Tailwind v3 + **design tokens** (HSL CSS vars in `web/src/styles.css`, mapped in `tailwind.config.js`). Primitives live in `web/src/components/ui/`; `cn()` in `lib/utils.ts`; icons `lucide-react`; toasts `sonner` (`toast.success/error` — not persistent inline notices). Import alias `@/ → web/src`. Dark theme + blue accent; retune the brand from `--primary`/`--ring`. Display serif (titles/brand), grotesk body, mono for IDs/keys.
+- **Auth/session:** httpOnly session cookie (ADR-010). On boot, `AuthContext` calls `GET /auth/me` to rehydrate the session from the cookie (a hard refresh stays signed in). Capabilities (`canAdminister/canAudit/canCurate/canReview`) are derived from the roles in `/auth/me` — a **UX hint only**; server authorization (ADR-011) is the real gate. `RequireCapability` guards admin/auditor routes; `Layout` tailors the nav.
+- **Routing:** HashRouter (the monolith serves only `/`, `/index.html`, `/assets/*`). Org config lives under `/settings/*` behind a tabbed `SettingsLayout`; detail screens use `Breadcrumbs`.
+- **Data:** typed wrappers in `api/resources.ts` over `apiClient` (`credentials: "include"`); load with the `useAsync` hook wrapped in `<AsyncBoundary>`; shared formatting (dates, markdown-strip, lifecycle `statusBadge`) in `lib/format.ts`.
+- **Tests:** co-located `*.test.tsx` (vitest + Testing Library); avoid asserting deep Radix Select/Dialog interactions in jsdom — prefer rendered text/roles.
+
 ## TypeScript Constraints
 
 - **Decorators** require SWC — `@swc-node/register/esm-register` transforms legacy TS decorators at runtime. They do NOT work with native Node.js type stripping.

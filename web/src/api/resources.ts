@@ -3,6 +3,7 @@ import type {
   AuditEventView,
   CollectionView,
   ConsumerCredentialView,
+  CurrentUser,
   IngestionJobView,
   IngestionUploadAccepted,
   InvitedUser,
@@ -11,6 +12,8 @@ import type {
   KnowledgeItemView,
   KnowledgeVersionView,
   LoginResponse,
+  OrgPolicyView,
+  OrgUser,
   SearchResult,
   TagView,
 } from "./types.ts";
@@ -22,11 +25,16 @@ export const authApi = {
   login: (email: string, password: string): Promise<LoginResponse> =>
     apiClient.post<LoginResponse>("/auth/login", { email, password }),
   logout: (): Promise<unknown> => apiClient.post("/auth/logout"),
+  // Restores the session on a hard refresh (the httpOnly cookie outlives the SPA's memory)
+  // and names the signed-in user + roles for the UI (capabilities, nav, top bar).
+  me: (): Promise<CurrentUser> => apiClient.get<CurrentUser>("/auth/me"),
   acceptInvitation: (token: string, password: string): Promise<{ userId: string; status: string }> =>
     apiClient.post(`/invitations/${encodeURIComponent(token)}/accept`, { password }),
 };
 
 export const usersApi = {
+  list: (orgId: string): Promise<{ users: OrgUser[] }> =>
+    apiClient.get(`/organizations/${encodeURIComponent(orgId)}/users`),
   invite: (
     orgId: string,
     email: string,
@@ -42,6 +50,8 @@ export const usersApi = {
     apiClient.put(`/users/${encodeURIComponent(userId)}/roles`, { roles }),
   disable: (userId: string): Promise<{ userId: string; status: string }> =>
     apiClient.post(`/users/${encodeURIComponent(userId)}/disable`),
+  getPolicy: (orgId: string): Promise<OrgPolicyView> =>
+    apiClient.get(`/organizations/${encodeURIComponent(orgId)}/policy`),
   setPolicy: (orgId: string, requireSeparateReviewer: boolean): Promise<unknown> =>
     apiClient.put(`/organizations/${encodeURIComponent(orgId)}/policy`, { requireSeparateReviewer }),
 };

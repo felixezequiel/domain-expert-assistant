@@ -10,6 +10,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const ME = {
+  userId: "u1",
+  companyId: "c1",
+  email: "a@b.com",
+  displayName: "Test Person",
+  roles: ["curator"],
+  status: "active",
+};
+
 function renderLogin(): void {
   render(
     <AuthProvider>
@@ -24,12 +33,13 @@ function renderLogin(): void {
 }
 
 describe("LoginPage", () => {
-  it("logs in and navigates to /search", async () => {
+  it("logs in (login + /auth/me) and navigates to /search", async () => {
+    // boot /auth/me (401, no cookie yet), then POST /auth/login (200), then /auth/me (200).
     installFetch(
       mockFetchSequence([
+        { status: 401, body: { error: "Unauthorized" } },
         { status: 200, body: { userId: "u1", companyId: "c1", expiresAt: "2030-01-01T00:00:00.000Z" } },
-        { status: 200, body: { credentials: [] } },
-        { status: 200, body: { events: [] } },
+        { status: 200, body: ME },
       ]),
     );
     renderLogin();
@@ -41,15 +51,20 @@ describe("LoginPage", () => {
     await waitFor(() => expect(screen.getByText("search screen")).toBeInTheDocument());
   });
 
-  it("shows an error when credentials are invalid", async () => {
-    installFetch(mockFetchSequence([{ status: 401, body: { error: "Invalid credentials" } }]));
+  it("shows a credentials-specific message on a 401 (finding B2)", async () => {
+    installFetch(
+      mockFetchSequence([
+        { status: 401, body: { error: "Unauthorized" } },
+        { status: 401, body: { error: "Invalid credentials" } },
+      ]),
+    );
     renderLogin();
 
     await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
     await userEvent.type(screen.getByLabelText("Password"), "bad");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(screen.getByText(/session expired|Invalid credentials/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Invalid email or password.")).toBeInTheDocument());
     expect(screen.queryByText("search screen")).toBeNull();
   });
 });

@@ -70,3 +70,17 @@ Escolhida a **alternativa 3**. SPA em **`/web`** (irmão de `/src`, **fora** do 
 - Visibilidade por papel na UI é UX; a autorização real é server-side (ADR-011).
 - O corpo de conhecimento é editado e armazenado como markdown.
 - A SPA é compilada estática e servida pelo monólito na mesma origem; o CI inclui um passo para `/web`.
+
+## Emenda — 2026-06-16: sistema de UI, endpoints de leitura para a SPA, sessão e capabilities
+
+A v1 da SPA validou a decisão acima, mas a implementação fixou quatro pontos que o ADR original deixou em aberto (ou que um comentário no código havia interpretado de forma restritiva demais). Registramos aqui o **porquê**.
+
+1. **Sistema de UI = shadcn/ui + Tailwind v3 + design tokens.** O framework segue trocável (React+Vite); o que se fixa é a camada de componentes/estilo: primitivas shadcn copiadas em `web/src/components/ui/`, `cn()` em `web/src/lib/utils.ts`, ícones `lucide-react`, toasts `sonner`, alias `@/ → web/src`. Tema **dark + acento azul** expresso como **design tokens** (variáveis CSS HSL em `web/src/styles.css`, mapeadas no `tailwind.config.js`); retunar a marca = editar `--primary`/`--ring`. Tipografia com propósito (display serif para títulos/marca, grotesk no corpo, mono em IDs/chaves). **Trade-off:** adiciona Radix/Tailwind/CVA/lucide/sonner ao pacote `web/`, em troca de acessibilidade, consistência e velocidade de construção — sem tocar o hexágono.
+
+2. **Endpoints de leitura dedicados à SPA são permitidos.** O ADR diz "a UI consome só REST" — **não proíbe** criar endpoints; um comentário antigo em `capabilities.ts` ("backend congelado") era uma leitura equivocada. Foram adicionados endpoints **read-only**: `GET /auth/me`, `GET /organizations/:orgId/users`, `GET /organizations/:orgId/policy` (gate por papel onde aplicável). A regra real continua: a UI não duplica regra de domínio; consome a porta REST.
+
+3. **Re-hidratação de sessão no boot.** Supera o comportamento original ("sessão só em memória; refresh volta ao login"): ao iniciar, a SPA chama `GET /auth/me` para **restaurar a sessão a partir do cookie `httpOnly` ainda válido** (TTL de 7 dias, ADR-010). Um refresh não desloga mais o usuário. O cookie segue sendo a fonte de verdade; a memória do React é apenas cache de UI.
+
+4. **Capabilities derivam dos papéis de `/auth/me`, não de probes.** Antes, a UI sondava endpoints role-gated e derivava capacidades do 200/403 (gerava 403 ruidosos no console). Agora os papéis vêm exatos no `/auth/me` e as capacidades (`canAdminister/canAudit/canCurate/canReview`) derivam deles, guardando a navegação e — via `RequireCapability` — as rotas de admin/auditoria. **Continua cosmético**: a autorização autoritativa permanece server-side (ADR-011); `RequireCapability` apenas evita renderizar telas que o papel não usa (a ação ainda seria barrada com 403).
+
+**IA derivada:** as cinco telas de administração foram agrupadas em uma área **`/settings`** com sub-abas (Members/Collections/Tags/API credentials/Policy) — uma só entrada semântica na navegação em vez de cinco links soltos —, e telas de detalhe ganharam breadcrumbs.

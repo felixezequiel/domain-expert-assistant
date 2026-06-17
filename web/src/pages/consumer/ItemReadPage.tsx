@@ -1,11 +1,17 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import Markdown from "react-markdown";
 import { itemsApi } from "../../api/resources.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { Breadcrumbs } from "../../components/Breadcrumbs.tsx";
+import { statusBadge } from "../../lib/format.ts";
+import { Badge } from "../../components/ui/badge.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
 
 // Read-only item view (consumer + auditor). Renders the markdown body with attribution
-// (status, sensitivity, version) and a stale badge when the served version is outdated.
+// (status, sensitivity, version) and a Deprecated badge when the served version is stale.
 export function ItemReadPage(): JSX.Element {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
@@ -14,29 +20,45 @@ export function ItemReadPage(): JSX.Element {
     [itemId],
   );
   const item = state.data;
+  const badge = item !== null ? statusBadge(item.status) : null;
 
   return (
-    <section>
-      <div className="page-header">
-        <h2>{item?.title ?? "Item"}</h2>
-        <button type="button" onClick={() => navigate(-1)}>
+    <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Catalog", to: "/catalog" }, { label: item?.title ?? "Item" }]} />
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{item?.title ?? "Item"}</h1>
+        <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back
-        </button>
+        </Button>
       </div>
+
       <AsyncBoundary loading={state.loading} error={state.error}>
         {item !== null ? (
-          <article className="card">
-            <p className="muted">
-              {item.status} · {item.sensitivity} · v
-              {item.publishedVersionNumber ?? item.currentVersionNumber}
-              {item.isStale ? <span className="badge badge--stale">stale</span> : null}
-            </p>
-            <div className="md-editor__preview">
-              <Markdown>{item.body}</Markdown>
-            </div>
-          </article>
+          <Card>
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-base">{item.title}</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                {badge !== null ? <Badge variant={badge.variant}>{badge.label}</Badge> : null}
+                <span className="text-xs text-muted-foreground">
+                  {item.sensitivity} · v{item.publishedVersionNumber ?? item.currentVersionNumber}
+                </span>
+                {item.isStale ? (
+                  <Badge variant="warning">
+                    <AlertTriangle className="mr-1 h-3 w-3" />
+                    Deprecated
+                  </Badge>
+                ) : null}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="markdown">
+                <Markdown>{item.body}</Markdown>
+              </div>
+            </CardContent>
+          </Card>
         ) : null}
       </AsyncBoundary>
-    </section>
+    </div>
   );
 }

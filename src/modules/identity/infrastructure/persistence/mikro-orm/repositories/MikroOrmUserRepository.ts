@@ -50,4 +50,10 @@ export class MikroOrmUserRepository implements UserRepositoryPort {
     }
     return count;
   }
+
+  public async listByCompany(companyId: string): Promise<ReadonlyArray<User>> {
+    const entityManager = this.entityManagerProvider.getEntityManager();
+    const entities = await entityManager.find(UserEntity, { companyId });
+    return entities.map((entity) => UserMapper.toDomain(entity));
+  }
 }

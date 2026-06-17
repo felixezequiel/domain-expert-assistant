@@ -22,6 +22,7 @@ function itemView(overrides: Partial<KnowledgeItemView> = {}): KnowledgeItemView
     publishedVersionNumber: 2,
     isServed: true,
     isStale: false,
+    lastRejectionReason: null,
     ...overrides,
   };
 }

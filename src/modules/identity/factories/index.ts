@@ -34,6 +34,9 @@ import { IssueConsumerCredentialUseCase } from "../application/usecase/IssueCons
 import { RotateConsumerCredentialUseCase } from "../application/usecase/RotateConsumerCredentialUseCase.ts";
 import { RevokeConsumerCredentialUseCase } from "../application/usecase/RevokeConsumerCredentialUseCase.ts";
 import { ListConsumerCredentialsUseCase } from "../application/usecase/ListConsumerCredentialsUseCase.ts";
+import { DescribeCurrentUserUseCase } from "../application/usecase/DescribeCurrentUserUseCase.ts";
+import { ListOrgUsersUseCase } from "../application/usecase/ListOrgUsersUseCase.ts";
+import { ReadOrgPolicyUseCase } from "../application/usecase/ReadOrgPolicyUseCase.ts";
 import { IdentityModule } from "../bootstrap/IdentityModule.ts";
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -114,6 +117,9 @@ export class IdentityModuleFactory {
           rotateConsumerCredential: new RotateConsumerCredentialUseCase(credentialRepository, opaqueSecret),
           revokeConsumerCredential: new RevokeConsumerCredentialUseCase(credentialRepository),
           listConsumerCredentials: new ListConsumerCredentialsUseCase(credentialRepository),
+          describeCurrentUser: new DescribeCurrentUserUseCase(userRepository),
+          listOrgUsers: new ListOrgUsersUseCase(userRepository),
+          readOrgPolicy: new ReadOrgPolicyUseCase(organizationRepository),
           operatorSecret: process.env.OPERATOR_SECRET ?? null,
           sessionTtlSeconds: SESSION_TTL_SECONDS,
           cookieSecure: process.env.NODE_ENV === "production",

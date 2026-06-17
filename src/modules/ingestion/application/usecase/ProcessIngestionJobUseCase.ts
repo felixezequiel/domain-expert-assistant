@@ -8,6 +8,9 @@ import type {
 import type { ProcessIngestionJobCommand } from "../command/IngestionCommands.ts";
 import type { IngestionJob } from "../../domain/aggregates/IngestionJob.ts";
 
+// Keep the derived title within the Knowledge Title value object's bound (1..200 chars).
+const MAX_DERIVED_TITLE_LENGTH = 200;
+
 /**
  * Processes one pending job (driven by the worker, in the job's tenant scope as a system
  * actor). Idempotent: a non-pending job is a no-op. Extraction → Knowledge draft creation
@@ -48,7 +51,7 @@ export class ProcessIngestionJobUseCase implements UseCase<ProcessIngestionJobCo
       const createdItemId = await this.knowledgeDraftCreation.createDraftFromDocument({
         companyId: job.companyId,
         collectionId: job.collectionId,
-        title: job.filename,
+        title: ProcessIngestionJobUseCase.deriveTitle(text, job.filename),
         body: text,
         createdBy: job.createdBy,
       });
@@ -66,5 +69,34 @@ export class ProcessIngestionJobUseCase implements UseCase<ProcessIngestionJobCo
       }
     }
     throw new Error("No extractor available for mime type: " + mimeType);
+  }
+
+  /**
+   * A human-friendly item title: prefer the document's first markdown heading, otherwise the
+   * filename with its extension stripped (never the raw "onboarding-guide.md"). Capped to the
+   * Title value object's length bound so a very long heading can't fail item creation.
+   */
+  private static deriveTitle(text: string, filename: string): string {
+    const heading = ProcessIngestionJobUseCase.firstMarkdownHeading(text);
+    const candidate = heading ?? ProcessIngestionJobUseCase.stripExtension(filename);
+    return candidate.slice(0, MAX_DERIVED_TITLE_LENGTH);
+  }
+
+  private static firstMarkdownHeading(text: string): string | null {
+    for (const line of text.split("\n")) {
+      const match = /^#{1,6}\s+(.+?)\s*#*\s*$/.exec(line.trim());
+      if (match !== null) {
+        const heading = match[1]!.trim();
+        if (heading.length > 0) {
+          return heading;
+        }
+      }
+    }
+    return null;
+  }
+
+  private static stripExtension(filename: string): string {
+    const lastDot = filename.lastIndexOf(".");
+    return lastDot > 0 ? filename.slice(0, lastDot) : filename;
   }
 }

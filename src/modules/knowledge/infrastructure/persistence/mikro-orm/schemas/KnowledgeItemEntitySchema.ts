@@ -21,6 +21,7 @@ export const KnowledgeItemEntitySchema = new EntitySchema<KnowledgeItemEntity>({
     publishedVersionNumber: { type: "number", fieldName: "published_version_number", nullable: true },
     authorId: { type: "string", fieldName: "author_id" },
     lastEditorId: { type: "string", fieldName: "last_editor_id" },
+    lastRejectionReason: { type: "text", fieldName: "last_rejection_reason", nullable: true },
     createdAt: { type: "string", fieldName: "created_at" },
   },
   filters: { [COMPANY_TENANT_FILTER_NAME]: companyTenantFilterDefinition },

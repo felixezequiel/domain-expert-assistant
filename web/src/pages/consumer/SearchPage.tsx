@@ -1,21 +1,55 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { AlertTriangle, Search } from "lucide-react";
 import { collectionsApi, searchApi } from "../../api/resources.ts";
 import { SENSITIVITY_LEVELS, type SearchResult } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { ErrorNotice, Loading } from "../../components/AsyncBoundary.tsx";
+import { formatDate, stripMarkdown } from "../../lib/format.ts";
+import { Badge } from "../../components/ui/badge.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
+import { Input } from "../../components/ui/input.tsx";
+import { Label } from "../../components/ui/label.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select.tsx";
 
-// Human search (PRD-5 parity, session-authed). Results carry attribution (title, collection,
-// published date) and a freshness flag (stale = deprecated-but-served).
+const ALL_COLLECTIONS = "all";
+const ANY_SENSITIVITY = "all";
+const SNIPPET_LENGTH = 280;
+
+// Trim the plain-text snippet to a readable length without cutting mid-grapheme awkwardly,
+// adding an ellipsis when truncated (finding U7 — snippets are stripped of markdown markup).
+function snippetOf(content: string): string {
+  const text = stripMarkdown(content);
+  if (text.length <= SNIPPET_LENGTH) {
+    return text;
+  }
+  return `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…`;
+}
+
+// Human search (PRD-5 parity, session-authed). Results carry attribution (title, collection
+// NAME, published date) and a freshness flag (stale = deprecated-but-served).
 export function SearchPage(): JSX.Element {
   const collections = useAsync(() => collectionsApi.list(), []);
   const [query, setQuery] = useState("");
-  const [collectionId, setCollectionId] = useState("");
-  const [sensitivityCeiling, setSensitivityCeiling] = useState("");
+  const [collectionId, setCollectionId] = useState(ALL_COLLECTIONS);
+  const [sensitivityCeiling, setSensitivityCeiling] = useState(ANY_SENSITIVITY);
   const [results, setResults] = useState<ReadonlyArray<SearchResult>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [searched, setSearched] = useState(false);
+
+  const collectionNames = new Map<string, string>(
+    (collections.data?.collections ?? []).map((collection) => [collection.id, collection.name]),
+  );
+
+  const showResults = searched && !loading && error === null;
 
   const run = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -24,8 +58,8 @@ export function SearchPage(): JSX.Element {
     try {
       const response = await searchApi.search(
         query,
-        collectionId === "" ? undefined : collectionId,
-        sensitivityCeiling === "" ? undefined : sensitivityCeiling,
+        collectionId === ALL_COLLECTIONS ? undefined : collectionId,
+        sensitivityCeiling === ANY_SENSITIVITY ? undefined : sensitivityCeiling,
       );
       setResults(response.results);
       setSearched(true);
@@ -37,63 +71,127 @@ export function SearchPage(): JSX.Element {
   };
 
   return (
-    <section>
-      <h2>Search</h2>
-      <form className="filters" onSubmit={(event) => void run(event)}>
-        <input
-          aria-label="Query"
-          placeholder="Search the knowledge base…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <select aria-label="Collection" value={collectionId} onChange={(event) => setCollectionId(event.target.value)}>
-          <option value="">All collections</option>
-          {(collections.data?.collections ?? []).map((collection) => (
-            <option key={collection.id} value={collection.id}>
-              {collection.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Sensitivity ceiling"
-          value={sensitivityCeiling}
-          onChange={(event) => setSensitivityCeiling(event.target.value)}
-        >
-          <option value="">Any sensitivity</option>
-          {SENSITIVITY_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
-        <button type="submit">Search</button>
-      </form>
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
+        <p className="text-sm text-muted-foreground">
+          Search the published knowledge base your session is allowed to see.
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          <form className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={(event) => void run(event)}>
+            <div className="space-y-1.5">
+              <Label htmlFor="search-query">Query</Label>
+              <Input
+                id="search-query"
+                aria-label="Query"
+                placeholder="Search the knowledge base…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="search-collection">Collection</Label>
+                <Select value={collectionId} onValueChange={setCollectionId}>
+                  <SelectTrigger id="search-collection" aria-label="Collection">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_COLLECTIONS}>All collections</SelectItem>
+                    {(collections.data?.collections ?? []).map((collection) => (
+                      <SelectItem key={collection.id} value={collection.id}>
+                        {collection.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="search-sensitivity">Sensitivity ceiling</Label>
+                <Select value={sensitivityCeiling} onValueChange={setSensitivityCeiling}>
+                  <SelectTrigger id="search-sensitivity" aria-label="Sensitivity ceiling">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ANY_SENSITIVITY}>Any sensitivity</SelectItem>
+                    {SENSITIVITY_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button type="submit" className="sm:col-start-2 sm:row-start-1">
+              <Search className="mr-2 h-4 w-4" />
+              Search
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {error !== null ? <ErrorNotice error={error} /> : null}
       {loading ? <Loading /> : null}
 
-      {searched && !loading && error === null ? (
-        <ul className="results" data-testid="search-results">
-          {results.map((result) => (
-            <li key={`${result.itemId}-${result.chunkIndex}`} className="result">
-              <div className="result__head">
-                <Link to={`/catalog/${result.itemId}`} className="result__title">
-                  {result.title}
-                </Link>
-                {result.stale ? <span className="badge badge--stale">stale</span> : null}
-              </div>
-              <p className="result__snippet">{result.content}</p>
-              <p className="result__meta">
-                Collection <code>{result.collectionId}</code> · {result.sensitivity} · published{" "}
-                {result.publishedAt} · score {result.score.toFixed(3)}
-              </p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {searched && !loading && error === null && results.length === 0 ? (
-        <p className="notice">No results.</p>
-      ) : null}
-    </section>
+      {showResults ? <SearchResults results={results} collectionNames={collectionNames} /> : null}
+    </div>
+  );
+}
+
+function SearchResults({
+  results,
+  collectionNames,
+}: {
+  readonly results: ReadonlyArray<SearchResult>;
+  readonly collectionNames: ReadonlyMap<string, string>;
+}): JSX.Element {
+  if (results.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">No results.</CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <ul className="space-y-3" data-testid="search-results">
+      {results.map((result) => {
+        const collectionName = collectionNames.get(result.collectionId) ?? result.collectionId;
+        return (
+          <li key={`${result.itemId}-${result.chunkIndex}`}>
+            <Card>
+              <CardHeader className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-base">
+                    <Link to={`/catalog/${result.itemId}`} className="text-foreground hover:underline">
+                      {result.title}
+                    </Link>
+                  </CardTitle>
+                  <Badge variant="secondary" title={`relevance score ${result.score}`}>
+                    match
+                  </Badge>
+                  {result.stale ? (
+                    <Badge variant="warning">
+                      <AlertTriangle className="mr-1 h-3 w-3" />
+                      Deprecated
+                    </Badge>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">{snippetOf(result.content)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {collectionName} · {result.sensitivity} · published {formatDate(result.publishedAt)}
+                </p>
+              </CardContent>
+            </Card>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

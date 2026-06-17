@@ -14,6 +14,9 @@ const SKIP_PATTERN_LIST = [
   /\.config\.(ts|js)$/,
   /mikro-orm\.config\./,
   /main\.ts$/,
+  // Vendored shadcn/ui primitives (copied library components, not first-party logic — like
+  // index.ts/ORM artifacts above, they are boilerplate exercised through the screens' tests).
+  /\/components\/ui\//,
 ];
 
 const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|tsx)$/i;

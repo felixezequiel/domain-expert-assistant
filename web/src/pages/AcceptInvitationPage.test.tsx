@@ -3,15 +3,19 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AcceptInvitationPage } from "./AcceptInvitationPage.tsx";
-import { mockFetchSequence, installFetch } from "../test/index.ts";
+import { authApi } from "../api/resources.ts";
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+vi.mock("../api/resources.ts", () => ({
+  authApi: {
+    acceptInvitation: vi.fn(),
+  },
+}));
+
+const authApiMock = vi.mocked(authApi);
 
 function renderAccept(): void {
   render(
-    <MemoryRouter initialEntries={["/invitations/tok-123"]}>
+    <MemoryRouter initialEntries={["/invitations/tok"]}>
       <Routes>
         <Route path="/invitations/:token" element={<AcceptInvitationPage />} />
         <Route path="/login" element={<div>login screen</div>} />
@@ -20,26 +24,31 @@ function renderAccept(): void {
   );
 }
 
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe("AcceptInvitationPage", () => {
-  it("accepts the invitation and offers to sign in", async () => {
-    const fetchFn = mockFetchSequence([{ status: 200, body: { userId: "u1", status: "active" } }]);
-    installFetch(fetchFn);
+  it("shows a validation error when the passwords do not match", async () => {
     renderAccept();
 
-    await userEvent.type(screen.getByLabelText("Choose a password"), "secret");
-    await userEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await userEvent.type(screen.getByLabelText("Password"), "longenough1");
+    await userEvent.type(screen.getByLabelText("Confirm password"), "different1");
+    await userEvent.click(screen.getByRole("button", { name: "Activate account" }));
 
-    await waitFor(() => expect(screen.getByText("Invitation accepted")).toBeInTheDocument());
-    expect(fetchFn.mock.calls[0]![0]).toBe("/invitations/tok-123/accept");
+    await waitFor(() => expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument());
+    expect(authApiMock.acceptInvitation).not.toHaveBeenCalled();
   });
 
-  it("surfaces an error on a bad token", async () => {
-    installFetch(mockFetchSequence([{ status: 400, body: { error: "Invalid invitation" } }]));
+  it("accepts the invitation when the passwords match and are long enough", async () => {
+    authApiMock.acceptInvitation.mockResolvedValue({ userId: "u1", status: "active" });
     renderAccept();
 
-    await userEvent.type(screen.getByLabelText("Choose a password"), "secret");
-    await userEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await userEvent.type(screen.getByLabelText("Password"), "longenough1");
+    await userEvent.type(screen.getByLabelText("Confirm password"), "longenough1");
+    await userEvent.click(screen.getByRole("button", { name: "Activate account" }));
 
-    await waitFor(() => expect(screen.getByText("Invalid invitation")).toBeInTheDocument());
+    await waitFor(() => expect(authApiMock.acceptInvitation).toHaveBeenCalledWith("tok", "longenough1"));
+    await waitFor(() => expect(screen.getByText("Your account is active.")).toBeInTheDocument());
   });
 });

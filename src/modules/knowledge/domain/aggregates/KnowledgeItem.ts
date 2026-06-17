@@ -34,6 +34,9 @@ interface KnowledgeItemProps {
   publishedVersionNumber: number | null;
   readonly authorId: string;
   lastEditorId: string;
+  // The reviewer's reason from the most recent rejection, surfaced back to the author so the
+  // editor screen can explain why an item returned to draft. Cleared on re-submit.
+  lastRejectionReason: string | null;
   readonly createdAt: Date;
 }
 
@@ -92,6 +95,10 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     return this.props.lastEditorId;
   }
 
+  public get lastRejectionReason(): string | null {
+    return this.props.lastRejectionReason;
+  }
+
   public get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -128,6 +135,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
       publishedVersionNumber: null,
       authorId,
       lastEditorId: authorId,
+      lastRejectionReason: null,
       createdAt: new Date(),
     });
     item.addDomainEvent(
@@ -149,6 +157,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     publishedVersionNumber: number | null;
     authorId: string;
     lastEditorId: string;
+    lastRejectionReason?: string | null;
     createdAt: Date;
   }): KnowledgeItem {
     return new KnowledgeItem(props.id, {
@@ -163,6 +172,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
       publishedVersionNumber: props.publishedVersionNumber,
       authorId: props.authorId,
       lastEditorId: props.lastEditorId,
+      lastRejectionReason: props.lastRejectionReason ?? null,
       createdAt: props.createdAt,
     });
   }
@@ -192,6 +202,8 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
   public submitForReview(): void {
     this.assertStatusIn(["draft"], "submit for review");
     this.props.status = "in_review";
+    // Re-submitting addresses the prior rejection, so the reason no longer applies.
+    this.props.lastRejectionReason = null;
     this.addDomainEvent(new KnowledgeItemSubmittedForReviewEvent(this.id.value));
   }
 
@@ -212,6 +224,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
       throw new Error("A rejection reason is required");
     }
     this.props.status = "draft";
+    this.props.lastRejectionReason = trimmedReason;
     this.addDomainEvent(new KnowledgeItemRejectedEvent(this.id.value, trimmedReason));
   }
 

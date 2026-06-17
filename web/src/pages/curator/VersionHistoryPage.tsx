@@ -1,10 +1,39 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { History, RotateCcw } from "lucide-react";
 import { itemsApi } from "../../api/resources.ts";
 import type { KnowledgeVersionView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary, ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { Breadcrumbs } from "../../components/Breadcrumbs.tsx";
 import { VersionDiff } from "../../components/VersionDiff.tsx";
+import { formatDateTime } from "../../lib/format.ts";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table.tsx";
+import { toast } from "../../components/ui/sonner.tsx";
 
 // Version history: list every version, pick two to diff, and roll back to an older one.
 // Rollback creates a new version from the chosen one (the backend appends, never rewrites).
@@ -18,7 +47,8 @@ export function VersionHistoryPage(): JSX.Element {
   const [leftNumber, setLeftNumber] = useState<number | null>(null);
   const [rightNumber, setRightNumber] = useState<number | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingRollback, setPendingRollback] = useState<number | null>(null);
+  const [rollingBack, setRollingBack] = useState(false);
 
   const versions = state.data?.versions ?? [];
 
@@ -35,18 +65,22 @@ export function VersionHistoryPage(): JSX.Element {
   const find = (versionNumber: number | null): KnowledgeVersionView | undefined =>
     versions.find((version) => version.versionNumber === versionNumber);
 
-  const rollback = async (versionNumber: number): Promise<void> => {
-    if (itemId === undefined) {
+  const confirmRollback = async (): Promise<void> => {
+    if (itemId === undefined || pendingRollback === null) {
       return;
     }
+    const versionNumber = pendingRollback;
     setError(null);
-    setNotice(null);
+    setRollingBack(true);
     try {
       await itemsApi.rollback(itemId, versionNumber);
-      setNotice(`Rolled back to version ${versionNumber}.`);
+      toast.success(`Rolled back to version ${versionNumber}`);
+      setPendingRollback(null);
       state.reload();
     } catch (caught) {
       setError(caught);
+    } finally {
+      setRollingBack(false);
     }
   };
 
@@ -54,77 +88,144 @@ export function VersionHistoryPage(): JSX.Element {
   const right = find(rightNumber);
 
   return (
-    <section>
-      <h2>Version history</h2>
+    <div className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Items", to: "/items" },
+          ...(itemId !== undefined ? [{ label: "Item", to: `/items/${itemId}` }] : []),
+          { label: "Version history" },
+        ]}
+      />
+      <h1 className="text-2xl font-semibold tracking-tight">Version history</h1>
+
       {error !== null ? <ErrorNotice error={error} /> : null}
-      {notice !== null ? <p className="notice notice--ok">{notice}</p> : null}
 
       <AsyncBoundary loading={state.loading} error={state.error}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Version</th>
-              <th>Title</th>
-              <th>Author</th>
-              <th>Created</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {versions.map((version) => (
-              <tr key={version.versionNumber}>
-                <td>{version.versionNumber}</td>
-                <td>{version.title}</td>
-                <td>{version.createdBy}</td>
-                <td>{version.createdAt}</td>
-                <td>
-                  <button type="button" onClick={() => void rollback(version.versionNumber)}>
-                    Roll back to this
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {versions.map((version) => (
+                  <TableRow key={version.versionNumber}>
+                    <TableCell className="font-medium">v{version.versionNumber}</TableCell>
+                    <TableCell>{version.title}</TableCell>
+                    <TableCell>{version.createdBy}</TableCell>
+                    <TableCell>{formatDateTime(version.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPendingRollback(version.versionNumber)}
+                      >
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                        Roll back to this
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {versions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      No versions yet.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         {versions.length > 0 ? (
-          <div className="card">
-            <h3>Compare versions</h3>
-            <div className="filters">
-              <select
-                aria-label="Left version"
-                value={leftNumber ?? ""}
-                onChange={(event) => setLeftNumber(Number(event.target.value))}
-              >
-                {versions.map((version) => (
-                  <option key={version.versionNumber} value={version.versionNumber}>
-                    v{version.versionNumber}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Right version"
-                value={rightNumber ?? ""}
-                onChange={(event) => setRightNumber(Number(event.target.value))}
-              >
-                {versions.map((version) => (
-                  <option key={version.versionNumber} value={version.versionNumber}>
-                    v{version.versionNumber}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {left !== undefined && right !== undefined ? (
-              <VersionDiff
-                oldText={left.body}
-                newText={right.body}
-                oldLabel={`v${left.versionNumber}`}
-                newLabel={`v${right.versionNumber}`}
-              />
-            ) : null}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Compare versions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Select
+                  value={leftNumber === null ? "" : String(leftNumber)}
+                  onValueChange={(value) => setLeftNumber(Number(value))}
+                >
+                  <SelectTrigger className="w-36" aria-label="Left version">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions.map((version) => (
+                      <SelectItem key={version.versionNumber} value={String(version.versionNumber)}>
+                        v{version.versionNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">vs</span>
+                <Select
+                  value={rightNumber === null ? "" : String(rightNumber)}
+                  onValueChange={(value) => setRightNumber(Number(value))}
+                >
+                  <SelectTrigger className="w-36" aria-label="Right version">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions.map((version) => (
+                      <SelectItem key={version.versionNumber} value={String(version.versionNumber)}>
+                        v{version.versionNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {left !== undefined && right !== undefined ? (
+                <VersionDiff
+                  oldText={left.body}
+                  newText={right.body}
+                  oldLabel={`v${left.versionNumber}`}
+                  newLabel={`v${right.versionNumber}`}
+                />
+              ) : null}
+            </CardContent>
+          </Card>
         ) : null}
       </AsyncBoundary>
-    </section>
+
+      <Dialog
+        open={pendingRollback !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRollback(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Roll back to version {pendingRollback}?</DialogTitle>
+            <DialogDescription>
+              Rolling back creates a new version and returns the item to draft (it must be
+              re-submitted for review).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPendingRollback(null)} disabled={rollingBack}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void confirmRollback()} disabled={rollingBack}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -2,39 +2,64 @@ import { Link } from "react-router-dom";
 import { itemsApi } from "../../api/resources.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Card, CardContent } from "../../components/ui/card.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table.tsx";
 
 // Reviewer queue: items currently in_review, filtered server-side by status.
 export function ReviewQueuePage(): JSX.Element {
   const state = useAsync(() => itemsApi.list(undefined, "in_review"), []);
+  const items = state.data?.items ?? [];
 
   return (
-    <section>
-      <h2>Review queue</h2>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Review queue</h1>
+
       <AsyncBoundary loading={state.loading} error={state.error}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Sensitivity</th>
-              <th>Version</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {(state.data?.items ?? []).map((item) => (
-              <tr key={item.id}>
-                <td>{item.title}</td>
-                <td>{item.sensitivity}</td>
-                <td>{item.currentVersionNumber}</td>
-                <td>
-                  <Link to={`/review/${item.id}`}>Review</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {(state.data?.items ?? []).length === 0 ? <p className="notice">Nothing awaiting review.</p> : null}
+        {items.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              Nothing waiting for review.
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Sensitivity</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead className="w-0" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.title}</TableCell>
+                      <TableCell>{item.sensitivity}</TableCell>
+                      <TableCell>v{item.currentVersionNumber}</TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="secondary">
+                          <Link to={`/review/${item.id}`}>Review</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </AsyncBoundary>
-    </section>
+    </div>
   );
 }

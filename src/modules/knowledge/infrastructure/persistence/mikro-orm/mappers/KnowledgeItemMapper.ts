@@ -23,6 +23,7 @@ export class KnowledgeItemMapper {
     entity.publishedVersionNumber = item.publishedVersionNumber;
     entity.authorId = item.authorId;
     entity.lastEditorId = item.lastEditorId;
+    entity.lastRejectionReason = item.lastRejectionReason;
     entity.createdAt = item.createdAt.toISOString();
     return entity;
   }
@@ -48,6 +49,7 @@ export class KnowledgeItemMapper {
       publishedVersionNumber: entity.publishedVersionNumber,
       authorId: entity.authorId,
       lastEditorId: entity.lastEditorId,
+      lastRejectionReason: entity.lastRejectionReason,
       createdAt: new Date(entity.createdAt),
     });
   }

@@ -28,6 +28,7 @@ describe("ItemEditorPage", () => {
           publishedVersionNumber: null,
           isServed: false,
           isStale: false,
+          lastRejectionReason: null,
         },
       },
       { status: 200, body: { id: "i1", status: "in_review" } }, // submit
@@ -46,7 +47,8 @@ describe("ItemEditorPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Submit for review" }));
 
-    await waitFor(() => expect(screen.getByText(/Submitted for review/i)).toBeInTheDocument());
+    // Feedback is a toast now; assert the lifecycle status badge flips to "In review" instead.
+    await waitFor(() => expect(screen.getByText("In review")).toBeInTheDocument());
     const submitCall = fetchFn.mock.calls.find(([url]) => url === "/items/i1/submit");
     expect(submitCall).toBeDefined();
   });

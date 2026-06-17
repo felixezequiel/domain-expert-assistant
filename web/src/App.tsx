@@ -1,7 +1,10 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext.tsx";
 import { Layout } from "./components/Layout.tsx";
 import { RequireAuth } from "./components/RequireAuth.tsx";
+import { RequireCapability } from "./components/RequireCapability.tsx";
+import { SettingsLayout } from "./components/SettingsLayout.tsx";
+import { Toaster } from "./components/ui/sonner.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage.tsx";
 import { UsersPage } from "./pages/admin/UsersPage.tsx";
@@ -51,19 +54,41 @@ export function App(): JSX.Element {
             <Route path="/review" element={<ReviewQueuePage />} />
             <Route path="/review/:itemId" element={<ReviewDetailPage />} />
 
-            <Route path="/audit" element={<AuditTrailPage />} />
+            <Route
+              path="/audit"
+              element={
+                <RequireCapability capability="canAudit">
+                  <AuditTrailPage />
+                </RequireCapability>
+              }
+            />
 
-            <Route path="/admin/users" element={<UsersPage />} />
-            <Route path="/admin/collections" element={<CollectionsPage />} />
-            <Route path="/admin/tags" element={<TagsPage />} />
-            <Route path="/admin/credentials" element={<CredentialsPage />} />
-            <Route path="/admin/policy" element={<PolicyPage />} />
+            <Route
+              element={<RequireCapability capability="canAdminister"><Outlet /></RequireCapability>}
+            >
+              <Route path="/settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="/settings/members" replace />} />
+                <Route path="members" element={<UsersPage />} />
+                <Route path="collections" element={<CollectionsPage />} />
+                <Route path="tags" element={<TagsPage />} />
+                <Route path="credentials" element={<CredentialsPage />} />
+                <Route path="policy" element={<PolicyPage />} />
+              </Route>
+            </Route>
+
+            {/* Back-compat redirects for the old flat admin links. */}
+            <Route path="/admin/users" element={<Navigate to="/settings/members" replace />} />
+            <Route path="/admin/collections" element={<Navigate to="/settings/collections" replace />} />
+            <Route path="/admin/tags" element={<Navigate to="/settings/tags" replace />} />
+            <Route path="/admin/credentials" element={<Navigate to="/settings/credentials" replace />} />
+            <Route path="/admin/policy" element={<Navigate to="/settings/policy" replace />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/search" replace />} />
           <Route path="*" element={<Navigate to="/search" replace />} />
         </Routes>
       </HashRouter>
+      <Toaster />
     </AuthProvider>
   );
 }
