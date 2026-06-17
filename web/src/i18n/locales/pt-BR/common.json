@@ -1,0 +1,41 @@
+{
+  "actions": {
+    "save": "Salvar",
+    "create": "Criar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "remove": "Remover",
+    "delete": "Excluir",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "close": "Fechar",
+    "copy": "Copiar",
+    "search": "Buscar",
+    "retry": "Tentar de novo"
+  },
+  "status": {
+    "draft": "Rascunho",
+    "in_review": "Em revisão",
+    "published": "Publicado",
+    "deprecated": "Descontinuado",
+    "archived": "Arquivado"
+  },
+  "sensitivity": {
+    "public": "público",
+    "internal": "interno",
+    "confidential": "confidencial"
+  },
+  "roles": {
+    "admin": "admin",
+    "curator": "curador",
+    "reviewer": "revisor",
+    "auditor": "auditor",
+    "consumer": "consumidor"
+  },
+  "errors": {
+    "forbidden": "Sem permissão: seu papel não pode executar esta ação.",
+    "sessionExpired": "Sua sessão expirou. Faça login novamente.",
+    "generic": "Algo deu errado."
+  },
+  "loading": "Carregando…"
+}

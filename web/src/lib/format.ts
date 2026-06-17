@@ -1,13 +1,14 @@
-// Small presentation helpers shared across screens: human dates, markdown-stripped snippets
-// (so search results don't show raw `#`/`**`/link syntax — finding U7), and lifecycle status
-// styling. Pure functions, no React.
+// Small presentation helpers shared across screens: human dates (formatted in the active UI
+// language), markdown-stripped snippets (so search results don't show raw `#`/`**`/link
+// syntax — finding U7), and lifecycle status styling. Pure functions, no React.
+import i18n from "../i18n/index.ts";
 
 export function formatDateTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
     return iso;
   }
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(i18n.language, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -21,7 +22,7 @@ export function formatDate(iso: string): string {
   if (Number.isNaN(date.getTime())) {
     return iso;
   }
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return date.toLocaleDateString(i18n.language, { year: "numeric", month: "short", day: "numeric" });
 }
 
 /** Strip the common markdown markup so a body can be shown as a plain-text snippet/preview. */

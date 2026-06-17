@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -16,6 +17,7 @@ import {
 import { useAuth, useCapabilities } from "../auth/AuthContext.tsx";
 import { cn } from "../lib/utils.ts";
 import { CommandPalette } from "./CommandPalette.tsx";
+import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
 import { Avatar, AvatarFallback } from "./ui/avatar.tsx";
 import { Button } from "./ui/button.tsx";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet.tsx";
@@ -56,6 +58,7 @@ function initials(name: string): string {
 }
 
 export function Layout(): JSX.Element {
+  const { t } = useTranslation();
   const { session, logout } = useAuth();
   const capabilities = useCapabilities();
   const navigate = useNavigate();
@@ -68,24 +71,24 @@ export function Layout(): JSX.Element {
     {
       heading: null,
       items: [
-        { to: "/", label: "Home", icon: LayoutDashboard, visible: true, end: true },
-        { to: "/search", label: "Search", icon: Search, visible: true },
-        { to: "/catalog", label: "Catalog", icon: BookOpen, visible: true },
+        { to: "/", label: t("nav.links.home"), icon: LayoutDashboard, visible: true, end: true },
+        { to: "/search", label: t("nav.links.search"), icon: Search, visible: true },
+        { to: "/catalog", label: t("nav.links.catalog"), icon: BookOpen, visible: true },
       ],
     },
     {
-      heading: "Curation",
+      heading: t("nav.sections.curation"),
       items: [
-        { to: "/items", label: "Items", icon: FileText, visible: capabilities.canCurate },
-        { to: "/upload", label: "Upload", icon: Upload, visible: capabilities.canCurate },
-        { to: "/review", label: "Review queue", icon: ClipboardCheck, visible: capabilities.canReview },
+        { to: "/items", label: t("nav.links.items"), icon: FileText, visible: capabilities.canCurate },
+        { to: "/upload", label: t("nav.links.upload"), icon: Upload, visible: capabilities.canCurate },
+        { to: "/review", label: t("nav.links.reviewQueue"), icon: ClipboardCheck, visible: capabilities.canReview },
       ],
     },
     {
-      heading: "Administration",
+      heading: t("nav.sections.administration"),
       items: [
-        { to: "/audit", label: "Audit trail", icon: ScrollText, visible: capabilities.canAudit },
-        { to: "/settings", label: "Settings", icon: Settings, visible: capabilities.canAdminister },
+        { to: "/audit", label: t("nav.links.audit"), icon: ScrollText, visible: capabilities.canAudit },
+        { to: "/settings", label: t("nav.links.settings"), icon: Settings, visible: capabilities.canAdminister },
       ],
     },
   ];
@@ -161,13 +164,13 @@ export function Layout(): JSX.Element {
           {/* Mobile navigation drawer */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("nav.openMenu")}>
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar p-0">
               <SheetHeader className="sr-only">
-                <SheetTitle>Navigation</SheetTitle>
+                <SheetTitle>{t("nav.navigation")}</SheetTitle>
               </SheetHeader>
               {brand}
               {nav}
@@ -175,6 +178,7 @@ export function Layout(): JSX.Element {
           </Sheet>
           <CommandPalette />
           <div className="flex-1" />
+          <LanguageSwitcher />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2">
@@ -194,7 +198,7 @@ export function Layout(): JSX.Element {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => void handleLogout()}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Log out
+                {t("nav.logout")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

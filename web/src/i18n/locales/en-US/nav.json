@@ -1,0 +1,35 @@
+{
+  "links": {
+    "home": "Home",
+    "search": "Search",
+    "catalog": "Catalog",
+    "items": "Items",
+    "upload": "Upload",
+    "reviewQueue": "Review queue",
+    "audit": "Audit trail",
+    "settings": "Settings"
+  },
+  "sections": {
+    "curation": "Curation",
+    "administration": "Administration"
+  },
+  "openMenu": "Open menu",
+  "navigation": "Navigation",
+  "logout": "Log out",
+  "search": {
+    "placeholder": "Search or jump to…",
+    "noMatches": "No matches.",
+    "groupGoTo": "Go to",
+    "groupCreate": "Create",
+    "newItem": "New item"
+  },
+  "notPermitted": {
+    "title": "Not permitted",
+    "description": "Your role can’t access this area. If you think this is a mistake, ask an administrator."
+  },
+  "language": {
+    "label": "Language",
+    "ptBR": "Português",
+    "enUS": "English"
+  }
+}

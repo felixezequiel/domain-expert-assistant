@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { ShieldAlert } from "lucide-react";
 import { useCapabilities } from "../auth/AuthContext.tsx";
 import type { Capabilities } from "../auth/capabilities.ts";
@@ -13,15 +14,14 @@ export function RequireCapability({
   readonly capability: keyof Capabilities;
   readonly children: ReactNode;
 }): JSX.Element {
+  const { t } = useTranslation();
   const capabilities = useCapabilities();
   if (!capabilities[capability]) {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-24 text-center">
         <ShieldAlert className="h-10 w-10 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Not permitted</h2>
-        <p className="text-sm text-muted-foreground">
-          Your role can&apos;t access this area. If you think this is a mistake, ask an administrator.
-        </p>
+        <h2 className="text-lg font-semibold">{t("nav.notPermitted.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("nav.notPermitted.description")}</p>
       </div>
     );
   }

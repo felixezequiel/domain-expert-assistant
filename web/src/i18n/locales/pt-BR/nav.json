@@ -1,0 +1,35 @@
+{
+  "links": {
+    "home": "Início",
+    "search": "Busca",
+    "catalog": "Catálogo",
+    "items": "Itens",
+    "upload": "Upload",
+    "reviewQueue": "Fila de revisão",
+    "audit": "Trilha de auditoria",
+    "settings": "Configurações"
+  },
+  "sections": {
+    "curation": "Curadoria",
+    "administration": "Administração"
+  },
+  "openMenu": "Abrir menu",
+  "navigation": "Navegação",
+  "logout": "Sair",
+  "search": {
+    "placeholder": "Buscar ou ir para…",
+    "noMatches": "Nenhum resultado.",
+    "groupGoTo": "Ir para",
+    "groupCreate": "Criar",
+    "newItem": "Novo item"
+  },
+  "notPermitted": {
+    "title": "Sem permissão",
+    "description": "Seu papel não tem acesso a esta área. Se você acha que é um engano, fale com um administrador."
+  },
+  "language": {
+    "label": "Idioma",
+    "ptBR": "Português",
+    "enUS": "English"
+  }
+}

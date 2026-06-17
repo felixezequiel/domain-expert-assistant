@@ -1,0 +1,41 @@
+{
+  "actions": {
+    "save": "Save",
+    "create": "Create",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "remove": "Remove",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "close": "Close",
+    "copy": "Copy",
+    "search": "Search",
+    "retry": "Retry"
+  },
+  "status": {
+    "draft": "Draft",
+    "in_review": "In review",
+    "published": "Published",
+    "deprecated": "Deprecated",
+    "archived": "Archived"
+  },
+  "sensitivity": {
+    "public": "public",
+    "internal": "internal",
+    "confidential": "confidential"
+  },
+  "roles": {
+    "admin": "admin",
+    "curator": "curator",
+    "reviewer": "reviewer",
+    "auditor": "auditor",
+    "consumer": "consumer"
+  },
+  "errors": {
+    "forbidden": "Not permitted: your role cannot perform this action.",
+    "sessionExpired": "Your session expired. Please log in again.",
+    "generic": "Something went wrong."
+  },
+  "loading": "Loading…"
+}

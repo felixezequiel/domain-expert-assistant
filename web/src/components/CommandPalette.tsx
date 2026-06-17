@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -24,7 +25,7 @@ import {
 } from "./ui/command.tsx";
 
 interface PaletteCommand {
-  readonly label: string;
+  readonly labelKey: string;
   readonly to: string;
   readonly icon: LucideIcon;
   readonly group: "Go to" | "Create";
@@ -37,6 +38,7 @@ const GROUP_ORDER = ["Go to", "Create"] as const;
 // top bar, so it is available on every authenticated screen.
 export function CommandPalette(): JSX.Element {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const capabilities = useCapabilities();
 
@@ -53,23 +55,23 @@ export function CommandPalette(): JSX.Element {
 
   const commands = useMemo<ReadonlyArray<PaletteCommand>>(() => {
     const list: Array<PaletteCommand> = [
-      { label: "Home", to: "/", icon: LayoutDashboard, group: "Go to" },
-      { label: "Search", to: "/search", icon: Search, group: "Go to" },
-      { label: "Catalog", to: "/catalog", icon: BookOpen, group: "Go to" },
+      { labelKey: "nav.links.home", to: "/", icon: LayoutDashboard, group: "Go to" },
+      { labelKey: "nav.links.search", to: "/search", icon: Search, group: "Go to" },
+      { labelKey: "nav.links.catalog", to: "/catalog", icon: BookOpen, group: "Go to" },
     ];
     if (capabilities.canCurate) {
-      list.push({ label: "Items", to: "/items", icon: FileText, group: "Go to" });
-      list.push({ label: "Upload", to: "/upload", icon: Upload, group: "Go to" });
-      list.push({ label: "New item", to: "/items/new", icon: Plus, group: "Create" });
+      list.push({ labelKey: "nav.links.items", to: "/items", icon: FileText, group: "Go to" });
+      list.push({ labelKey: "nav.links.upload", to: "/upload", icon: Upload, group: "Go to" });
+      list.push({ labelKey: "nav.search.newItem", to: "/items/new", icon: Plus, group: "Create" });
     }
     if (capabilities.canReview) {
-      list.push({ label: "Review queue", to: "/review", icon: ClipboardCheck, group: "Go to" });
+      list.push({ labelKey: "nav.links.reviewQueue", to: "/review", icon: ClipboardCheck, group: "Go to" });
     }
     if (capabilities.canAudit) {
-      list.push({ label: "Audit trail", to: "/audit", icon: ScrollText, group: "Go to" });
+      list.push({ labelKey: "nav.links.audit", to: "/audit", icon: ScrollText, group: "Go to" });
     }
     if (capabilities.canAdminister) {
-      list.push({ label: "Settings", to: "/settings", icon: Settings, group: "Go to" });
+      list.push({ labelKey: "nav.links.settings", to: "/settings", icon: Settings, group: "Go to" });
     }
     return list;
   }, [capabilities]);
@@ -88,29 +90,31 @@ export function CommandPalette(): JSX.Element {
         className="h-9 justify-start gap-2 px-2.5 font-normal text-muted-foreground hover:text-foreground sm:w-72"
       >
         <Search className="h-4 w-4 shrink-0" />
-        <span className="hidden flex-1 text-left sm:inline">Search or jump to…</span>
+        <span className="hidden flex-1 text-left sm:inline">{t("nav.search.placeholder")}</span>
         <kbd className="hidden rounded border border-border bg-muted px-1.5 font-mono text-[0.7rem] text-muted-foreground sm:inline">
           ⌘K
         </kbd>
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search or jump to…" />
+        <CommandInput placeholder={t("nav.search.placeholder")} />
         <CommandList>
-          <CommandEmpty>No matches.</CommandEmpty>
+          <CommandEmpty>{t("nav.search.noMatches")}</CommandEmpty>
           {GROUP_ORDER.map((group) => {
             const inGroup = commands.filter((command) => command.group === group);
             if (inGroup.length === 0) {
               return null;
             }
+            const heading = group === "Go to" ? t("nav.search.groupGoTo") : t("nav.search.groupCreate");
             return (
-              <CommandGroup key={group} heading={group}>
+              <CommandGroup key={group} heading={heading}>
                 {inGroup.map((command) => {
                   const Icon = command.icon;
+                  const label = t(command.labelKey);
                   return (
-                    <CommandItem key={command.to} value={command.label} onSelect={() => select(command.to)}>
+                    <CommandItem key={command.to} value={label} onSelect={() => select(command.to)}>
                       <Icon className="h-4 w-4 text-muted-foreground" />
-                      {command.label}
+                      {label}
                     </CommandItem>
                   );
                 })}
