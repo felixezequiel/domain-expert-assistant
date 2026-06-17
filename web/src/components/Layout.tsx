@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth, useCapabilities } from "../auth/AuthContext.tsx";
 import { cn } from "../lib/utils.ts";
+import { CommandPalette } from "./CommandPalette.tsx";
 import { Button } from "./ui/button.tsx";
 import {
   DropdownMenu,
@@ -186,6 +187,7 @@ export function Layout(): JSX.Element {
           >
             <Menu className="h-5 w-5" />
           </Button>
+          <CommandPalette />
           <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
