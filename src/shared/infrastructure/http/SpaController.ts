@@ -33,7 +33,7 @@ const PLACEHOLDER_HTML = [
  * "/assets/*" (the hashed JS/CSS bundles) — there is no history fallback to implement.
  *
  * Registered LAST in the composition root so it cannot shadow API routes; it only claims
- * "/", "/index.html", "/favicon.ico", and the "/assets/" static prefix. If the build is
+ * "/", "/index.html", "/favicon.svg", "/favicon.ico", and the "/assets/" static prefix. If the build is
  * absent it returns a 200 placeholder telling the operator to build — it never crashes the
  * server.
  *
@@ -73,6 +73,9 @@ export class SpaController {
 
     httpServer.rawGet("/", serveIndex);
     httpServer.rawGet("/index.html", serveIndex);
+    // index.html links rel="icon" to /favicon.svg, and browsers also fetch /favicon.ico by
+    // convention — serve the built SVG at both so neither 404s in the console.
+    httpServer.rawGet("/favicon.svg", serveFavicon);
     httpServer.rawGet("/favicon.ico", serveFavicon);
     httpServer.serveStatic("/assets/", join(this.distPath, "assets"));
   }

@@ -43,6 +43,8 @@ describe("SpaController", () => {
 
     assert.ok(httpServer.rawRoutes.has("GET /"), "should serve /");
     assert.ok(httpServer.rawRoutes.has("GET /index.html"), "should serve /index.html");
+    // index.html links to /favicon.svg and browsers also fetch /favicon.ico — serve both.
+    assert.ok(httpServer.rawRoutes.has("GET /favicon.svg"), "should serve /favicon.svg");
     assert.ok(httpServer.rawRoutes.has("GET /favicon.ico"), "should serve /favicon.ico");
     assert.equal(httpServer.staticRoutes.length, 1, "should mount one static route");
     assert.equal(httpServer.staticRoutes[0]!.urlPrefix, "/assets/");
