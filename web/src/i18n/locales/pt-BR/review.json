@@ -1,1 +1,37 @@
-{}
+{
+  "queue": {
+    "title": "Fila de revisão",
+    "empty": "Nada aguardando revisão.",
+    "columns": {
+      "title": "Título",
+      "sensitivity": "Sensibilidade",
+      "version": "Versão"
+    },
+    "review": "Revisar"
+  },
+  "detail": {
+    "breadcrumbQueue": "Fila de revisão",
+    "breadcrumbItem": "Revisar item",
+    "title": "Revisar item",
+    "backToQueue": "Voltar para a fila"
+  },
+  "version": "v{{number}}",
+  "decision": {
+    "title": "Decisão",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "rejectionReason": "Motivo da rejeição",
+    "rejectionPlaceholder": "Explique o que precisa mudar antes que isto possa ser publicado…"
+  },
+  "lifecycle": {
+    "title": "Ciclo de vida",
+    "deprecate": "Descontinuar",
+    "archive": "Arquivar"
+  },
+  "toasts": {
+    "approved": "Aprovado — agora publicado",
+    "rejected": "Rejeitado — de volta a rascunho",
+    "deprecated": "Descontinuado",
+    "archived": "Arquivado"
+  }
+}

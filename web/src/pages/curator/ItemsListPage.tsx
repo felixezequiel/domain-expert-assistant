@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
@@ -34,6 +35,7 @@ const ALL = "all";
 // by collection + status server-side; tag + sensitivity are filtered client-side over the
 // returned set (the list endpoint only accepts collectionId + status query params).
 export function ItemsListPage(): JSX.Element {
+  const { t } = useTranslation();
   const collections = useAsync(() => collectionsApi.list(), []);
   const tags = useAsync(() => tagsApi.list(), []);
 
@@ -62,7 +64,7 @@ export function ItemsListPage(): JSX.Element {
   if (items.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (visibleItems.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No items match these filters.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("knowledge.list.empty")}</TableEmptyRow>;
   } else {
     tableBody = visibleItems.map((item: KnowledgeItemView) => <ItemRow key={item.id} item={item} />);
   }
@@ -70,11 +72,11 @@ export function ItemsListPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Items</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("knowledge.list.title")}</h1>
         <Button asChild>
           <Link to="/items/new">
             <Plus className="mr-2 h-4 w-4" />
-            New item
+            {t("knowledge.list.newItem")}
           </Link>
         </Button>
       </div>
@@ -82,11 +84,11 @@ export function ItemsListPage(): JSX.Element {
       <Card>
         <CardContent className="flex flex-wrap gap-3 py-4">
           <Select value={collectionId} onValueChange={setCollectionId}>
-            <SelectTrigger className="w-48" aria-label="Collection filter">
+            <SelectTrigger className="w-48" aria-label={t("knowledge.list.filters.collection")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All collections</SelectItem>
+              <SelectItem value={ALL}>{t("knowledge.list.filters.allCollections")}</SelectItem>
               {(collections.data?.collections ?? []).map((collection) => (
                 <SelectItem key={collection.id} value={collection.id}>
                   {collection.name}
@@ -95,24 +97,24 @@ export function ItemsListPage(): JSX.Element {
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-44" aria-label="Status filter">
+            <SelectTrigger className="w-44" aria-label={t("knowledge.list.filters.status")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
+              <SelectItem value={ALL}>{t("knowledge.list.filters.allStatuses")}</SelectItem>
               {LIFECYCLE_STATUSES.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {statusBadge(value).label}
+                  {t("common.status." + value)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={tagId} onValueChange={setTagId}>
-            <SelectTrigger className="w-44" aria-label="Tag filter">
+            <SelectTrigger className="w-44" aria-label={t("knowledge.list.filters.tag")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All tags</SelectItem>
+              <SelectItem value={ALL}>{t("knowledge.list.filters.allTags")}</SelectItem>
               {(tags.data?.tags ?? []).map((tag) => (
                 <SelectItem key={tag.id} value={tag.id}>
                   {tag.label}
@@ -121,14 +123,14 @@ export function ItemsListPage(): JSX.Element {
             </SelectContent>
           </Select>
           <Select value={sensitivity} onValueChange={setSensitivity}>
-            <SelectTrigger className="w-44" aria-label="Sensitivity filter">
+            <SelectTrigger className="w-44" aria-label={t("knowledge.list.filters.sensitivity")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All sensitivities</SelectItem>
+              <SelectItem value={ALL}>{t("knowledge.list.filters.allSensitivities")}</SelectItem>
               {SENSITIVITY_LEVELS.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {value}
+                  {t("common.sensitivity." + value)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -143,11 +145,11 @@ export function ItemsListPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Sensitivity</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("knowledge.list.columns.title")}</TableHead>
+                <TableHead>{t("knowledge.list.columns.status")}</TableHead>
+                <TableHead>{t("knowledge.list.columns.sensitivity")}</TableHead>
+                <TableHead>{t("knowledge.list.columns.version")}</TableHead>
+                <TableHead className="text-right">{t("knowledge.list.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>{tableBody}</TableBody>
@@ -159,25 +161,26 @@ export function ItemsListPage(): JSX.Element {
 }
 
 function ItemRow({ item }: { readonly item: KnowledgeItemView }): JSX.Element {
+  const { t } = useTranslation();
   const badge = statusBadge(item.status);
   return (
     <TableRow>
       <TableCell className="font-medium">{item.title}</TableCell>
       <TableCell>
         <span className="flex items-center gap-2">
-          <Badge variant={badge.variant}>{badge.label}</Badge>
-          {item.isStale ? <Badge variant="warning">stale</Badge> : null}
+          <Badge variant={badge.variant}>{t("common.status." + item.status)}</Badge>
+          {item.isStale ? <Badge variant="warning">{t("knowledge.list.stale")}</Badge> : null}
         </span>
       </TableCell>
-      <TableCell>{item.sensitivity}</TableCell>
+      <TableCell>{t("common.sensitivity." + item.sensitivity)}</TableCell>
       <TableCell>{item.currentVersionNumber}</TableCell>
       <TableCell className="text-right">
         <span className="flex justify-end gap-3 text-sm">
           <Link className="text-primary hover:underline" to={`/items/${item.id}`}>
-            Edit
+            {t("common.actions.edit")}
           </Link>
           <Link className="text-primary hover:underline" to={`/items/${item.id}/versions`}>
-            Versions
+            {t("knowledge.list.rowActions.versions")}
           </Link>
         </span>
       </TableCell>

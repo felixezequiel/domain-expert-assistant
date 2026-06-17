@@ -1,1 +1,26 @@
-{}
+{
+  "title": "Trilha de auditoria",
+  "filters": {
+    "aggregateId": "ID do agregado",
+    "actorId": "ID do ator",
+    "eventName": "Nome do evento",
+    "dateRange": "Período"
+  },
+  "states": {
+    "prompt": "Faça uma busca para ver os eventos.",
+    "empty": "Nenhum evento corresponde a estes filtros."
+  },
+  "columns": {
+    "when": "Quando",
+    "event": "Evento",
+    "aggregate": "Agregado",
+    "actor": "Ator",
+    "type": "Tipo"
+  },
+  "system": "sistema",
+  "dateRange": {
+    "anyDate": "Qualquer data",
+    "pick": "Escolha um período",
+    "clear": "Limpar"
+  }
+}

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import { Eye, Loader2, Pencil } from "lucide-react";
 import { Button } from "./ui/button.tsx";
@@ -12,18 +13,20 @@ const MonacoMarkdownEditor = lazy(() => import("./MonacoMarkdownEditor.tsx"));
 export function MarkdownEditor({
   value,
   onChange,
-  label = "Body (markdown)",
+  label,
 }: {
   readonly value: string;
   onChange(next: string): void;
   readonly label?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [showPreview, setShowPreview] = useState(false);
+  const resolvedLabel = label ?? t("knowledge.markdownEditor.label");
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label>{label}</Label>
+        <Label>{resolvedLabel}</Label>
         <Button
           type="button"
           variant="outline"
@@ -32,7 +35,7 @@ export function MarkdownEditor({
           aria-pressed={showPreview}
         >
           {showPreview ? <Pencil className="mr-1.5 h-3.5 w-3.5" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
-          {showPreview ? "Edit" : "Preview"}
+          {showPreview ? t("knowledge.markdownEditor.edit") : t("knowledge.markdownEditor.preview")}
         </Button>
       </div>
       {showPreview ? (
@@ -47,7 +50,7 @@ export function MarkdownEditor({
           <Suspense
             fallback={
               <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading editor…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("knowledge.markdownEditor.loading")}
               </div>
             }
           >

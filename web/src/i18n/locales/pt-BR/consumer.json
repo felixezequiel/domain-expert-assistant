@@ -1,1 +1,32 @@
-{}
+{
+  "search": {
+    "title": "Buscar",
+    "subtitle": "Busque na base de conhecimento publicada que sua sessão tem permissão de ver.",
+    "queryLabel": "Consulta",
+    "placeholder": "Busque na base de conhecimento…",
+    "collectionLabel": "Coleção",
+    "allCollections": "Todas as coleções",
+    "sensitivityLabel": "Limite de sensibilidade",
+    "anySensitivity": "Qualquer sensibilidade",
+    "match": "correspondência",
+    "relevanceTooltip": "índice de relevância {{score}}",
+    "deprecated": "Descontinuado",
+    "noResults": "Nenhum resultado.",
+    "publishedOn": "publicado em {{date}}"
+  },
+  "catalog": {
+    "title": "Catálogo",
+    "subtitle": "Navegue por itens de conhecimento publicados e ainda disponíveis.",
+    "collectionLabel": "Coleção",
+    "allCollections": "Todas as coleções",
+    "tagLabel": "Etiqueta",
+    "allTags": "Todas as etiquetas",
+    "deprecated": "Descontinuado",
+    "noItems": "Nenhum item publicado."
+  },
+  "item": {
+    "breadcrumbCatalog": "Catálogo",
+    "fallbackTitle": "Item",
+    "deprecated": "Descontinuado"
+  }
+}

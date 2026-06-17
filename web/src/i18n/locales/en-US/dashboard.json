@@ -1,1 +1,31 @@
-{}
+{
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "withName": "{{greeting}}, {{name}}.",
+    "withoutName": "{{greeting}}."
+  },
+  "subtitle": "Here's what's happening in your knowledge base.",
+  "metrics": {
+    "published": "Published",
+    "awaitingReview": "Awaiting review",
+    "drafts": "Drafts",
+    "actionNeeded": "Action needed",
+    "members": "Members",
+    "collections": "Collections",
+    "credentials": "API credentials"
+  },
+  "actions": {
+    "heading": "Jump back in",
+    "newItem": "New item",
+    "uploadDocument": "Upload a document",
+    "reviewQueue": "Review queue",
+    "search": "Search the knowledge base",
+    "audit": "Audit trail"
+  },
+  "attention": {
+    "heading": "Needs your attention",
+    "rejected": "Rejected: {{reason}}"
+  }
+}

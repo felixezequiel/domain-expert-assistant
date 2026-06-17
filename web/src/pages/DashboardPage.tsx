@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -22,15 +23,17 @@ import { Button } from "../components/ui/button.tsx";
 import { Card, CardContent } from "../components/ui/card.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 
-function greeting(): string {
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+function greetingPhrase(t: Translate): string {
   const hour = new Date().getHours();
   if (hour < 12) {
-    return "Good morning";
+    return t("dashboard.greeting.morning");
   }
   if (hour < 18) {
-    return "Good afternoon";
+    return t("dashboard.greeting.afternoon");
   }
-  return "Good evening";
+  return t("dashboard.greeting.evening");
 }
 
 interface Metric {
@@ -49,6 +52,7 @@ interface QuickAction {
 }
 
 export function DashboardPage(): JSX.Element {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const capabilities = useCapabilities();
   const orgId = session?.user.companyId ?? "";
@@ -73,15 +77,17 @@ export function DashboardPage(): JSX.Element {
   const countByStatus = (status: string): number => all.filter((item) => item.status === status).length;
   const rejectedDrafts = all.filter((item) => item.status === "draft" && item.lastRejectionReason !== null);
 
-  const metrics: Array<Metric> = [{ label: "Published", value: countByStatus("published"), icon: BookOpen, to: "/catalog" }];
+  const metrics: Array<Metric> = [
+    { label: t("dashboard.metrics.published"), value: countByStatus("published"), icon: BookOpen, to: "/catalog" },
+  ];
   if (capabilities.canReview) {
-    metrics.push({ label: "Awaiting review", value: countByStatus("in_review"), icon: ClipboardCheck, to: "/review" });
+    metrics.push({ label: t("dashboard.metrics.awaitingReview"), value: countByStatus("in_review"), icon: ClipboardCheck, to: "/review" });
   }
   if (capabilities.canCurate) {
-    metrics.push({ label: "Drafts", value: countByStatus("draft"), icon: FileText, to: "/items" });
+    metrics.push({ label: t("dashboard.metrics.drafts"), value: countByStatus("draft"), icon: FileText, to: "/items" });
     if (rejectedDrafts.length > 0) {
       metrics.push({
-        label: "Action needed",
+        label: t("dashboard.metrics.actionNeeded"),
         value: rejectedDrafts.length,
         icon: AlertTriangle,
         to: "/items",
@@ -90,32 +96,33 @@ export function DashboardPage(): JSX.Element {
     }
   }
   if (capabilities.canAdminister && adminCounts.data !== null) {
-    metrics.push({ label: "Members", value: adminCounts.data.users, icon: Users, to: "/settings/members" });
-    metrics.push({ label: "Collections", value: adminCounts.data.collections, icon: Library, to: "/settings/collections" });
-    metrics.push({ label: "API credentials", value: adminCounts.data.credentials, icon: KeyRound, to: "/settings/credentials" });
+    metrics.push({ label: t("dashboard.metrics.members"), value: adminCounts.data.users, icon: Users, to: "/settings/members" });
+    metrics.push({ label: t("dashboard.metrics.collections"), value: adminCounts.data.collections, icon: Library, to: "/settings/collections" });
+    metrics.push({ label: t("dashboard.metrics.credentials"), value: adminCounts.data.credentials, icon: KeyRound, to: "/settings/credentials" });
   }
 
   const actions: Array<QuickAction> = [];
   if (capabilities.canCurate) {
-    actions.push({ label: "New item", icon: Plus, to: "/items/new", primary: true });
-    actions.push({ label: "Upload a document", icon: Upload, to: "/upload" });
+    actions.push({ label: t("dashboard.actions.newItem"), icon: Plus, to: "/items/new", primary: true });
+    actions.push({ label: t("dashboard.actions.uploadDocument"), icon: Upload, to: "/upload" });
   }
   if (capabilities.canReview) {
-    actions.push({ label: "Review queue", icon: ClipboardCheck, to: "/review" });
+    actions.push({ label: t("dashboard.actions.reviewQueue"), icon: ClipboardCheck, to: "/review" });
   }
-  actions.push({ label: "Search the knowledge base", icon: Search, to: "/search" });
+  actions.push({ label: t("dashboard.actions.search"), icon: Search, to: "/search" });
   if (capabilities.canAudit) {
-    actions.push({ label: "Audit trail", icon: ScrollText, to: "/audit" });
+    actions.push({ label: t("dashboard.actions.audit"), icon: ScrollText, to: "/audit" });
   }
 
   return (
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {greeting()}
-          {firstName !== "" ? `, ${firstName}` : ""}.
+          {firstName !== ""
+            ? t("dashboard.greeting.withName", { greeting: greetingPhrase(t), name: firstName })
+            : t("dashboard.greeting.withoutName", { greeting: greetingPhrase(t) })}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s what&apos;s happening in your knowledge base.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
       </header>
 
       {items.error !== null ? <ErrorNotice error={items.error} /> : null}
@@ -156,7 +163,7 @@ export function DashboardPage(): JSX.Element {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Jump back in</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">{t("dashboard.actions.heading")}</h2>
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => {
             const Icon = action.icon;
@@ -174,7 +181,7 @@ export function DashboardPage(): JSX.Element {
 
       {capabilities.canCurate && rejectedDrafts.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">{t("dashboard.attention.heading")}</h2>
           <Card>
             <CardContent className="divide-y divide-border p-0">
               {rejectedDrafts.map((item) => (
@@ -187,7 +194,7 @@ export function DashboardPage(): JSX.Element {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{item.title}</p>
                     <p className="truncate text-sm text-muted-foreground">
-                      Rejected: {item.lastRejectionReason}
+                      {t("dashboard.attention.rejected", { reason: item.lastRejectionReason })}
                     </p>
                   </div>
                   <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, FileCheck2, Loader2, Lock, ScrollText } from "lucide-react";
 import { useAuth } from "../auth/AuthContext.tsx";
@@ -7,27 +8,41 @@ import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
 import { Label } from "../components/ui/label.tsx";
 
+type Translate = ReturnType<typeof useTranslation>["t"];
+
 // A 401 here means bad credentials (the visitor never had a session), so show a credentials
 // message rather than the generic "session expired" copy used elsewhere (finding B2).
-function loginErrorMessage(error: unknown): string {
+function loginErrorMessage(error: unknown, t: Translate): string {
   if (error instanceof ApiError) {
     if (error.isUnauthorized) {
-      return "Invalid email or password.";
+      return t("auth.errors.invalidCredentials");
     }
     return error.message;
   }
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : t("auth.errors.generic");
 }
 
-const HIGHLIGHTS = [
-  { icon: FileCheck2, label: "Draft → review → publish", hint: "A governed lifecycle for every item" },
-  { icon: Lock, label: "Tenant-isolated", hint: "Each organization sees only its own knowledge" },
-  { icon: ScrollText, label: "Fully audited", hint: "Every change is on the record" },
-];
-
 export function LoginPage(): JSX.Element {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const highlights = [
+    {
+      icon: FileCheck2,
+      label: t("auth.login.hero.highlights.lifecycle.label"),
+      hint: t("auth.login.hero.highlights.lifecycle.hint"),
+    },
+    {
+      icon: Lock,
+      label: t("auth.login.hero.highlights.tenant.label"),
+      hint: t("auth.login.hero.highlights.tenant.hint"),
+    },
+    {
+      icon: ScrollText,
+      label: t("auth.login.hero.highlights.audited.label"),
+      hint: t("auth.login.hero.highlights.audited.hint"),
+    },
+  ];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -55,21 +70,20 @@ export function LoginPage(): JSX.Element {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground ring-1 ring-inset ring-white/10">
             DE
           </span>
-          <span className="font-display text-lg font-semibold tracking-tight">Domain Expert</span>
+          <span className="font-display text-lg font-semibold tracking-tight">{t("auth.brand")}</span>
         </div>
 
         <div className="max-w-md">
           <h1 className="font-display text-[2.6rem] font-semibold leading-[1.08] tracking-tight text-foreground">
-            A governed source of truth — for your team and your AI.
+            {t("auth.login.hero.title")}
           </h1>
           <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-            Curate, review and publish trusted knowledge, then serve it to your agents over MCP
-            and the API — with every change on the record.
+            {t("auth.login.hero.description")}
           </p>
         </div>
 
         <ul className="space-y-4">
-          {HIGHLIGHTS.map((item) => {
+          {highlights.map((item) => {
             const Icon = item.icon;
             return (
               <li key={item.label} className="flex items-start gap-3">
@@ -93,32 +107,32 @@ export function LoginPage(): JSX.Element {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
               DE
             </span>
-            <span className="font-display text-lg font-semibold tracking-tight">Domain Expert</span>
+            <span className="font-display text-lg font-semibold tracking-tight">{t("auth.brand")}</span>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Welcome back — sign in to your console.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("auth.login.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("auth.login.subtitle")}</p>
 
           <form className="mt-7 space-y-4" onSubmit={(event) => void submit(event)}>
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.login.emailLabel")}</Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="username"
-                placeholder="you@company.com"
+                placeholder={t("auth.login.emailPlaceholder")}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.login.passwordLabel")}</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder={t("auth.login.passwordPlaceholder")}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
@@ -130,12 +144,12 @@ export function LoginPage(): JSX.Element {
                 className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground/90"
               >
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <span>{loginErrorMessage(error)}</span>
+                <span>{loginErrorMessage(error, t)}</span>
               </div>
             ) : null}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {submitting ? "Signing in…" : "Sign in"}
+              {submitting ? t("auth.login.submitting") : t("auth.login.submit")}
             </Button>
           </form>
         </div>

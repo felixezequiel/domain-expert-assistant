@@ -1,1 +1,31 @@
-{}
+{
+  "greeting": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "evening": "Boa noite",
+    "withName": "{{greeting}}, {{name}}.",
+    "withoutName": "{{greeting}}."
+  },
+  "subtitle": "Veja o que está acontecendo na sua base de conhecimento.",
+  "metrics": {
+    "published": "Publicados",
+    "awaitingReview": "Aguardando revisão",
+    "drafts": "Rascunhos",
+    "actionNeeded": "Ação necessária",
+    "members": "Membros",
+    "collections": "Coleções",
+    "credentials": "Credenciais de API"
+  },
+  "actions": {
+    "heading": "Retomar de onde parou",
+    "newItem": "Novo item",
+    "uploadDocument": "Enviar um documento",
+    "reviewQueue": "Fila de revisão",
+    "search": "Buscar na base de conhecimento",
+    "audit": "Trilha de auditoria"
+  },
+  "attention": {
+    "heading": "Precisa da sua atenção",
+    "rejected": "Rejeitado: {{reason}}"
+  }
+}

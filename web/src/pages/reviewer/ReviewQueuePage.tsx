@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { itemsApi } from "../../api/resources.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
@@ -17,6 +18,7 @@ import {
 
 // Reviewer queue: items currently in_review, filtered server-side by status.
 export function ReviewQueuePage(): JSX.Element {
+  const { t } = useTranslation();
   const state = useAsync(() => itemsApi.list(undefined, "in_review"), []);
   const items = state.data?.items ?? [];
 
@@ -25,16 +27,16 @@ export function ReviewQueuePage(): JSX.Element {
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (items.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>Nothing waiting for review.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("review.queue.empty")}</TableEmptyRow>;
   } else {
     tableBody = items.map((item) => (
       <TableRow key={item.id}>
         <TableCell className="font-medium">{item.title}</TableCell>
-        <TableCell>{item.sensitivity}</TableCell>
-        <TableCell>v{item.currentVersionNumber}</TableCell>
+        <TableCell>{t("common.sensitivity." + item.sensitivity)}</TableCell>
+        <TableCell>{t("review.version", { number: item.currentVersionNumber })}</TableCell>
         <TableCell className="text-right">
           <Button asChild size="sm" variant="secondary">
-            <Link to={`/review/${item.id}`}>Review</Link>
+            <Link to={`/review/${item.id}`}>{t("review.queue.review")}</Link>
           </Button>
         </TableCell>
       </TableRow>
@@ -43,7 +45,7 @@ export function ReviewQueuePage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Review queue</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("review.queue.title")}</h1>
 
       {state.error !== null ? <ErrorNotice error={state.error} /> : null}
 
@@ -52,9 +54,9 @@ export function ReviewQueuePage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Sensitivity</TableHead>
-                <TableHead>Version</TableHead>
+                <TableHead>{t("review.queue.columns.title")}</TableHead>
+                <TableHead>{t("review.queue.columns.sensitivity")}</TableHead>
+                <TableHead>{t("review.queue.columns.version")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>

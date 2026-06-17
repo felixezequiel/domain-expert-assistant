@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import { type DateRange } from "react-day-picker";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table.tsx";
+import i18n from "../../i18n/index.ts";
 
 const DEFAULT_LIMIT = 100;
 
@@ -30,13 +32,14 @@ function actorLabel(event: AuditEventView): string {
   if (event.actorName !== null) {
     return event.actorName;
   }
-  return event.actorId ?? "system";
+  return event.actorId ?? i18n.t("audit.system");
 }
 
 // Read-only audit trail (Auditor persona). Filters by aggregate / actor / event name /
 // time window. The endpoint is auditor/admin-gated server-side; a 403 renders as
 // "not permitted" via ErrorNotice (the router also gates this page by capability).
 export function AuditTrailPage(): JSX.Element {
+  const { t } = useTranslation();
   const [aggregateId, setAggregateId] = useState("");
   const [actorId, setActorId] = useState("");
   const [eventName, setEventName] = useState("");
@@ -86,9 +89,9 @@ export function AuditTrailPage(): JSX.Element {
   if (loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (!searched) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>Run a search to see events.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("audit.states.prompt")}</TableEmptyRow>;
   } else if (events.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No events match these filters.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("audit.states.empty")}</TableEmptyRow>;
   } else {
     tableBody = events.map((event) => (
       <TableRow key={event.eventId}>
@@ -109,50 +112,50 @@ export function AuditTrailPage(): JSX.Element {
           </code>
         </TableCell>
         <TableCell>{actorLabel(event)}</TableCell>
-        <TableCell>{event.actorType ?? "system"}</TableCell>
+        <TableCell>{event.actorType ?? t("audit.system")}</TableCell>
       </TableRow>
     ));
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Audit trail</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("audit.title")}</h1>
 
       <Card>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="audit-aggregate">Aggregate id</Label>
+            <Label htmlFor="audit-aggregate">{t("audit.filters.aggregateId")}</Label>
             <Input
               id="audit-aggregate"
-              placeholder="Aggregate id"
+              placeholder={t("audit.filters.aggregateId")}
               value={aggregateId}
               onChange={(event) => setAggregateId(event.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="audit-actor">Actor id</Label>
+            <Label htmlFor="audit-actor">{t("audit.filters.actorId")}</Label>
             <Input
               id="audit-actor"
-              placeholder="Actor id"
+              placeholder={t("audit.filters.actorId")}
               value={actorId}
               onChange={(event) => setActorId(event.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="audit-event">Event name</Label>
+            <Label htmlFor="audit-event">{t("audit.filters.eventName")}</Label>
             <Input
               id="audit-event"
-              placeholder="Event name"
+              placeholder={t("audit.filters.eventName")}
               value={eventName}
               onChange={(event) => setEventName(event.target.value)}
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="audit-range">Date range</Label>
+            <Label htmlFor="audit-range">{t("audit.filters.dateRange")}</Label>
             <DateRangePicker
               id="audit-range"
-              ariaLabel="Date range"
-              placeholder="Any date"
+              ariaLabel={t("audit.filters.dateRange")}
+              placeholder={t("audit.dateRange.anyDate")}
               value={range}
               onChange={setRange}
             />
@@ -160,7 +163,7 @@ export function AuditTrailPage(): JSX.Element {
           <div className="flex items-end">
             <Button type="button" onClick={() => void runSearch()} disabled={loading}>
               <Search className="h-4 w-4" />
-              Search
+              {t("common.actions.search")}
             </Button>
           </div>
         </CardContent>
@@ -173,11 +176,11 @@ export function AuditTrailPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>When</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Aggregate</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>{t("audit.columns.when")}</TableHead>
+                <TableHead>{t("audit.columns.event")}</TableHead>
+                <TableHead>{t("audit.columns.aggregate")}</TableHead>
+                <TableHead>{t("audit.columns.actor")}</TableHead>
+                <TableHead>{t("audit.columns.type")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>{tableBody}</TableBody>

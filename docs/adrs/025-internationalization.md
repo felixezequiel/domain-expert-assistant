@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito — fundação implementada (commit `bfee192`, 2026-06-17); migração das telas em andamento.
+Aceito — implementado (fundação `bfee192` + migração completa das telas, 2026-06-17). Todas as telas/componentes da SPA usam `t(...)`; pt-BR é o padrão.
 
 ## Data
 

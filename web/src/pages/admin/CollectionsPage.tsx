@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
 import { collectionsApi } from "../../api/resources.ts";
 import type { CollectionView } from "../../api/types.ts";
@@ -36,6 +37,7 @@ interface RenameTarget {
 }
 
 export function CollectionsPage(): JSX.Element {
+  const { t } = useTranslation();
   const state = useAsync(() => collectionsApi.list(), []);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -47,7 +49,7 @@ export function CollectionsPage(): JSX.Element {
       await collectionsApi.create(name, description === "" ? undefined : description);
       setName("");
       setDescription("");
-      toast.success("Collection created");
+      toast.success(t("admin.collections.toasts.created"));
       state.reload();
     } catch (caught) {
       toast.error(errorMessage(caught));
@@ -66,7 +68,7 @@ export function CollectionsPage(): JSX.Element {
     try {
       await collectionsApi.rename(renameTarget.id, renameValue);
       setRenameTarget(null);
-      toast.success("Collection renamed");
+      toast.success(t("admin.collections.toasts.renamed"));
       state.reload();
     } catch (caught) {
       toast.error(errorMessage(caught));
@@ -80,7 +82,7 @@ export function CollectionsPage(): JSX.Element {
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (collections.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No collections yet.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("admin.collections.empty")}</TableEmptyRow>;
   } else {
     tableBody = collections.map((collection) => (
       <TableRow key={collection.id}>
@@ -97,7 +99,7 @@ export function CollectionsPage(): JSX.Element {
         <TableCell>
           <Button type="button" variant="outline" size="sm" onClick={() => openRename(collection)}>
             <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Rename
+            {t("admin.collections.rename")}
           </Button>
         </TableCell>
       </TableRow>
@@ -106,19 +108,19 @@ export function CollectionsPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Collections</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("admin.collections.title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Create collection</CardTitle>
+          <CardTitle className="text-base">{t("admin.collections.createCard")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="coll-name">Name</Label>
+            <Label htmlFor="coll-name">{t("admin.collections.nameLabel")}</Label>
             <Input id="coll-name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="coll-desc">Description (optional)</Label>
+            <Label htmlFor="coll-desc">{t("admin.collections.descriptionLabel")}</Label>
             <Input
               id="coll-desc"
               value={description}
@@ -127,7 +129,7 @@ export function CollectionsPage(): JSX.Element {
           </div>
           <Button type="button" onClick={() => void create()} disabled={name === ""}>
             <Plus className="mr-2 h-4 w-4" />
-            Create
+            {t("common.actions.create")}
           </Button>
         </CardContent>
       </Card>
@@ -139,9 +141,9 @@ export function CollectionsPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Id</TableHead>
+                <TableHead>{t("admin.collections.columns.name")}</TableHead>
+                <TableHead>{t("admin.collections.columns.description")}</TableHead>
+                <TableHead>{t("admin.collections.columns.id")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -160,10 +162,10 @@ export function CollectionsPage(): JSX.Element {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename collection</DialogTitle>
+            <DialogTitle>{t("admin.collections.renameTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="coll-rename">Name</Label>
+            <Label htmlFor="coll-rename">{t("admin.collections.nameLabel")}</Label>
             <Input
               id="coll-rename"
               value={renameValue}
@@ -172,10 +174,10 @@ export function CollectionsPage(): JSX.Element {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRenameTarget(null)}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="button" onClick={() => void rename()} disabled={renameValue === ""}>
-              Save
+              {t("common.actions.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

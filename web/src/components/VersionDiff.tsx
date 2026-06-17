@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 
 // The Monaco-powered diff lives in its own chunk; lazy-load it so the multi-MB Monaco bundle
@@ -19,6 +20,7 @@ export function VersionDiff({
   readonly oldLabel: string;
   readonly newLabel: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className="overflow-hidden rounded-lg border border-border" data-testid="version-diff">
       <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -28,7 +30,7 @@ export function VersionDiff({
       <Suspense
         fallback={
           <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading diff…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("knowledge.versionDiff.loading")}
           </div>
         }
       >

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import Markdown from "react-markdown";
 import { ArrowLeft, Check, X } from "lucide-react";
@@ -15,12 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Label } from "../../components/ui/label.tsx";
 import { Textarea } from "../../components/ui/textarea.tsx";
 import { toast } from "../../components/ui/sonner.tsx";
+import i18n from "../../i18n/index.ts";
 
 function actionErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
   }
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : i18n.t("common.errors.generic");
 }
 
 // The loaded item plus the decision/lifecycle controls. Split out so the page body only
@@ -29,6 +31,7 @@ function ReviewItem({ item, onChanged }: {
   readonly item: KnowledgeItemView;
   readonly onChanged: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const badge = statusBadge(item.status);
   const rejectDisabled = reason.trim() === "";
@@ -54,10 +57,10 @@ function ReviewItem({ item, onChanged }: {
         <CardHeader>
           <CardTitle className="text-base">{item.title}</CardTitle>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Badge variant={badge.variant}>{badge.label}</Badge>
-            <span>{item.sensitivity}</span>
+            <Badge variant={badge.variant}>{t("common.status." + item.status)}</Badge>
+            <span>{t("common.sensitivity." + item.sensitivity)}</span>
             <span>·</span>
-            <span>v{item.currentVersionNumber}</span>
+            <span>{t("review.version", { number: item.currentVersionNumber })}</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -69,33 +72,33 @@ function ReviewItem({ item, onChanged }: {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Decision</CardTitle>
+          <CardTitle className="text-base">{t("review.decision.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
             type="button"
-            onClick={() => void act(() => itemsApi.approve(item.id), "Approved — now published")}
+            onClick={() => void act(() => itemsApi.approve(item.id), t("review.toasts.approved"))}
           >
             <Check className="h-4 w-4" />
-            Approve
+            {t("review.decision.approve")}
           </Button>
 
           <div className="space-y-1.5">
-            <Label htmlFor="reject-reason">Rejection reason</Label>
+            <Label htmlFor="reject-reason">{t("review.decision.rejectionReason")}</Label>
             <Textarea
               id="reject-reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="Explain what needs to change before this can be published…"
+              placeholder={t("review.decision.rejectionPlaceholder")}
             />
             <Button
               type="button"
               variant="destructive"
               disabled={rejectDisabled}
-              onClick={() => void act(() => itemsApi.reject(item.id, reason), "Rejected — back to draft")}
+              onClick={() => void act(() => itemsApi.reject(item.id, reason), t("review.toasts.rejected"))}
             >
               <X className="h-4 w-4" />
-              Reject
+              {t("review.decision.reject")}
             </Button>
           </div>
         </CardContent>
@@ -104,25 +107,25 @@ function ReviewItem({ item, onChanged }: {
       {showLifecycle && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Lifecycle</CardTitle>
+            <CardTitle className="text-base">{t("review.lifecycle.title")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {canDeprecate && (
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => void act(() => itemsApi.deprecate(item.id), "Deprecated")}
+                onClick={() => void act(() => itemsApi.deprecate(item.id), t("review.toasts.deprecated"))}
               >
-                Deprecate
+                {t("review.lifecycle.deprecate")}
               </Button>
             )}
             {canArchive && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => void act(() => itemsApi.archive(item.id), "Archived")}
+                onClick={() => void act(() => itemsApi.archive(item.id), t("review.toasts.archived"))}
               >
-                Archive
+                {t("review.lifecycle.archive")}
               </Button>
             )}
           </CardContent>
@@ -137,6 +140,7 @@ function ReviewItem({ item, onChanged }: {
 // they apply to (U15). Action feedback is a transient toast — no inline notice is kept
 // in state, so nothing stale can survive navigation (B3).
 export function ReviewDetailPage(): JSX.Element {
+  const { t } = useTranslation();
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const state = useAsync(
@@ -148,12 +152,14 @@ export function ReviewDetailPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Review queue", to: "/review" }, { label: "Review item" }]} />
+      <Breadcrumbs
+        items={[{ label: t("review.detail.breadcrumbQueue"), to: "/review" }, { label: t("review.detail.breadcrumbItem") }]}
+      />
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Review item</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("review.detail.title")}</h1>
         <Button type="button" variant="outline" size="sm" onClick={() => navigate("/review")}>
           <ArrowLeft className="h-4 w-4" />
-          Back to queue
+          {t("review.detail.backToQueue")}
         </Button>
       </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import { collectionsApi, ingestionApi } from "../../api/resources.ts";
@@ -42,6 +43,7 @@ function toBase64(file: File): Promise<string> {
 }
 
 export function UploadPage(): JSX.Element {
+  const { t } = useTranslation();
   const collections = useAsync(() => collectionsApi.list(), []);
   const [collectionId, setCollectionId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -56,7 +58,7 @@ export function UploadPage(): JSX.Element {
     setError(null);
     setJob(null);
     if (file === null) {
-      setError(new Error("Choose a file first."));
+      setError(new Error(t("knowledge.upload.chooseFileFirst")));
       return;
     }
     try {
@@ -102,24 +104,22 @@ export function UploadPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Upload document</h1>
-        <p className="text-sm text-muted-foreground">
-          Drop a file to ingest it into a collection — it becomes a draft item you can review.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("knowledge.upload.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("knowledge.upload.subtitle")}</p>
       </div>
 
       {error !== null ? <ErrorNotice error={error} /> : null}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">New ingestion</CardTitle>
+          <CardTitle className="text-base">{t("knowledge.upload.newIngestion")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label htmlFor="upload-collection">Collection</Label>
+            <Label htmlFor="upload-collection">{t("knowledge.upload.collectionLabel")}</Label>
             <Select value={collectionId} onValueChange={setCollectionId}>
               <SelectTrigger id="upload-collection" className="w-full sm:w-72">
-                <SelectValue placeholder="Select…" />
+                <SelectValue placeholder={t("knowledge.upload.collectionPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {(collections.data?.collections ?? []).map((collection) => (
@@ -132,19 +132,19 @@ export function UploadPage(): JSX.Element {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="upload-file">File</Label>
+            <Label htmlFor="upload-file">{t("knowledge.upload.fileLabel")}</Label>
             <FileDropzone
               id="upload-file"
               file={file}
               onFileChange={setFile}
-              hint="Markdown or plain text · a single document"
+              hint={t("knowledge.upload.dropzoneHint")}
               disabled={processing}
             />
           </div>
 
           <Button type="button" onClick={() => void upload()} disabled={file === null || processing}>
             {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Upload
+            {t("knowledge.upload.uploadButton")}
           </Button>
         </CardContent>
       </Card>
@@ -154,7 +154,7 @@ export function UploadPage(): JSX.Element {
           <CardContent className="space-y-3 py-5">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Processing…
+              {t("knowledge.upload.processing")}
             </div>
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-1/2" />
@@ -167,14 +167,14 @@ export function UploadPage(): JSX.Element {
           <CardContent className="space-y-2 py-5">
             <div className="flex items-center gap-2 text-sm font-medium text-success">
               <CheckCircle2 className="h-4 w-4" />
-              Ingestion complete
+              {t("knowledge.upload.complete")}
             </div>
             <p className="text-sm text-muted-foreground">
-              Created from <span className="font-medium text-foreground">{job.filename}</span>.
+              {t("knowledge.upload.createdFrom", { filename: job.filename })}
             </p>
             {job.createdItemId !== null ? (
               <Button asChild variant="outline" size="sm">
-                <Link to={`/items/${job.createdItemId}`}>Open created item</Link>
+                <Link to={`/items/${job.createdItemId}`}>{t("knowledge.upload.openCreatedItem")}</Link>
               </Button>
             ) : null}
           </CardContent>
@@ -188,7 +188,8 @@ export function UploadPage(): JSX.Element {
           className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
         >
           <span>
-            <span className="font-medium">Ingestion failed:</span> {job.failureReason ?? "Unknown error."}
+            <span className="font-medium">{t("knowledge.upload.failed")}</span>{" "}
+            {job.failureReason ?? t("knowledge.upload.unknownError")}
           </span>
         </div>
       ) : null}

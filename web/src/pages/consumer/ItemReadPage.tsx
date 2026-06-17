@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import Markdown from "react-markdown";
@@ -13,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 // Read-only item view (consumer + auditor). Renders the markdown body with attribution
 // (status, sensitivity, version) and a Deprecated badge when the served version is stale.
 export function ItemReadPage(): JSX.Element {
+  const { t } = useTranslation();
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const state = useAsync(
@@ -24,12 +26,17 @@ export function ItemReadPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Catalog", to: "/catalog" }, { label: item?.title ?? "Item" }]} />
+      <Breadcrumbs
+        items={[
+          { label: t("consumer.item.breadcrumbCatalog"), to: "/catalog" },
+          { label: item?.title ?? t("consumer.item.fallbackTitle") },
+        ]}
+      />
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{item?.title ?? "Item"}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{item?.title ?? t("consumer.item.fallbackTitle")}</h1>
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          {t("common.actions.back")}
         </Button>
       </div>
 
@@ -39,14 +46,15 @@ export function ItemReadPage(): JSX.Element {
             <CardHeader className="space-y-2">
               <CardTitle className="text-base">{item.title}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
-                {badge !== null ? <Badge variant={badge.variant}>{badge.label}</Badge> : null}
+                {badge !== null ? <Badge variant={badge.variant}>{t("common.status." + item.status)}</Badge> : null}
                 <span className="text-xs text-muted-foreground">
-                  {item.sensitivity} · v{item.publishedVersionNumber ?? item.currentVersionNumber}
+                  {t("common.sensitivity." + item.sensitivity)} · v
+                  {item.publishedVersionNumber ?? item.currentVersionNumber}
                 </span>
                 {item.isStale ? (
                   <Badge variant="warning">
                     <AlertTriangle className="mr-1 h-3 w-3" />
-                    Deprecated
+                    {t("consumer.item.deprecated")}
                   </Badge>
                 ) : null}
               </div>

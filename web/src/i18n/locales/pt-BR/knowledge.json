@@ -1,1 +1,104 @@
-{}
+{
+  "list": {
+    "title": "Itens",
+    "newItem": "Novo item",
+    "filters": {
+      "collection": "Filtro de coleção",
+      "status": "Filtro de status",
+      "tag": "Filtro de tag",
+      "sensitivity": "Filtro de sensibilidade",
+      "allCollections": "Todas as coleções",
+      "allStatuses": "Todos os status",
+      "allTags": "Todas as tags",
+      "allSensitivities": "Todas as sensibilidades"
+    },
+    "columns": {
+      "title": "Título",
+      "status": "Status",
+      "sensitivity": "Sensibilidade",
+      "version": "Versão",
+      "actions": "Ações"
+    },
+    "empty": "Nenhum item corresponde a esses filtros.",
+    "stale": "desatualizado",
+    "rowActions": {
+      "versions": "Versões"
+    }
+  },
+  "editor": {
+    "breadcrumbItems": "Itens",
+    "newTitle": "Novo item",
+    "editTitle": "Editar item",
+    "rejectedByReviewer": "Rejeitado pelo revisor:",
+    "contentCard": "Conteúdo",
+    "collectionLabel": "Coleção",
+    "collectionPlaceholder": "Selecione…",
+    "moveHint": "Alterar a coleção move o item ao Salvar.",
+    "sensitivityLabel": "Sensibilidade",
+    "titleLabel": "Título",
+    "tagsLabel": "Tags",
+    "submitForReview": "Enviar para revisão",
+    "lockedNote": "Este item está {{status}} e não pode ser editado aqui. Reverta para um rascunho para fazer alterações.",
+    "toast": {
+      "saved": "Salvo",
+      "created": "Item criado",
+      "submitted": "Enviado para revisão"
+    }
+  },
+  "versions": {
+    "breadcrumbItems": "Itens",
+    "breadcrumbItem": "Item",
+    "breadcrumbHistory": "Histórico de versões",
+    "title": "Histórico de versões",
+    "columns": {
+      "version": "Versão",
+      "title": "Título",
+      "author": "Autor",
+      "created": "Criado em",
+      "action": "Ação"
+    },
+    "empty": "Nenhuma versão ainda.",
+    "rollbackThis": "Reverter para esta",
+    "compareTitle": "Comparar versões",
+    "leftVersion": "Versão da esquerda",
+    "rightVersion": "Versão da direita",
+    "versus": "vs",
+    "rolledBack": "Revertido para a versão {{n}}",
+    "rollbackDialog": {
+      "title": "Reverter para a versão {{n}}?",
+      "description": "Reverter cria uma nova versão e retorna o item para rascunho (ele precisa ser reenviado para revisão)."
+    }
+  },
+  "upload": {
+    "title": "Enviar documento",
+    "subtitle": "Solte um arquivo para ingeri-lo em uma coleção — ele se torna um item em rascunho que você pode revisar.",
+    "newIngestion": "Nova ingestão",
+    "collectionLabel": "Coleção",
+    "collectionPlaceholder": "Selecione…",
+    "fileLabel": "Arquivo",
+    "dropzoneHint": "Markdown ou texto simples · um único documento",
+    "uploadButton": "Enviar",
+    "chooseFileFirst": "Escolha um arquivo primeiro.",
+    "processing": "Processando…",
+    "complete": "Ingestão concluída",
+    "createdFrom": "Criado a partir de {{filename}}.",
+    "openCreatedItem": "Abrir item criado",
+    "failed": "Falha na ingestão:",
+    "unknownError": "Erro desconhecido."
+  },
+  "markdownEditor": {
+    "label": "Corpo (markdown)",
+    "preview": "Visualizar",
+    "edit": "Editar",
+    "loading": "Carregando editor…"
+  },
+  "fileDropzone": {
+    "removeFile": "Remover arquivo",
+    "dropPrefix": "Arraste e solte um arquivo, ou ",
+    "browse": "procure",
+    "defaultHint": "Um único documento"
+  },
+  "versionDiff": {
+    "loading": "Carregando diff…"
+  }
+}

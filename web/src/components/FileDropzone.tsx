@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FileText, UploadCloud, X } from "lucide-react";
 import { Button } from "./ui/button.tsx";
 import { cn } from "../lib/utils.ts";
@@ -31,6 +32,7 @@ export function FileDropzone({
   readonly disabled?: boolean;
   readonly hint?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -57,7 +59,7 @@ export function FileDropzone({
           <p className="truncate text-sm font-medium">{file.name}</p>
           <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={clear} disabled={disabled} aria-label="Remove file">
+        <Button type="button" variant="ghost" size="icon" onClick={clear} disabled={disabled} aria-label={t("knowledge.fileDropzone.removeFile")}>
           <X className="h-4 w-4" />
         </Button>
         <input
@@ -108,9 +110,10 @@ export function FileDropzone({
         <UploadCloud className="h-5 w-5" />
       </span>
       <p className="text-sm font-medium text-foreground">
-        Drag &amp; drop a file, or <span className="text-primary">browse</span>
+        {t("knowledge.fileDropzone.dropPrefix")}
+        <span className="text-primary">{t("knowledge.fileDropzone.browse")}</span>
       </p>
-      <p className="text-xs text-muted-foreground">{hint ?? "A single document"}</p>
+      <p className="text-xs text-muted-foreground">{hint ?? t("knowledge.fileDropzone.defaultHint")}</p>
       <input
         ref={inputRef}
         id={id}

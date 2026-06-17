@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
 import { tagsApi } from "../../api/resources.ts";
 import type { TagView } from "../../api/types.ts";
@@ -35,11 +37,11 @@ function errorMessage(caught: unknown): string {
   return "Something went wrong.";
 }
 
-function removeDescription(target: TagView | null): string | null {
+function removeDescription(target: TagView | null, t: TFunction): string | null {
   if (target === null) {
     return null;
   }
-  return `"${target.label}" will be removed. Tags that are in use cannot be removed.`;
+  return t("admin.tags.removeDescription", { label: target.label });
 }
 
 function scopeBadgeVariant(scope: string): "secondary" | "outline" {
@@ -50,6 +52,7 @@ function scopeBadgeVariant(scope: string): "secondary" | "outline" {
 }
 
 export function TagsPage(): JSX.Element {
+  const { t } = useTranslation();
   const state = useAsync(() => tagsApi.list(), []);
   const [label, setLabel] = useState("");
   const [removeTarget, setRemoveTarget] = useState<TagView | null>(null);
@@ -58,7 +61,7 @@ export function TagsPage(): JSX.Element {
     try {
       await tagsApi.create(label);
       setLabel("");
-      toast.success("Tag created");
+      toast.success(t("admin.tags.toasts.created"));
       state.reload();
     } catch (caught) {
       toast.error(errorMessage(caught));
@@ -72,7 +75,7 @@ export function TagsPage(): JSX.Element {
     try {
       await tagsApi.remove(removeTarget.id);
       setRemoveTarget(null);
-      toast.success("Tag removed");
+      toast.success(t("admin.tags.toasts.removed"));
       state.reload();
     } catch (caught) {
       setRemoveTarget(null);
@@ -87,14 +90,14 @@ export function TagsPage(): JSX.Element {
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (tags.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No tags yet.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("admin.tags.empty")}</TableEmptyRow>;
   } else {
     tableBody = tags.map((tag) => (
       <TableRow key={tag.id}>
         <TableCell className="font-medium">{tag.label}</TableCell>
         <TableCell className="font-mono text-xs text-muted-foreground">{tag.slug}</TableCell>
         <TableCell>
-          <Badge variant={scopeBadgeVariant(tag.scope)}>{tag.scope}</Badge>
+          <Badge variant={scopeBadgeVariant(tag.scope)}>{t("admin.tags.scope." + tag.scope)}</Badge>
         </TableCell>
         <TableCell>
           <TagAction tag={tag} onRemove={setRemoveTarget} />
@@ -105,20 +108,20 @@ export function TagsPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Tenant tags</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("admin.tags.title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Create tag</CardTitle>
+          <CardTitle className="text-base">{t("admin.tags.createCard")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="tag-label">Label</Label>
+            <Label htmlFor="tag-label">{t("admin.tags.labelLabel")}</Label>
             <Input id="tag-label" value={label} onChange={(event) => setLabel(event.target.value)} />
           </div>
           <Button type="button" onClick={() => void create()} disabled={label === ""}>
             <Plus className="mr-2 h-4 w-4" />
-            Create
+            {t("common.actions.create")}
           </Button>
         </CardContent>
       </Card>
@@ -130,9 +133,9 @@ export function TagsPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Label</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Scope</TableHead>
+                <TableHead>{t("admin.tags.columns.label")}</TableHead>
+                <TableHead>{t("admin.tags.columns.slug")}</TableHead>
+                <TableHead>{t("admin.tags.columns.scope")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -151,15 +154,15 @@ export function TagsPage(): JSX.Element {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Remove this tag?</DialogTitle>
-            <DialogDescription>{removeDescription(removeTarget)}</DialogDescription>
+            <DialogTitle>{t("admin.tags.removeTitle")}</DialogTitle>
+            <DialogDescription>{removeDescription(removeTarget, t)}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRemoveTarget(null)}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="button" variant="destructive" onClick={() => void confirmRemove()}>
-              Remove
+              {t("common.actions.remove")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -175,13 +178,14 @@ function TagAction({
   readonly tag: TagView;
   onRemove(tag: TagView): void;
 }): JSX.Element {
+  const { t } = useTranslation();
   if (tag.scope === "system") {
-    return <span className="text-sm text-muted-foreground">system</span>;
+    return <span className="text-sm text-muted-foreground">{t("admin.tags.scope.system")}</span>;
   }
   return (
     <Button type="button" variant="outline" size="sm" onClick={() => onRemove(tag)}>
       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-      Remove
+      {t("common.actions.remove")}
     </Button>
   );
 }

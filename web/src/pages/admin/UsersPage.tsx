@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Copy, Loader2, UserPlus } from "lucide-react";
 import { usersApi } from "../../api/resources.ts";
 import { ROLES, type InvitedUser, type OrgUser } from "../../api/types.ts";
@@ -52,6 +53,7 @@ function statusVariant(status: string): "outline" | "secondary" {
 // flows; the invite form surfaces the generated invitation token so an admin can hand
 // the invitee a ready-to-use accept link.
 export function UsersPage(): JSX.Element {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const orgId = session?.user.companyId ?? "";
 
@@ -79,7 +81,7 @@ export function UsersPage(): JSX.Element {
   if (roster.loading) {
     tableBody = <TableSkeletonRows columns={ROSTER_COLUMN_COUNT} />;
   } else if (rosterUsers.length === 0) {
-    tableBody = <TableEmptyRow columns={ROSTER_COLUMN_COUNT}>No users yet.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={ROSTER_COLUMN_COUNT}>{t("admin.users.empty")}</TableEmptyRow>;
   } else {
     tableBody = rosterUsers.map((user) => (
       <TableRow key={user.id}>
@@ -89,18 +91,18 @@ export function UsersPage(): JSX.Element {
           <div className="flex flex-wrap gap-1">
             {user.roles.map((role) => (
               <Badge key={role} variant="secondary">
-                {role}
+                {t("common.roles." + role)}
               </Badge>
             ))}
           </div>
         </TableCell>
         <TableCell>
-          <Badge variant={statusVariant(user.status)}>{user.status}</Badge>
+          <Badge variant={statusVariant(user.status)}>{t("admin.users.status." + user.status)}</Badge>
         </TableCell>
         <TableCell className="text-right">
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => openEdit(user)}>
-              Edit roles
+              {t("admin.users.editRoles")}
             </Button>
             <Button
               type="button"
@@ -109,7 +111,7 @@ export function UsersPage(): JSX.Element {
               onClick={() => setDisabling(user)}
               disabled={user.status !== "active"}
             >
-              Disable
+              {t("admin.users.disable")}
             </Button>
           </div>
         </TableCell>
@@ -126,7 +128,7 @@ export function UsersPage(): JSX.Element {
       setDisplayName("");
       setInviteRoles(["consumer"]);
       roster.reload();
-      toast.success("Invitation sent");
+      toast.success(t("admin.users.toasts.invited"));
     } catch (caught) {
       toast.error(errorMessage(caught));
     } finally {
@@ -137,7 +139,7 @@ export function UsersPage(): JSX.Element {
   const copyAcceptUrl = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(acceptUrl);
-      toast.success("Accept link copied");
+      toast.success(t("admin.users.toasts.linkCopied"));
     } catch (caught) {
       toast.error(errorMessage(caught));
     }
@@ -169,7 +171,7 @@ export function UsersPage(): JSX.Element {
       await usersApi.changeRoles(editing.id, editRoles);
       setEditing(null);
       roster.reload();
-      toast.success("Roles updated");
+      toast.success(t("admin.users.toasts.rolesUpdated"));
     } catch (caught) {
       toast.error(errorMessage(caught));
     } finally {
@@ -186,7 +188,7 @@ export function UsersPage(): JSX.Element {
       await usersApi.disable(disabling.id);
       setDisabling(null);
       roster.reload();
-      toast.success("User disabled");
+      toast.success(t("admin.users.toasts.disabled"));
     } catch (caught) {
       toast.error(errorMessage(caught));
     } finally {
@@ -196,16 +198,16 @@ export function UsersPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Users &amp; roles</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("admin.users.title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Invite user</CardTitle>
+          <CardTitle className="text-base">{t("admin.users.inviteCard")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="invite-email">Email</Label>
+              <Label htmlFor="invite-email">{t("admin.users.emailLabel")}</Label>
               <Input
                 id="invite-email"
                 type="email"
@@ -214,7 +216,7 @@ export function UsersPage(): JSX.Element {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-name">Display name</Label>
+              <Label htmlFor="invite-name">{t("admin.users.displayNameLabel")}</Label>
               <Input
                 id="invite-name"
                 value={displayName}
@@ -224,7 +226,7 @@ export function UsersPage(): JSX.Element {
           </div>
 
           <div className="space-y-2">
-            <Label>Roles</Label>
+            <Label>{t("admin.users.rolesLabel")}</Label>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {ROLES.map((role) => (
                 <label key={role} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -232,7 +234,7 @@ export function UsersPage(): JSX.Element {
                     checked={inviteRoles.includes(role)}
                     onCheckedChange={() => setInviteRoles((current) => toggleRole(current, role))}
                   />
-                  {role}
+                  {t("common.roles." + role)}
                 </label>
               ))}
             </div>
@@ -240,20 +242,20 @@ export function UsersPage(): JSX.Element {
 
           <Button type="button" onClick={() => void invite()} disabled={inviting}>
             {inviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-            Invite
+            {t("admin.users.invite")}
           </Button>
 
           {invited !== null ? (
             <div className="space-y-2 rounded-md border border-border bg-muted/30 px-3 py-3 text-sm">
               <p className="break-all">
-                Invitation token:{" "}
+                {t("admin.users.invitationToken")}{" "}
                 <code className="font-mono" data-testid="invitation-token">
                   {invited.invitationToken}
                 </code>
               </p>
               <Button type="button" variant="secondary" size="sm" onClick={() => void copyAcceptUrl()}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy accept link
+                {t("admin.users.copyAcceptLink")}
               </Button>
             </div>
           ) : null}
@@ -262,18 +264,18 @@ export function UsersPage(): JSX.Element {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Roster</CardTitle>
+          <CardTitle className="text-base">{t("admin.users.rosterCard")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {roster.error !== null ? <ErrorNotice error={roster.error} /> : null}
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Display name</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("admin.users.columns.email")}</TableHead>
+                <TableHead>{t("admin.users.columns.displayName")}</TableHead>
+                <TableHead>{t("admin.users.columns.roles")}</TableHead>
+                <TableHead>{t("admin.users.columns.status")}</TableHead>
+                <TableHead className="text-right">{t("admin.users.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>{tableBody}</TableBody>
@@ -284,7 +286,7 @@ export function UsersPage(): JSX.Element {
       <Dialog open={editing !== null} onOpenChange={onEditOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit roles</DialogTitle>
+            <DialogTitle>{t("admin.users.editRoles")}</DialogTitle>
             <DialogDescription>{editing?.email}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -294,17 +296,17 @@ export function UsersPage(): JSX.Element {
                   checked={editRoles.includes(role)}
                   onCheckedChange={() => setEditRoles((current) => toggleRole(current, role))}
                 />
-                {role}
+                {t("common.roles." + role)}
               </label>
             ))}
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setEditing(null)} disabled={savingRoles}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="button" onClick={() => void saveRoles()} disabled={savingRoles}>
               {savingRoles ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
+              {t("common.actions.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -313,14 +315,14 @@ export function UsersPage(): JSX.Element {
       <Dialog open={disabling !== null} onOpenChange={onDisableOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Disable user</DialogTitle>
+            <DialogTitle>{t("admin.users.disableTitle")}</DialogTitle>
             <DialogDescription>
-              Disabling {disabling?.email} will revoke their access until re-enabled.
+              {t("admin.users.disableDescription", { email: disabling?.email ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setDisabling(null)} disabled={disablingBusy}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button
               type="button"
@@ -329,7 +331,7 @@ export function UsersPage(): JSX.Element {
               disabled={disablingBusy}
             >
               {disablingBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Disable
+              {t("admin.users.disable")}
             </Button>
           </DialogFooter>
         </DialogContent>

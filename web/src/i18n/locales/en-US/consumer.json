@@ -1,1 +1,32 @@
-{}
+{
+  "search": {
+    "title": "Search",
+    "subtitle": "Search the published knowledge base your session is allowed to see.",
+    "queryLabel": "Query",
+    "placeholder": "Search the knowledge base…",
+    "collectionLabel": "Collection",
+    "allCollections": "All collections",
+    "sensitivityLabel": "Sensitivity ceiling",
+    "anySensitivity": "Any sensitivity",
+    "match": "match",
+    "relevanceTooltip": "relevance score {{score}}",
+    "deprecated": "Deprecated",
+    "noResults": "No results.",
+    "publishedOn": "published {{date}}"
+  },
+  "catalog": {
+    "title": "Catalog",
+    "subtitle": "Browse published and still-served knowledge items.",
+    "collectionLabel": "Collection",
+    "allCollections": "All collections",
+    "tagLabel": "Tag",
+    "allTags": "All tags",
+    "deprecated": "Deprecated",
+    "noItems": "No published items."
+  },
+  "item": {
+    "breadcrumbCatalog": "Catalog",
+    "fallbackTitle": "Item",
+    "deprecated": "Deprecated"
+  }
+}

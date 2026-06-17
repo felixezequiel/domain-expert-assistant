@@ -1,4 +1,5 @@
 import { CalendarIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { type DateRange } from "react-day-picker";
 import { Button } from "./ui/button.tsx";
 import { Calendar } from "./ui/calendar.tsx";
@@ -12,7 +13,7 @@ import { formatDate } from "../lib/format.ts";
 export function DateRangePicker({
   value,
   onChange,
-  placeholder = "Pick a date range",
+  placeholder,
   id,
   ariaLabel,
 }: {
@@ -22,7 +23,8 @@ export function DateRangePicker({
   readonly id?: string;
   readonly ariaLabel?: string;
 }): JSX.Element {
-  let label = placeholder;
+  const { t } = useTranslation();
+  let label = placeholder ?? t("audit.dateRange.pick");
   if (value?.from !== undefined && value.to !== undefined) {
     label = formatDate(value.from.toISOString()) + " – " + formatDate(value.to.toISOString());
   } else if (value?.from !== undefined) {
@@ -61,7 +63,7 @@ export function DateRangePicker({
               className="w-full"
               onClick={() => onChange(undefined)}
             >
-              Clear
+              {t("audit.dateRange.clear")}
             </Button>
           </div>
         ) : null}

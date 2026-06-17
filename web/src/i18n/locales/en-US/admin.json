@@ -1,1 +1,134 @@
-{}
+{
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your organization — members, taxonomy, API access and governance.",
+    "tabs": {
+      "members": "Members",
+      "collections": "Collections",
+      "tags": "Tags",
+      "credentials": "API credentials",
+      "policy": "Policy"
+    }
+  },
+  "users": {
+    "title": "Users & roles",
+    "inviteCard": "Invite user",
+    "emailLabel": "Email",
+    "displayNameLabel": "Display name",
+    "rolesLabel": "Roles",
+    "invite": "Invite",
+    "invitationToken": "Invitation token:",
+    "copyAcceptLink": "Copy accept link",
+    "rosterCard": "Roster",
+    "empty": "No users yet.",
+    "columns": {
+      "email": "Email",
+      "displayName": "Display name",
+      "roles": "Roles",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editRoles": "Edit roles",
+    "disable": "Disable",
+    "disableTitle": "Disable user",
+    "disableDescription": "Disabling {{email}} will revoke their access until re-enabled.",
+    "status": {
+      "active": "active",
+      "disabled": "disabled"
+    },
+    "toasts": {
+      "invited": "Invitation sent",
+      "linkCopied": "Accept link copied",
+      "rolesUpdated": "Roles updated",
+      "disabled": "User disabled"
+    }
+  },
+  "collections": {
+    "title": "Collections",
+    "createCard": "Create collection",
+    "nameLabel": "Name",
+    "descriptionLabel": "Description (optional)",
+    "empty": "No collections yet.",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "id": "Id"
+    },
+    "rename": "Rename",
+    "renameTitle": "Rename collection",
+    "toasts": {
+      "created": "Collection created",
+      "renamed": "Collection renamed"
+    }
+  },
+  "tags": {
+    "title": "Tenant tags",
+    "createCard": "Create tag",
+    "labelLabel": "Label",
+    "empty": "No tags yet.",
+    "columns": {
+      "label": "Label",
+      "slug": "Slug",
+      "scope": "Scope"
+    },
+    "remove": "Remove",
+    "removeTitle": "Remove this tag?",
+    "removeDescription": "\"{{label}}\" will be removed. Tags that are in use cannot be removed.",
+    "scope": {
+      "system": "system",
+      "tenant": "tenant"
+    },
+    "toasts": {
+      "created": "Tag created",
+      "removed": "Tag removed"
+    }
+  },
+  "credentials": {
+    "title": "Consumer credentials",
+    "issueCard": "Issue credential",
+    "nameLabel": "Name",
+    "scopedCollectionsLabel": "Scoped collections (none selected = all)",
+    "ceilingLabel": "Sensitivity ceiling",
+    "issue": "Issue",
+    "empty": "No credentials yet.",
+    "never": "never",
+    "scopeAll": "all",
+    "columns": {
+      "name": "Name",
+      "prefix": "Prefix",
+      "scope": "Scope",
+      "ceiling": "Ceiling",
+      "status": "Status",
+      "lastUsed": "Last used"
+    },
+    "rotate": "Rotate",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke this credential?",
+    "revokeDescription": "Applications using it will stop working.",
+    "status": {
+      "active": "active",
+      "revoked": "revoked"
+    },
+    "secret": {
+      "title": "Credential secret",
+      "warning": "Copy this secret now. It is shown only once and cannot be retrieved again.",
+      "copied": "Copied",
+      "done": "Done"
+    },
+    "toasts": {
+      "issued": "Credential issued",
+      "rotated": "Credential rotated",
+      "revoked": "Credential revoked"
+    }
+  },
+  "policy": {
+    "title": "Org policy",
+    "governanceCard": "Governance",
+    "requireReviewer": "Require a separate reviewer",
+    "requireReviewerHint": "The approver must differ from the author.",
+    "savePolicy": "Save policy",
+    "toasts": {
+      "saved": "Policy saved"
+    }
+  }
+}

@@ -1,25 +1,25 @@
+import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
 import { cn } from "../lib/utils.ts";
 
 // Organization settings live behind ONE "Settings" entry rather than five loose sidebar
 // links: members, taxonomy, API access and governance are all the same behaviour ("configure
 // my org"), so they're grouped on one screen with a sub-tab bar (finding: semantic IA).
-const TABS: ReadonlyArray<{ readonly to: string; readonly label: string }> = [
-  { to: "/settings/members", label: "Members" },
-  { to: "/settings/collections", label: "Collections" },
-  { to: "/settings/tags", label: "Tags" },
-  { to: "/settings/credentials", label: "API credentials" },
-  { to: "/settings/policy", label: "Policy" },
+const TABS: ReadonlyArray<{ readonly to: string; readonly labelKey: string }> = [
+  { to: "/settings/members", labelKey: "admin.settings.tabs.members" },
+  { to: "/settings/collections", labelKey: "admin.settings.tabs.collections" },
+  { to: "/settings/tags", labelKey: "admin.settings.tabs.tags" },
+  { to: "/settings/credentials", labelKey: "admin.settings.tabs.credentials" },
+  { to: "/settings/policy", labelKey: "admin.settings.tabs.policy" },
 ];
 
 export function SettingsLayout(): JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your organization — members, taxonomy, API access and governance.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("admin.settings.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("admin.settings.subtitle")}</p>
       </div>
 
       <div className="border-b border-border">
@@ -37,7 +37,7 @@ export function SettingsLayout(): JSX.Element {
                 )
               }
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </NavLink>
           ))}
         </nav>

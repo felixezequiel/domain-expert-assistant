@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AlertTriangle, Search } from "lucide-react";
 import { collectionsApi, searchApi } from "../../api/resources.ts";
@@ -48,6 +49,7 @@ function snippetOf(content: string, title: string): string {
 // Human search (PRD-5 parity, session-authed). Results carry attribution (title, collection
 // NAME, published date) and a freshness flag (stale = deprecated-but-served).
 export function SearchPage(): JSX.Element {
+  const { t } = useTranslation();
   const collections = useAsync(() => collectionsApi.list(), []);
   const [query, setQuery] = useState("");
   const [collectionId, setCollectionId] = useState(ALL_COLLECTIONS);
@@ -85,34 +87,32 @@ export function SearchPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
-        <p className="text-sm text-muted-foreground">
-          Search the published knowledge base your session is allowed to see.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("consumer.search.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("consumer.search.subtitle")}</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <form className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={(event) => void run(event)}>
             <div className="space-y-1.5">
-              <Label htmlFor="search-query">Query</Label>
+              <Label htmlFor="search-query">{t("consumer.search.queryLabel")}</Label>
               <Input
                 id="search-query"
-                aria-label="Query"
-                placeholder="Search the knowledge base…"
+                aria-label={t("consumer.search.queryLabel")}
+                placeholder={t("consumer.search.placeholder")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
               <div className="space-y-1.5">
-                <Label htmlFor="search-collection">Collection</Label>
+                <Label htmlFor="search-collection">{t("consumer.search.collectionLabel")}</Label>
                 <Select value={collectionId} onValueChange={setCollectionId}>
-                  <SelectTrigger id="search-collection" aria-label="Collection">
+                  <SelectTrigger id="search-collection" aria-label={t("consumer.search.collectionLabel")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_COLLECTIONS}>All collections</SelectItem>
+                    <SelectItem value={ALL_COLLECTIONS}>{t("consumer.search.allCollections")}</SelectItem>
                     {(collections.data?.collections ?? []).map((collection) => (
                       <SelectItem key={collection.id} value={collection.id}>
                         {collection.name}
@@ -122,16 +122,16 @@ export function SearchPage(): JSX.Element {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="search-sensitivity">Sensitivity ceiling</Label>
+                <Label htmlFor="search-sensitivity">{t("consumer.search.sensitivityLabel")}</Label>
                 <Select value={sensitivityCeiling} onValueChange={setSensitivityCeiling}>
-                  <SelectTrigger id="search-sensitivity" aria-label="Sensitivity ceiling">
+                  <SelectTrigger id="search-sensitivity" aria-label={t("consumer.search.sensitivityLabel")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ANY_SENSITIVITY}>Any sensitivity</SelectItem>
+                    <SelectItem value={ANY_SENSITIVITY}>{t("consumer.search.anySensitivity")}</SelectItem>
                     {SENSITIVITY_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>
-                        {level}
+                        {t("common.sensitivity." + level)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -140,7 +140,7 @@ export function SearchPage(): JSX.Element {
             </div>
             <Button type="submit" className="sm:col-start-2 sm:row-start-1">
               <Search className="mr-2 h-4 w-4" />
-              Search
+              {t("common.actions.search")}
             </Button>
           </form>
         </CardContent>
@@ -161,10 +161,13 @@ function SearchResults({
   readonly results: ReadonlyArray<SearchResult>;
   readonly collectionNames: ReadonlyMap<string, string>;
 }): JSX.Element {
+  const { t } = useTranslation();
   if (results.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">No results.</CardContent>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          {t("consumer.search.noResults")}
+        </CardContent>
       </Card>
     );
   }
@@ -183,13 +186,16 @@ function SearchResults({
                       {result.title}
                     </Link>
                   </CardTitle>
-                  <Badge variant="secondary" title={`relevance score ${result.score.toFixed(SCORE_DECIMALS)}`}>
-                    match
+                  <Badge
+                    variant="secondary"
+                    title={t("consumer.search.relevanceTooltip", { score: result.score.toFixed(SCORE_DECIMALS) })}
+                  >
+                    {t("consumer.search.match")}
                   </Badge>
                   {result.stale ? (
                     <Badge variant="warning">
                       <AlertTriangle className="mr-1 h-3 w-3" />
-                      Deprecated
+                      {t("consumer.search.deprecated")}
                     </Badge>
                   ) : null}
                 </div>
@@ -197,7 +203,8 @@ function SearchResults({
               <CardContent className="space-y-2">
                 <p className="text-sm text-muted-foreground">{snippetOf(result.content, result.title)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {collectionName} · {result.sensitivity} · published {formatDate(result.publishedAt)}
+                  {collectionName} · {t("common.sensitivity." + result.sensitivity)} ·{" "}
+                  {t("consumer.search.publishedOn", { date: formatDate(result.publishedAt) })}
                 </p>
               </CardContent>
             </Card>

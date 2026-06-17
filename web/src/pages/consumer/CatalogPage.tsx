@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
@@ -36,6 +37,7 @@ function mergeServed(
 // Catalog browse by collection (and tag, client-side). Shows the items the session is
 // allowed to see; the read view is one click away.
 export function CatalogPage(): JSX.Element {
+  const { t } = useTranslation();
   const collections = useAsync(() => collectionsApi.list(), []);
   const tags = useAsync(() => tagsApi.list(), []);
   const [collectionId, setCollectionId] = useState(ALL_COLLECTIONS);
@@ -61,19 +63,19 @@ export function CatalogPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
-        <p className="text-sm text-muted-foreground">Browse published and still-served knowledge items.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("consumer.catalog.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("consumer.catalog.subtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="catalog-collection">Collection</Label>
+          <Label htmlFor="catalog-collection">{t("consumer.catalog.collectionLabel")}</Label>
           <Select value={collectionId} onValueChange={setCollectionId}>
-            <SelectTrigger id="catalog-collection" aria-label="Collection">
+            <SelectTrigger id="catalog-collection" aria-label={t("consumer.catalog.collectionLabel")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_COLLECTIONS}>All collections</SelectItem>
+              <SelectItem value={ALL_COLLECTIONS}>{t("consumer.catalog.allCollections")}</SelectItem>
               {(collections.data?.collections ?? []).map((collection) => (
                 <SelectItem key={collection.id} value={collection.id}>
                   {collection.name}
@@ -83,13 +85,13 @@ export function CatalogPage(): JSX.Element {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="catalog-tag">Tag</Label>
+          <Label htmlFor="catalog-tag">{t("consumer.catalog.tagLabel")}</Label>
           <Select value={tagId} onValueChange={setTagId}>
-            <SelectTrigger id="catalog-tag" aria-label="Tag">
+            <SelectTrigger id="catalog-tag" aria-label={t("consumer.catalog.tagLabel")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_TAGS}>All tags</SelectItem>
+              <SelectItem value={ALL_TAGS}>{t("consumer.catalog.allTags")}</SelectItem>
               {(tags.data?.tags ?? []).map((tag) => (
                 <SelectItem key={tag.id} value={tag.id}>
                   {tag.label}
@@ -114,10 +116,13 @@ function CatalogList({
   readonly items: ReadonlyArray<KnowledgeItemView>;
   readonly collectionNames: ReadonlyMap<string, string>;
 }): JSX.Element {
+  const { t } = useTranslation();
   if (items.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">No published items.</CardContent>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          {t("consumer.catalog.noItems")}
+        </CardContent>
       </Card>
     );
   }
@@ -136,16 +141,16 @@ function CatalogList({
                   <Link to={`/catalog/${item.id}`} className="font-medium hover:underline">
                     {item.title}
                   </Link>
-                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                  <Badge variant={badge.variant}>{t("common.status." + item.status)}</Badge>
                   {showDeprecated ? (
                     <Badge variant="warning">
                       <AlertTriangle className="mr-1 h-3 w-3" />
-                      Deprecated
+                      {t("consumer.catalog.deprecated")}
                     </Badge>
                   ) : null}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {collectionName} · {item.sensitivity} · v
+                  {collectionName} · {t("common.sensitivity." + item.sensitivity)} · v
                   {item.publishedVersionNumber ?? item.currentVersionNumber}
                 </p>
               </CardContent>

@@ -1,1 +1,104 @@
-{}
+{
+  "list": {
+    "title": "Items",
+    "newItem": "New item",
+    "filters": {
+      "collection": "Collection filter",
+      "status": "Status filter",
+      "tag": "Tag filter",
+      "sensitivity": "Sensitivity filter",
+      "allCollections": "All collections",
+      "allStatuses": "All statuses",
+      "allTags": "All tags",
+      "allSensitivities": "All sensitivities"
+    },
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "sensitivity": "Sensitivity",
+      "version": "Version",
+      "actions": "Actions"
+    },
+    "empty": "No items match these filters.",
+    "stale": "stale",
+    "rowActions": {
+      "versions": "Versions"
+    }
+  },
+  "editor": {
+    "breadcrumbItems": "Items",
+    "newTitle": "New item",
+    "editTitle": "Edit item",
+    "rejectedByReviewer": "Rejected by reviewer:",
+    "contentCard": "Content",
+    "collectionLabel": "Collection",
+    "collectionPlaceholder": "Select…",
+    "moveHint": "Changing the collection moves the item on Save.",
+    "sensitivityLabel": "Sensitivity",
+    "titleLabel": "Title",
+    "tagsLabel": "Tags",
+    "submitForReview": "Submit for review",
+    "lockedNote": "This item is {{status}} and can't be edited here. Roll back to a draft to make changes.",
+    "toast": {
+      "saved": "Saved",
+      "created": "Item created",
+      "submitted": "Submitted for review"
+    }
+  },
+  "versions": {
+    "breadcrumbItems": "Items",
+    "breadcrumbItem": "Item",
+    "breadcrumbHistory": "Version history",
+    "title": "Version history",
+    "columns": {
+      "version": "Version",
+      "title": "Title",
+      "author": "Author",
+      "created": "Created",
+      "action": "Action"
+    },
+    "empty": "No versions yet.",
+    "rollbackThis": "Roll back to this",
+    "compareTitle": "Compare versions",
+    "leftVersion": "Left version",
+    "rightVersion": "Right version",
+    "versus": "vs",
+    "rolledBack": "Rolled back to version {{n}}",
+    "rollbackDialog": {
+      "title": "Roll back to version {{n}}?",
+      "description": "Rolling back creates a new version and returns the item to draft (it must be re-submitted for review)."
+    }
+  },
+  "upload": {
+    "title": "Upload document",
+    "subtitle": "Drop a file to ingest it into a collection — it becomes a draft item you can review.",
+    "newIngestion": "New ingestion",
+    "collectionLabel": "Collection",
+    "collectionPlaceholder": "Select…",
+    "fileLabel": "File",
+    "dropzoneHint": "Markdown or plain text · a single document",
+    "uploadButton": "Upload",
+    "chooseFileFirst": "Choose a file first.",
+    "processing": "Processing…",
+    "complete": "Ingestion complete",
+    "createdFrom": "Created from {{filename}}.",
+    "openCreatedItem": "Open created item",
+    "failed": "Ingestion failed:",
+    "unknownError": "Unknown error."
+  },
+  "markdownEditor": {
+    "label": "Body (markdown)",
+    "preview": "Preview",
+    "edit": "Edit",
+    "loading": "Loading editor…"
+  },
+  "fileDropzone": {
+    "removeFile": "Remove file",
+    "dropPrefix": "Drag & drop a file, or ",
+    "browse": "browse",
+    "defaultHint": "A single document"
+  },
+  "versionDiff": {
+    "loading": "Loading diff…"
+  }
+}

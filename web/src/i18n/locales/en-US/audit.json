@@ -1,1 +1,26 @@
-{}
+{
+  "title": "Audit trail",
+  "filters": {
+    "aggregateId": "Aggregate id",
+    "actorId": "Actor id",
+    "eventName": "Event name",
+    "dateRange": "Date range"
+  },
+  "states": {
+    "prompt": "Run a search to see events.",
+    "empty": "No events match these filters."
+  },
+  "columns": {
+    "when": "When",
+    "event": "Event",
+    "aggregate": "Aggregate",
+    "actor": "Actor",
+    "type": "Type"
+  },
+  "system": "system",
+  "dateRange": {
+    "anyDate": "Any date",
+    "pick": "Pick a date range",
+    "clear": "Clear"
+  }
+}

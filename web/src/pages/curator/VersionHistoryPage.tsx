@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { History, RotateCcw } from "lucide-react";
 import { itemsApi } from "../../api/resources.ts";
@@ -39,6 +40,7 @@ import { toast } from "../../components/ui/sonner.tsx";
 // Version history: list every version, pick two to diff, and roll back to an older one.
 // Rollback creates a new version from the chosen one (the backend appends, never rewrites).
 export function VersionHistoryPage(): JSX.Element {
+  const { t } = useTranslation();
   const { itemId } = useParams<{ itemId: string }>();
   const state = useAsync(
     () => (itemId === undefined ? Promise.resolve({ versions: [] }) : itemsApi.versions(itemId)),
@@ -75,7 +77,7 @@ export function VersionHistoryPage(): JSX.Element {
     setRollingBack(true);
     try {
       await itemsApi.rollback(itemId, versionNumber);
-      toast.success(`Rolled back to version ${versionNumber}`);
+      toast.success(t("knowledge.versions.rolledBack", { n: versionNumber }));
       setPendingRollback(null);
       state.reload();
     } catch (caught) {
@@ -93,7 +95,7 @@ export function VersionHistoryPage(): JSX.Element {
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (versions.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No versions yet.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("knowledge.versions.empty")}</TableEmptyRow>;
   } else {
     tableBody = versions.map((version) => (
       <TableRow key={version.versionNumber}>
@@ -109,7 +111,7 @@ export function VersionHistoryPage(): JSX.Element {
             onClick={() => setPendingRollback(version.versionNumber)}
           >
             <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Roll back to this
+            {t("knowledge.versions.rollbackThis")}
           </Button>
         </TableCell>
       </TableRow>
@@ -120,12 +122,12 @@ export function VersionHistoryPage(): JSX.Element {
     <div className="space-y-6">
       <Breadcrumbs
         items={[
-          { label: "Items", to: "/items" },
-          ...(itemId !== undefined ? [{ label: "Item", to: `/items/${itemId}` }] : []),
-          { label: "Version history" },
+          { label: t("knowledge.versions.breadcrumbItems"), to: "/items" },
+          ...(itemId !== undefined ? [{ label: t("knowledge.versions.breadcrumbItem"), to: `/items/${itemId}` }] : []),
+          { label: t("knowledge.versions.breadcrumbHistory") },
         ]}
       />
-      <h1 className="text-2xl font-semibold tracking-tight">Version history</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("knowledge.versions.title")}</h1>
 
       {error !== null ? <ErrorNotice error={error} /> : null}
       {state.error !== null ? <ErrorNotice error={state.error} /> : null}
@@ -135,11 +137,11 @@ export function VersionHistoryPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Version</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t("knowledge.versions.columns.version")}</TableHead>
+                <TableHead>{t("knowledge.versions.columns.title")}</TableHead>
+                <TableHead>{t("knowledge.versions.columns.author")}</TableHead>
+                <TableHead>{t("knowledge.versions.columns.created")}</TableHead>
+                <TableHead className="text-right">{t("knowledge.versions.columns.action")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>{tableBody}</TableBody>
@@ -152,7 +154,7 @@ export function VersionHistoryPage(): JSX.Element {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4 text-muted-foreground" />
-              Compare versions
+              {t("knowledge.versions.compareTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -161,7 +163,7 @@ export function VersionHistoryPage(): JSX.Element {
                 value={leftNumber === null ? "" : String(leftNumber)}
                 onValueChange={(value) => setLeftNumber(Number(value))}
               >
-                <SelectTrigger className="w-36" aria-label="Left version">
+                <SelectTrigger className="w-36" aria-label={t("knowledge.versions.leftVersion")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -172,12 +174,12 @@ export function VersionHistoryPage(): JSX.Element {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground">vs</span>
+              <span className="text-sm text-muted-foreground">{t("knowledge.versions.versus")}</span>
               <Select
                 value={rightNumber === null ? "" : String(rightNumber)}
                 onValueChange={(value) => setRightNumber(Number(value))}
               >
-                <SelectTrigger className="w-36" aria-label="Right version">
+                <SelectTrigger className="w-36" aria-label={t("knowledge.versions.rightVersion")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -211,18 +213,15 @@ export function VersionHistoryPage(): JSX.Element {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Roll back to version {pendingRollback}?</DialogTitle>
-            <DialogDescription>
-              Rolling back creates a new version and returns the item to draft (it must be
-              re-submitted for review).
-            </DialogDescription>
+            <DialogTitle>{t("knowledge.versions.rollbackDialog.title", { n: pendingRollback })}</DialogTitle>
+            <DialogDescription>{t("knowledge.versions.rollbackDialog.description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPendingRollback(null)} disabled={rollingBack}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="button" onClick={() => void confirmRollback()} disabled={rollingBack}>
-              Confirm
+              {t("common.actions.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

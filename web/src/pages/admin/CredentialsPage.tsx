@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import { collectionsApi, credentialsApi } from "../../api/resources.ts";
 import { SENSITIVITY_LEVELS, type ConsumerCredentialView } from "../../api/types.ts";
@@ -52,21 +54,22 @@ function statusBadgeVariant(status: string): "success" | "secondary" {
   return "secondary";
 }
 
-function lastUsedLabel(lastUsedAt: string | null): string {
+function lastUsedLabel(lastUsedAt: string | null, t: TFunction): string {
   if (lastUsedAt === null) {
-    return "never";
+    return t("admin.credentials.never");
   }
   return formatDateTime(lastUsedAt);
 }
 
-function scopeLabel(collectionIds: ReadonlyArray<string>): string {
+function scopeLabel(collectionIds: ReadonlyArray<string>, t: TFunction): string {
   if (collectionIds.length === 0) {
-    return "all";
+    return t("admin.credentials.scopeAll");
   }
   return String(collectionIds.length);
 }
 
 export function CredentialsPage(): JSX.Element {
+  const { t } = useTranslation();
   const credentials = useAsync(() => credentialsApi.list(), []);
   const collections = useAsync(() => collectionsApi.list(), []);
 
@@ -83,7 +86,7 @@ export function CredentialsPage(): JSX.Element {
       setCollectionIds([]);
       setCeiling("internal");
       setRevealedSecret(result.secret);
-      toast.success("Credential issued");
+      toast.success(t("admin.credentials.toasts.issued"));
       credentials.reload();
     } catch (caught) {
       toast.error(errorMessage(caught));
@@ -94,7 +97,7 @@ export function CredentialsPage(): JSX.Element {
     try {
       const result = await credentialsApi.rotate(id);
       setRevealedSecret(result.secret);
-      toast.success("Credential rotated");
+      toast.success(t("admin.credentials.toasts.rotated"));
       credentials.reload();
     } catch (caught) {
       toast.error(errorMessage(caught));
@@ -108,7 +111,7 @@ export function CredentialsPage(): JSX.Element {
     try {
       await credentialsApi.revoke(revokeTarget.id);
       setRevokeTarget(null);
-      toast.success("Credential revoked");
+      toast.success(t("admin.credentials.toasts.revoked"));
       credentials.reload();
     } catch (caught) {
       setRevokeTarget(null);
@@ -130,7 +133,7 @@ export function CredentialsPage(): JSX.Element {
   if (credentials.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
   } else if (rows.length === 0) {
-    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No credentials yet.</TableEmptyRow>;
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>{t("admin.credentials.empty")}</TableEmptyRow>;
   } else {
     tableBody = rows.map((credential) => (
       <TableRow key={credential.id}>
@@ -138,12 +141,14 @@ export function CredentialsPage(): JSX.Element {
         <TableCell>
           <code className="font-mono text-xs text-muted-foreground">{credential.keyPrefix}</code>
         </TableCell>
-        <TableCell>{scopeLabel(credential.collectionIds)}</TableCell>
-        <TableCell>{credential.sensitivityCeiling}</TableCell>
+        <TableCell>{scopeLabel(credential.collectionIds, t)}</TableCell>
+        <TableCell>{t("common.sensitivity." + credential.sensitivityCeiling)}</TableCell>
         <TableCell>
-          <Badge variant={statusBadgeVariant(credential.status)}>{credential.status}</Badge>
+          <Badge variant={statusBadgeVariant(credential.status)}>
+            {t("admin.credentials.status." + credential.status)}
+          </Badge>
         </TableCell>
-        <TableCell>{lastUsedLabel(credential.lastUsedAt)}</TableCell>
+        <TableCell>{lastUsedLabel(credential.lastUsedAt, t)}</TableCell>
         <TableCell>
           <CredentialActions credential={credential} onRotate={rotate} onRevoke={setRevokeTarget} />
         </TableCell>
@@ -153,20 +158,20 @@ export function CredentialsPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Consumer credentials</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("admin.credentials.title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Issue credential</CardTitle>
+          <CardTitle className="text-base">{t("admin.credentials.issueCard")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label htmlFor="cred-name">Name</Label>
+            <Label htmlFor="cred-name">{t("admin.credentials.nameLabel")}</Label>
             <Input id="cred-name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label>Scoped collections (none selected = all)</Label>
+            <Label>{t("admin.credentials.scopedCollectionsLabel")}</Label>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {availableCollections.map((collection) => (
                 <label
@@ -184,7 +189,7 @@ export function CredentialsPage(): JSX.Element {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="cred-ceiling">Sensitivity ceiling</Label>
+            <Label htmlFor="cred-ceiling">{t("admin.credentials.ceilingLabel")}</Label>
             <Select value={ceiling} onValueChange={setCeiling}>
               <SelectTrigger id="cred-ceiling" className="sm:w-64">
                 <SelectValue />
@@ -192,7 +197,7 @@ export function CredentialsPage(): JSX.Element {
               <SelectContent>
                 {SENSITIVITY_LEVELS.map((level) => (
                   <SelectItem key={level} value={level}>
-                    {level}
+                    {t("common.sensitivity." + level)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -201,7 +206,7 @@ export function CredentialsPage(): JSX.Element {
 
           <Button type="button" onClick={() => void issue()} disabled={name === ""}>
             <KeyRound className="mr-2 h-4 w-4" />
-            Issue
+            {t("admin.credentials.issue")}
           </Button>
         </CardContent>
       </Card>
@@ -213,12 +218,12 @@ export function CredentialsPage(): JSX.Element {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Prefix</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead>Ceiling</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last used</TableHead>
+                <TableHead>{t("admin.credentials.columns.name")}</TableHead>
+                <TableHead>{t("admin.credentials.columns.prefix")}</TableHead>
+                <TableHead>{t("admin.credentials.columns.scope")}</TableHead>
+                <TableHead>{t("admin.credentials.columns.ceiling")}</TableHead>
+                <TableHead>{t("admin.credentials.columns.status")}</TableHead>
+                <TableHead>{t("admin.credentials.columns.lastUsed")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -241,17 +246,15 @@ export function CredentialsPage(): JSX.Element {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Revoke this credential?</DialogTitle>
-            <DialogDescription>
-              Applications using it will stop working.
-            </DialogDescription>
+            <DialogTitle>{t("admin.credentials.revokeTitle")}</DialogTitle>
+            <DialogDescription>{t("admin.credentials.revokeDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="button" variant="destructive" onClick={() => void confirmRevoke()}>
-              Revoke
+              {t("admin.credentials.revoke")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -269,6 +272,7 @@ function CredentialActions({
   onRotate(id: string): void;
   onRevoke(credential: ConsumerCredentialView): void;
 }): JSX.Element | null {
+  const { t } = useTranslation();
   if (credential.status !== "active") {
     return null;
   }
@@ -276,11 +280,11 @@ function CredentialActions({
     <div className="flex gap-2">
       <Button type="button" variant="outline" size="sm" onClick={() => onRotate(credential.id)}>
         <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-        Rotate
+        {t("admin.credentials.rotate")}
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={() => onRevoke(credential)}>
         <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-        Revoke
+        {t("admin.credentials.revoke")}
       </Button>
     </div>
   );

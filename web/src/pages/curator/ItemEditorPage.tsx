@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, Loader2, Save, Send } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
@@ -28,6 +29,7 @@ import { toast } from "../../components/ui/sonner.tsx";
 // Changing the collection on Save additionally moves the item (finding B3). Save/Submit are
 // only offered for statuses where the transition is valid (finding P3).
 export function ItemEditorPage(): JSX.Element {
+  const { t } = useTranslation();
   const { itemId } = useParams<{ itemId: string }>();
   const isEdit = itemId !== undefined;
   const navigate = useNavigate();
@@ -81,10 +83,10 @@ export function ItemEditorPage(): JSX.Element {
           setSavedCollectionId(collectionId);
         }
         setStatus(result.status);
-        toast.success("Saved");
+        toast.success(t("knowledge.editor.toast.saved"));
       } else {
         const result = await itemsApi.create({ collectionId, title, body, tagIds: selectedTags, sensitivity });
-        toast.success("Item created");
+        toast.success(t("knowledge.editor.toast.created"));
         navigate(`/items/${result.id}`);
       }
     } catch (caught) {
@@ -104,7 +106,7 @@ export function ItemEditorPage(): JSX.Element {
       const result = await itemsApi.submit(itemId);
       setStatus(result.status);
       setRejectionReason(null);
-      toast.success("Submitted for review");
+      toast.success(t("knowledge.editor.toast.submitted"));
     } catch (caught) {
       setError(caught);
     } finally {
@@ -119,17 +121,26 @@ export function ItemEditorPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Items", to: "/items" }, { label: isEdit ? "Edit item" : "New item" }]} />
+      <Breadcrumbs
+        items={[
+          { label: t("knowledge.editor.breadcrumbItems"), to: "/items" },
+          { label: isEdit ? t("knowledge.editor.editTitle") : t("knowledge.editor.newTitle") },
+        ]}
+      />
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? "Edit item" : "New item"}</h1>
-        {badge !== null ? <Badge variant={badge.variant}>{badge.label}</Badge> : null}
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {isEdit ? t("knowledge.editor.editTitle") : t("knowledge.editor.newTitle")}
+        </h1>
+        {badge !== null && status !== null ? (
+          <Badge variant={badge.variant}>{t("common.status." + status)}</Badge>
+        ) : null}
       </div>
 
       {rejectionReason !== null && status === "draft" ? (
         <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
           <span>
-            <span className="font-medium">Rejected by reviewer:</span> {rejectionReason}
+            <span className="font-medium">{t("knowledge.editor.rejectedByReviewer")}</span> {rejectionReason}
           </span>
         </div>
       ) : null}
@@ -139,15 +150,15 @@ export function ItemEditorPage(): JSX.Element {
       <AsyncBoundary loading={existing.loading} error={existing.error}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Content</CardTitle>
+            <CardTitle className="text-base">{t("knowledge.editor.contentCard")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="item-collection">Collection</Label>
+                <Label htmlFor="item-collection">{t("knowledge.editor.collectionLabel")}</Label>
                 <Select value={collectionId} onValueChange={setCollectionId} disabled={!canEdit}>
                   <SelectTrigger id="item-collection">
-                    <SelectValue placeholder="Select…" />
+                    <SelectValue placeholder={t("knowledge.editor.collectionPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(collections.data?.collections ?? []).map((collection) => (
@@ -158,11 +169,11 @@ export function ItemEditorPage(): JSX.Element {
                   </SelectContent>
                 </Select>
                 {isEdit ? (
-                  <p className="text-xs text-muted-foreground">Changing the collection moves the item on Save.</p>
+                  <p className="text-xs text-muted-foreground">{t("knowledge.editor.moveHint")}</p>
                 ) : null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="item-sensitivity">Sensitivity</Label>
+                <Label htmlFor="item-sensitivity">{t("knowledge.editor.sensitivityLabel")}</Label>
                 <Select value={sensitivity} onValueChange={setSensitivity}>
                   <SelectTrigger id="item-sensitivity">
                     <SelectValue />
@@ -170,7 +181,7 @@ export function ItemEditorPage(): JSX.Element {
                   <SelectContent>
                     {SENSITIVITY_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>
-                        {level}
+                        {t("common.sensitivity." + level)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -179,12 +190,12 @@ export function ItemEditorPage(): JSX.Element {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="item-title">Title</Label>
+              <Label htmlFor="item-title">{t("knowledge.editor.titleLabel")}</Label>
               <Input id="item-title" value={title} onChange={(event) => setTitle(event.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <Label>Tags</Label>
+              <Label>{t("knowledge.editor.tagsLabel")}</Label>
               <div className="flex flex-wrap gap-x-5 gap-y-2">
                 {(tags.data?.tags ?? []).map((tag) => (
                   <label key={tag.id} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -203,18 +214,18 @@ export function ItemEditorPage(): JSX.Element {
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => void save()} disabled={busy || !canEdit}>
                 {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {isEdit ? "Save" : "Create"}
+                {isEdit ? t("common.actions.save") : t("common.actions.create")}
               </Button>
               {canSubmit ? (
                 <Button type="button" variant="secondary" onClick={() => void submitForReview()} disabled={busy}>
                   <Send className="mr-2 h-4 w-4" />
-                  Submit for review
+                  {t("knowledge.editor.submitForReview")}
                 </Button>
               ) : null}
             </div>
-            {isEdit && !canEdit ? (
+            {isEdit && !canEdit && status !== null ? (
               <p className="text-sm text-muted-foreground">
-                This item is {status} and can't be edited here. Roll back to a draft to make changes.
+                {t("knowledge.editor.lockedNote", { status: t("common.status." + status) })}
               </p>
             ) : null}
           </CardContent>

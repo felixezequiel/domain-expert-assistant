@@ -1,1 +1,134 @@
-{}
+{
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Gerencie sua organização — membros, taxonomia, acesso à API e governança.",
+    "tabs": {
+      "members": "Membros",
+      "collections": "Coleções",
+      "tags": "Tags",
+      "credentials": "Credenciais de API",
+      "policy": "Política"
+    }
+  },
+  "users": {
+    "title": "Usuários e papéis",
+    "inviteCard": "Convidar usuário",
+    "emailLabel": "E-mail",
+    "displayNameLabel": "Nome de exibição",
+    "rolesLabel": "Papéis",
+    "invite": "Convidar",
+    "invitationToken": "Token de convite:",
+    "copyAcceptLink": "Copiar link de aceite",
+    "rosterCard": "Equipe",
+    "empty": "Nenhum usuário ainda.",
+    "columns": {
+      "email": "E-mail",
+      "displayName": "Nome de exibição",
+      "roles": "Papéis",
+      "status": "Status",
+      "actions": "Ações"
+    },
+    "editRoles": "Editar papéis",
+    "disable": "Desativar",
+    "disableTitle": "Desativar usuário",
+    "disableDescription": "Desativar {{email}} revogará o acesso até que seja reativado.",
+    "status": {
+      "active": "ativo",
+      "disabled": "desativado"
+    },
+    "toasts": {
+      "invited": "Convite enviado",
+      "linkCopied": "Link de aceite copiado",
+      "rolesUpdated": "Papéis atualizados",
+      "disabled": "Usuário desativado"
+    }
+  },
+  "collections": {
+    "title": "Coleções",
+    "createCard": "Criar coleção",
+    "nameLabel": "Nome",
+    "descriptionLabel": "Descrição (opcional)",
+    "empty": "Nenhuma coleção ainda.",
+    "columns": {
+      "name": "Nome",
+      "description": "Descrição",
+      "id": "Id"
+    },
+    "rename": "Renomear",
+    "renameTitle": "Renomear coleção",
+    "toasts": {
+      "created": "Coleção criada",
+      "renamed": "Coleção renomeada"
+    }
+  },
+  "tags": {
+    "title": "Tags do tenant",
+    "createCard": "Criar tag",
+    "labelLabel": "Rótulo",
+    "empty": "Nenhuma tag ainda.",
+    "columns": {
+      "label": "Rótulo",
+      "slug": "Slug",
+      "scope": "Escopo"
+    },
+    "remove": "Remover",
+    "removeTitle": "Remover esta tag?",
+    "removeDescription": "\"{{label}}\" será removida. Tags em uso não podem ser removidas.",
+    "scope": {
+      "system": "sistema",
+      "tenant": "tenant"
+    },
+    "toasts": {
+      "created": "Tag criada",
+      "removed": "Tag removida"
+    }
+  },
+  "credentials": {
+    "title": "Credenciais de consumidor",
+    "issueCard": "Emitir credencial",
+    "nameLabel": "Nome",
+    "scopedCollectionsLabel": "Coleções com escopo (nenhuma selecionada = todas)",
+    "ceilingLabel": "Teto de sensibilidade",
+    "issue": "Emitir",
+    "empty": "Nenhuma credencial ainda.",
+    "never": "nunca",
+    "scopeAll": "todas",
+    "columns": {
+      "name": "Nome",
+      "prefix": "Prefixo",
+      "scope": "Escopo",
+      "ceiling": "Teto",
+      "status": "Status",
+      "lastUsed": "Último uso"
+    },
+    "rotate": "Rotacionar",
+    "revoke": "Revogar",
+    "revokeTitle": "Revogar esta credencial?",
+    "revokeDescription": "Aplicações que a utilizam deixarão de funcionar.",
+    "status": {
+      "active": "ativa",
+      "revoked": "revogada"
+    },
+    "secret": {
+      "title": "Segredo da credencial",
+      "warning": "Copie este segredo agora. Ele é exibido apenas uma vez e não pode ser recuperado novamente.",
+      "copied": "Copiado",
+      "done": "Concluir"
+    },
+    "toasts": {
+      "issued": "Credencial emitida",
+      "rotated": "Credencial rotacionada",
+      "revoked": "Credencial revogada"
+    }
+  },
+  "policy": {
+    "title": "Política da organização",
+    "governanceCard": "Governança",
+    "requireReviewer": "Exigir um revisor distinto",
+    "requireReviewerHint": "O aprovador deve ser diferente do autor.",
+    "savePolicy": "Salvar política",
+    "toasts": {
+      "saved": "Política salva"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, Check, Copy } from "lucide-react";
 import { Button } from "./ui/button.tsx";
 import {
@@ -20,6 +21,7 @@ export function SecretRevealDialog({
   readonly secret: string;
   onClose(): void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const copy = async (): Promise<void> => {
@@ -42,10 +44,10 @@ export function SecretRevealDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Credential secret</DialogTitle>
+          <DialogTitle>{t("admin.credentials.secret.title")}</DialogTitle>
           <DialogDescription className="flex items-center gap-1.5 text-warning">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            Copy this secret now. It is shown only once and cannot be retrieved again.
+            {t("admin.credentials.secret.warning")}
           </DialogDescription>
         </DialogHeader>
         <code
@@ -57,10 +59,10 @@ export function SecretRevealDialog({
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => void copy()}>
             {copied ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("admin.credentials.secret.copied") : t("common.actions.copy")}
           </Button>
           <Button type="button" onClick={onClose}>
-            Done
+            {t("admin.credentials.secret.done")}
           </Button>
         </DialogFooter>
       </DialogContent>

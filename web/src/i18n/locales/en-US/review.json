@@ -1,1 +1,37 @@
-{}
+{
+  "queue": {
+    "title": "Review queue",
+    "empty": "Nothing waiting for review.",
+    "columns": {
+      "title": "Title",
+      "sensitivity": "Sensitivity",
+      "version": "Version"
+    },
+    "review": "Review"
+  },
+  "detail": {
+    "breadcrumbQueue": "Review queue",
+    "breadcrumbItem": "Review item",
+    "title": "Review item",
+    "backToQueue": "Back to queue"
+  },
+  "version": "v{{number}}",
+  "decision": {
+    "title": "Decision",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectionReason": "Rejection reason",
+    "rejectionPlaceholder": "Explain what needs to change before this can be published…"
+  },
+  "lifecycle": {
+    "title": "Lifecycle",
+    "deprecate": "Deprecate",
+    "archive": "Archive"
+  },
+  "toasts": {
+    "approved": "Approved — now published",
+    "rejected": "Rejected — back to draft",
+    "deprecated": "Deprecated",
+    "archived": "Archived"
+  }
+}
