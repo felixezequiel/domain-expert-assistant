@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
 import { LIFECYCLE_STATUSES, SENSITIVITY_LEVELS, type KnowledgeItemView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { statusBadge } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
@@ -55,6 +56,16 @@ export function ItemsListPage(): JSX.Element {
     const sensitivityMatches = sensitivity === ALL || item.sensitivity === sensitivity;
     return tagMatches && sensitivityMatches;
   });
+
+  const COLUMN_COUNT = 5;
+  let tableBody: ReactNode;
+  if (items.loading) {
+    tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
+  } else if (visibleItems.length === 0) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No items match these filters.</TableEmptyRow>;
+  } else {
+    tableBody = visibleItems.map((item: KnowledgeItemView) => <ItemRow key={item.id} item={item} />);
+  }
 
   return (
     <div className="space-y-6">
@@ -125,35 +136,24 @@ export function ItemsListPage(): JSX.Element {
         </CardContent>
       </Card>
 
-      <AsyncBoundary loading={items.loading} error={items.error}>
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Sensitivity</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleItems.map((item: KnowledgeItemView) => (
-                  <ItemRow key={item.id} item={item} />
-                ))}
-                {visibleItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                      No items match these filters.
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </AsyncBoundary>
+      {items.error !== null ? <ErrorNotice error={items.error} /> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Sensitivity</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

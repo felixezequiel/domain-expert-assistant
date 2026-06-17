@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { tagsApi } from "../../api/resources.ts";
 import type { TagView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
@@ -81,6 +82,27 @@ export function TagsPage(): JSX.Element {
 
   const tags = state.data?.tags ?? [];
 
+  const COLUMN_COUNT = 4;
+  let tableBody: ReactNode;
+  if (state.loading) {
+    tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
+  } else if (tags.length === 0) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No tags yet.</TableEmptyRow>;
+  } else {
+    tableBody = tags.map((tag) => (
+      <TableRow key={tag.id}>
+        <TableCell className="font-medium">{tag.label}</TableCell>
+        <TableCell className="font-mono text-xs text-muted-foreground">{tag.slug}</TableCell>
+        <TableCell>
+          <Badge variant={scopeBadgeVariant(tag.scope)}>{tag.scope}</Badge>
+        </TableCell>
+        <TableCell>
+          <TagAction tag={tag} onRemove={setRemoveTarget} />
+        </TableCell>
+      </TableRow>
+    ));
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Tenant tags</h1>
@@ -101,9 +123,23 @@ export function TagsPage(): JSX.Element {
         </CardContent>
       </Card>
 
-      <AsyncBoundary loading={state.loading} error={state.error}>
-        <TagsTable tags={tags} onRemove={setRemoveTarget} />
-      </AsyncBoundary>
+      {state.error !== null ? <ErrorNotice error={state.error} /> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Label</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Scope</TableHead>
+                <TableHead className="w-0" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog
         open={removeTarget !== null}
@@ -147,43 +183,5 @@ function TagAction({
       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
       Remove
     </Button>
-  );
-}
-
-function TagsTable({
-  tags,
-  onRemove,
-}: {
-  readonly tags: ReadonlyArray<TagView>;
-  onRemove(tag: TagView): void;
-}): JSX.Element {
-  if (tags.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No tags yet.</p>;
-  }
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Label</TableHead>
-          <TableHead>Slug</TableHead>
-          <TableHead>Scope</TableHead>
-          <TableHead className="w-0" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tags.map((tag) => (
-          <TableRow key={tag.id}>
-            <TableCell className="font-medium">{tag.label}</TableCell>
-            <TableCell className="font-mono text-xs text-muted-foreground">{tag.slug}</TableCell>
-            <TableCell>
-              <Badge variant={scopeBadgeVariant(tag.scope)}>{tag.scope}</Badge>
-            </TableCell>
-            <TableCell>
-              <TagAction tag={tag} onRemove={onRemove} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   );
 }

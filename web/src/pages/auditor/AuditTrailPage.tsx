@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
 import type { AuditEventView } from "../../api/types.ts";
-import { ErrorNotice, Loading } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { formatDateTime } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
@@ -67,8 +68,38 @@ export function AuditTrailPage(): JSX.Element {
     }
   };
 
-  const showResults = searched && !loading && error === null;
-  const isEmpty = showResults && events.length === 0;
+  const COLUMN_COUNT = 5;
+  let tableBody: ReactNode;
+  if (loading) {
+    tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
+  } else if (!searched) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>Run a search to see events.</TableEmptyRow>;
+  } else if (events.length === 0) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No events match these filters.</TableEmptyRow>;
+  } else {
+    tableBody = events.map((event) => (
+      <TableRow key={event.eventId}>
+        <TableCell className="whitespace-nowrap text-muted-foreground">
+          {formatDateTime(event.occurredAt)}
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline" className="font-mono">
+            {event.eventName}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <code
+            className="block max-w-[16rem] truncate font-mono text-xs"
+            title={event.aggregateId}
+          >
+            {event.aggregateId}
+          </code>
+        </TableCell>
+        <TableCell>{event.actorId ?? "system"}</TableCell>
+        <TableCell>{event.actorType ?? "system"}</TableCell>
+      </TableRow>
+    ));
+  }
 
   return (
     <div className="space-y-6">
@@ -132,58 +163,24 @@ export function AuditTrailPage(): JSX.Element {
         </CardContent>
       </Card>
 
-      {error !== null && <ErrorNotice error={error} />}
-      {loading && <Loading />}
+      {error !== null ? <ErrorNotice error={error} /> : null}
 
-      {isEmpty && (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No events match these filters.
-          </CardContent>
-        </Card>
-      )}
-
-      {showResults && events.length > 0 && (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Aggregate</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.eventId}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {formatDateTime(event.occurredAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono">
-                        {event.eventName}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <code
-                        className="block max-w-[16rem] truncate font-mono text-xs"
-                        title={event.aggregateId}
-                      >
-                        {event.aggregateId}
-                      </code>
-                    </TableCell>
-                    <TableCell>{event.actorId ?? "system"}</TableCell>
-                    <TableCell>{event.actorType ?? "system"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Event</TableHead>
+                <TableHead>Aggregate</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Type</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Copy, Loader2, UserPlus } from "lucide-react";
 import { usersApi } from "../../api/resources.ts";
 import { ROLES, type InvitedUser, type OrgUser } from "../../api/types.ts";
 import { useAuth } from "../../auth/AuthContext.tsx";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
@@ -70,6 +71,51 @@ export function UsersPage(): JSX.Element {
   const [disablingBusy, setDisablingBusy] = useState(false);
 
   const acceptUrl = invited !== null ? `${location.origin}/#/invitations/${invited.invitationToken}` : "";
+
+  const rosterUsers = roster.data?.users ?? [];
+
+  const ROSTER_COLUMN_COUNT = 5;
+  let tableBody: ReactNode;
+  if (roster.loading) {
+    tableBody = <TableSkeletonRows columns={ROSTER_COLUMN_COUNT} />;
+  } else if (rosterUsers.length === 0) {
+    tableBody = <TableEmptyRow columns={ROSTER_COLUMN_COUNT}>No users yet.</TableEmptyRow>;
+  } else {
+    tableBody = rosterUsers.map((user) => (
+      <TableRow key={user.id}>
+        <TableCell className="font-medium">{user.email}</TableCell>
+        <TableCell>{user.displayName}</TableCell>
+        <TableCell>
+          <div className="flex flex-wrap gap-1">
+            {user.roles.map((role) => (
+              <Badge key={role} variant="secondary">
+                {role}
+              </Badge>
+            ))}
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge variant={statusVariant(user.status)}>{user.status}</Badge>
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => openEdit(user)}>
+              Edit roles
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDisabling(user)}
+              disabled={user.status !== "active"}
+            >
+              Disable
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ));
+  }
 
   const invite = async (): Promise<void> => {
     setInviting(true);
@@ -221,56 +267,20 @@ export function UsersPage(): JSX.Element {
         <CardHeader>
           <CardTitle className="text-base">Roster</CardTitle>
         </CardHeader>
-        <CardContent>
-          <AsyncBoundary loading={roster.loading} error={roster.error}>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Display name</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(roster.data?.users ?? []).map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{user.displayName}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((role) => (
-                          <Badge key={role} variant="secondary">
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(user.status)}>{user.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" size="sm" onClick={() => openEdit(user)}>
-                          Edit roles
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDisabling(user)}
-                          disabled={user.status !== "active"}
-                        >
-                          Disable
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </AsyncBoundary>
+        <CardContent className="space-y-4">
+          {roster.error !== null ? <ErrorNotice error={roster.error} /> : null}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Display name</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
         </CardContent>
       </Card>
 

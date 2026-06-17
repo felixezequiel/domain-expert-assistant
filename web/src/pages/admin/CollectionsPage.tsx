@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { collectionsApi } from "../../api/resources.ts";
 import type { CollectionView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
 import { Input } from "../../components/ui/input.tsx";
@@ -74,6 +75,35 @@ export function CollectionsPage(): JSX.Element {
 
   const collections = state.data?.collections ?? [];
 
+  const COLUMN_COUNT = 4;
+  let tableBody: ReactNode;
+  if (state.loading) {
+    tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
+  } else if (collections.length === 0) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No collections yet.</TableEmptyRow>;
+  } else {
+    tableBody = collections.map((collection) => (
+      <TableRow key={collection.id}>
+        <TableCell className="font-medium">{collection.name}</TableCell>
+        <TableCell>{collection.description ?? "—"}</TableCell>
+        <TableCell>
+          <code
+            className="block max-w-[12rem] truncate font-mono text-xs text-muted-foreground"
+            title={collection.id}
+          >
+            {collection.id}
+          </code>
+        </TableCell>
+        <TableCell>
+          <Button type="button" variant="outline" size="sm" onClick={() => openRename(collection)}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+            Rename
+          </Button>
+        </TableCell>
+      </TableRow>
+    ));
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Collections</h1>
@@ -102,9 +132,23 @@ export function CollectionsPage(): JSX.Element {
         </CardContent>
       </Card>
 
-      <AsyncBoundary loading={state.loading} error={state.error}>
-        <CollectionsTable collections={collections} onRename={openRename} />
-      </AsyncBoundary>
+      {state.error !== null ? <ErrorNotice error={state.error} /> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Id</TableHead>
+                <TableHead className="w-0" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog
         open={renameTarget !== null}
@@ -137,51 +181,5 @@ export function CollectionsPage(): JSX.Element {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function CollectionsTable({
-  collections,
-  onRename,
-}: {
-  readonly collections: ReadonlyArray<CollectionView>;
-  onRename(collection: CollectionView): void;
-}): JSX.Element {
-  if (collections.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No collections yet.</p>;
-  }
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead>Id</TableHead>
-          <TableHead className="w-0" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {collections.map((collection) => (
-          <TableRow key={collection.id}>
-            <TableCell className="font-medium">{collection.name}</TableCell>
-            <TableCell>{collection.description ?? "—"}</TableCell>
-            <TableCell>
-              <code
-                className="block max-w-[12rem] truncate font-mono text-xs text-muted-foreground"
-                title={collection.id}
-              >
-                {collection.id}
-              </code>
-            </TableCell>
-            <TableCell>
-              <Button type="button" variant="outline" size="sm" onClick={() => onRename(collection)}>
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Rename
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   );
 }

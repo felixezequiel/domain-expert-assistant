@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import { collectionsApi, credentialsApi } from "../../api/resources.ts";
 import { SENSITIVITY_LEVELS, type ConsumerCredentialView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
-import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
+import { TableEmptyRow, TableSkeletonRows } from "../../components/TableState.tsx";
 import { SecretRevealDialog } from "../../components/SecretRevealDialog.tsx";
 import { formatDateTime } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
@@ -124,6 +125,32 @@ export function CredentialsPage(): JSX.Element {
   const rows = credentials.data?.credentials ?? [];
   const availableCollections = collections.data?.collections ?? [];
 
+  const COLUMN_COUNT = 7;
+  let tableBody: ReactNode;
+  if (credentials.loading) {
+    tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
+  } else if (rows.length === 0) {
+    tableBody = <TableEmptyRow columns={COLUMN_COUNT}>No credentials yet.</TableEmptyRow>;
+  } else {
+    tableBody = rows.map((credential) => (
+      <TableRow key={credential.id}>
+        <TableCell className="font-medium">{credential.name}</TableCell>
+        <TableCell>
+          <code className="font-mono text-xs text-muted-foreground">{credential.keyPrefix}</code>
+        </TableCell>
+        <TableCell>{scopeLabel(credential.collectionIds)}</TableCell>
+        <TableCell>{credential.sensitivityCeiling}</TableCell>
+        <TableCell>
+          <Badge variant={statusBadgeVariant(credential.status)}>{credential.status}</Badge>
+        </TableCell>
+        <TableCell>{lastUsedLabel(credential.lastUsedAt)}</TableCell>
+        <TableCell>
+          <CredentialActions credential={credential} onRotate={rotate} onRevoke={setRevokeTarget} />
+        </TableCell>
+      </TableRow>
+    ));
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Consumer credentials</h1>
@@ -179,9 +206,26 @@ export function CredentialsPage(): JSX.Element {
         </CardContent>
       </Card>
 
-      <AsyncBoundary loading={credentials.loading} error={credentials.error}>
-        <CredentialsTable rows={rows} onRotate={rotate} onRevoke={setRevokeTarget} />
-      </AsyncBoundary>
+      {credentials.error !== null ? <ErrorNotice error={credentials.error} /> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Prefix</TableHead>
+                <TableHead>Scope</TableHead>
+                <TableHead>Ceiling</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last used</TableHead>
+                <TableHead className="w-0" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>{tableBody}</TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {revealedSecret !== null ? (
         <SecretRevealDialog secret={revealedSecret} onClose={() => setRevealedSecret(null)} />
@@ -213,54 +257,6 @@ export function CredentialsPage(): JSX.Element {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function CredentialsTable({
-  rows,
-  onRotate,
-  onRevoke,
-}: {
-  readonly rows: ReadonlyArray<ConsumerCredentialView>;
-  onRotate(id: string): void;
-  onRevoke(credential: ConsumerCredentialView): void;
-}): JSX.Element {
-  if (rows.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No credentials yet.</p>;
-  }
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Prefix</TableHead>
-          <TableHead>Scope</TableHead>
-          <TableHead>Ceiling</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Last used</TableHead>
-          <TableHead className="w-0" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((credential) => (
-          <TableRow key={credential.id}>
-            <TableCell className="font-medium">{credential.name}</TableCell>
-            <TableCell>
-              <code className="font-mono text-xs text-muted-foreground">{credential.keyPrefix}</code>
-            </TableCell>
-            <TableCell>{scopeLabel(credential.collectionIds)}</TableCell>
-            <TableCell>{credential.sensitivityCeiling}</TableCell>
-            <TableCell>
-              <Badge variant={statusBadgeVariant(credential.status)}>{credential.status}</Badge>
-            </TableCell>
-            <TableCell>{lastUsedLabel(credential.lastUsedAt)}</TableCell>
-            <TableCell>
-              <CredentialActions credential={credential} onRotate={onRotate} onRevoke={onRevoke} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   );
 }
 
