@@ -26,5 +26,8 @@ describe("MonacoVersionDiff", () => {
     expect(props.language).toBe("markdown");
     expect((props.options as { readOnly?: boolean }).readOnly).toBe(true);
     expect((props.options as { renderSideBySide?: boolean }).renderSideBySide).toBe(true);
+    // Models are kept (not disposed by the wrapper) to avoid Monaco's unmount dispose race.
+    expect(props.keepCurrentOriginalModel).toBe(true);
+    expect(props.keepCurrentModifiedModel).toBe(true);
   });
 });

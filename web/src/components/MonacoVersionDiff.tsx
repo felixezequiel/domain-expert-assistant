@@ -69,6 +69,11 @@ export default function MonacoVersionDiff({
       language="markdown"
       theme={MONOKAI_THEME}
       height={diffHeight(oldText, newText)}
+      // Don't let the wrapper dispose the text models on unmount — that disposal races the
+      // diff widget's own teardown and logs "TextModel got disposed before DiffEditorWidget
+      // model got reset". Prop-change updates still apply via setValue.
+      keepCurrentOriginalModel
+      keepCurrentModifiedModel
       options={{
         readOnly: true,
         originalEditable: false,
