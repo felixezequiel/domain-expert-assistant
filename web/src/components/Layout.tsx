@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardCheck,
   FileText,
+  LayoutDashboard,
   LogOut,
   Menu,
   ScrollText,
@@ -30,6 +31,8 @@ interface NavItem {
   readonly label: string;
   readonly icon: LucideIcon;
   readonly visible: boolean;
+  // Exact-match active state (for "/" so it isn't active on every nested route).
+  readonly end?: boolean;
 }
 
 interface NavSection {
@@ -63,6 +66,7 @@ export function Layout(): JSX.Element {
     {
       heading: null,
       items: [
+        { to: "/", label: "Home", icon: LayoutDashboard, visible: true, end: true },
         { to: "/search", label: "Search", icon: Search, visible: true },
         { to: "/catalog", label: "Catalog", icon: BookOpen, visible: true },
       ],
@@ -111,6 +115,7 @@ export function Layout(): JSX.Element {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end === true}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(

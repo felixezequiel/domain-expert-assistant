@@ -5,6 +5,7 @@ import { RequireAuth } from "./components/RequireAuth.tsx";
 import { RequireCapability } from "./components/RequireCapability.tsx";
 import { SettingsLayout } from "./components/SettingsLayout.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
+import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage.tsx";
 import { UsersPage } from "./pages/admin/UsersPage.tsx";
@@ -41,6 +42,7 @@ export function App(): JSX.Element {
               </RequireAuth>
             }
           >
+            <Route path="/" element={<DashboardPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/catalog/:itemId" element={<ItemReadPage />} />
@@ -84,8 +86,7 @@ export function App(): JSX.Element {
             <Route path="/admin/policy" element={<Navigate to="/settings/policy" replace />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/search" replace />} />
-          <Route path="*" element={<Navigate to="/search" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
       <Toaster />
