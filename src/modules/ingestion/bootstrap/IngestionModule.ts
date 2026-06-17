@@ -12,6 +12,7 @@ const HTTP_OK = 200;
 const HTTP_ACCEPTED = 202;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_INTERNAL_ERROR = 500;
 
@@ -99,14 +100,20 @@ export class IngestionModule {
 
   private respondError(response: ServerResponse, error: unknown): void {
     const message = error instanceof Error ? error.message : "Internal Server Error";
+    this.respond(response, { statusCode: IngestionModule.statusForError(message), body: { error: message } });
+  }
+
+  private static statusForError(message: string): number {
+    if (message.startsWith("Forbidden")) {
+      return HTTP_FORBIDDEN;
+    }
     const isClientError =
       message.includes("required") ||
       message.includes("Unsupported") ||
       message.includes("empty") ||
-      message.includes("not found") ||
-      message.startsWith("Forbidden");
-    const statusCode = isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
-    this.respond(response, { statusCode, body: { error: message } });
+      message.includes("too large") ||
+      message.includes("not found");
+    return isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {

@@ -6,7 +6,9 @@ import { OrganizationPolicy } from "../valueObjects/OrganizationPolicy.ts";
 import { OrganizationProvisionedEvent } from "../events/OrganizationProvisionedEvent.ts";
 import { OrganizationPolicyChangedEvent } from "../events/OrganizationPolicyChangedEvent.ts";
 
-export type OrganizationStatus = "active" | "suspended";
+// The org is `active` from provisioning; v1 has no suspend operation (PRD-1 §2), so this is
+// a single-value type kept for forward extensibility rather than a real lifecycle.
+export type OrganizationStatus = "active";
 
 interface OrganizationProps {
   readonly name: OrganizationName;

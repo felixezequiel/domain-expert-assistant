@@ -122,6 +122,9 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     tagIds: ReadonlyArray<TagId>,
     sensitivity: SensitivityLevel,
     authorId: string,
+    // Set when the draft originates from an ingestion upload, so its drafting event is
+    // correlated to the originating job in the audit trail (ADR-024 / PRD-3 audit linkage).
+    causationId: string | null = null,
   ): KnowledgeItem {
     const item = new KnowledgeItem(id, {
       companyId,
@@ -139,7 +142,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
       createdAt: new Date(),
     });
     item.addDomainEvent(
-      new KnowledgeItemDraftedEvent(id.value, title.value, collectionId.value, FIRST_VERSION),
+      new KnowledgeItemDraftedEvent(id.value, title.value, collectionId.value, FIRST_VERSION, causationId),
     );
     return item;
   }
@@ -177,13 +180,55 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemId, KnowledgeItemP
     });
   }
 
-  public edit(title: Title, body: KnowledgeBody, sensitivity: SensitivityLevel, editorId: string): void {
+  /**
+   * Applies a content + tag revision as a single new working version. Returns false (a no-op,
+   * no version, no event) when nothing actually changed, so a Save that touches nothing — or
+   * one combined content+tag change — never spawns redundant versions (findings B1/P2).
+   */
+  public edit(
+    title: Title,
+    body: KnowledgeBody,
+    sensitivity: SensitivityLevel,
+    tagIds: ReadonlyArray<TagId>,
+    editorId: string,
+  ): boolean {
     this.assertStatusIn(["draft", "published"], "edit");
+    if (!this.contentOrTagsChanged(title, body, sensitivity, tagIds)) {
+      return false;
+    }
     this.props.title = title;
     this.props.body = body;
     this.props.sensitivity = sensitivity;
+    this.props.tagIds = [...tagIds];
     this.openNewWorkingVersion(editorId);
     this.addDomainEvent(new KnowledgeItemEditedEvent(this.id.value, this.props.currentVersionNumber));
+    return true;
+  }
+
+  private contentOrTagsChanged(
+    title: Title,
+    body: KnowledgeBody,
+    sensitivity: SensitivityLevel,
+    tagIds: ReadonlyArray<TagId>,
+  ): boolean {
+    if (this.props.title.value !== title.value) {
+      return true;
+    }
+    if (this.props.body.value !== body.value) {
+      return true;
+    }
+    if (this.props.sensitivity.name !== sensitivity.name) {
+      return true;
+    }
+    return !this.hasSameTagSet(tagIds);
+  }
+
+  private hasSameTagSet(tagIds: ReadonlyArray<TagId>): boolean {
+    if (this.props.tagIds.length !== tagIds.length) {
+      return false;
+    }
+    const current = new Set(this.props.tagIds.map((tag) => tag.value));
+    return tagIds.every((tag) => current.has(tag.value));
   }
 
   public retag(tagIds: ReadonlyArray<TagId>, editorId: string): void {

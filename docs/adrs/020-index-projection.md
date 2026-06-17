@@ -71,3 +71,4 @@ Escolhida a **alternativa 2**. A indexação **nunca** roda dentro da transaçã
 - O índice é derivado e deve ser totalmente reconstruível a partir dos itens publicados.
 - A projeção é idempotente; `Deprecated` permanece indexado com flag stale, `Archived` é removido, mover o ponteiro publicado dispara reindexação.
 - O worker de projeção abre o próprio Actor Context (`system`).
+- **Emenda (2026-06-17):** cada chunk carrega os `tag_ids` do item publicado (denormalizados na projeção, com índice GIN — `Migration_011`); a busca filtra por **sobreposição de tags** (`tag_ids && :tags`), fail-closed quando o conjunto pedido é vazio. Assim o filtro `tags` do contrato de consumo (PRD-5) é real (antes era no-op).

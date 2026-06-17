@@ -153,6 +153,38 @@ describe("ConsumptionModule routes", () => {
     assert.equal(response.statusCode, 403);
   });
 
+  it("maps a Forbidden authorization error to 403, not 400/500", async () => {
+    const knowledgeQueryFacade = {
+      search: async () => {
+        throw new Error("Forbidden: requires one of the roles [admin].");
+      },
+    } as unknown as ConsumptionModuleDeps["knowledgeQueryFacade"];
+    new ConsumptionModule(deps({ knowledgeQueryFacade })).registerRoutes(httpServer as never);
+    const response = await invoke(
+      httpServer.routes.get("GET /v1/search")!,
+      fakeRequest({ authorization: "Bearer good-key", url: "/v1/search?q=x" }),
+    );
+    assert.equal(response.statusCode, 403);
+  });
+
+  it("accepts `query` as an alias for `q` (P4 — no silent empty result)", async () => {
+    let capturedQuery: string | undefined;
+    const knowledgeQueryFacade = {
+      search: async (_companyId: string, _scope: unknown, request: { query: string }) => {
+        capturedQuery = request.query;
+        return { results: [], effectiveScope: { collectionIds: ["col-a"], sensitivityCeiling: "internal" } };
+      },
+    } as unknown as ConsumptionModuleDeps["knowledgeQueryFacade"];
+    new ConsumptionModule(deps({ knowledgeQueryFacade })).registerRoutes(httpServer as never);
+
+    await invoke(
+      httpServer.routes.get("GET /v1/search")!,
+      fakeRequest({ authorization: "Bearer good-key", url: "/v1/search?query=refund+policy" }),
+    );
+
+    assert.equal(capturedQuery, "refund policy");
+  });
+
   it("returns 404 for an out-of-scope / missing item", async () => {
     new ConsumptionModule(deps({})).registerRoutes(httpServer as never);
     const response = await invoke(

@@ -29,6 +29,7 @@ function publishedItem(overrides: Partial<PublishedItem> = {}): PublishedItem {
     title: "Refund policy",
     body: "Customers may request a refund within 30 days of purchase. Refunds are processed by finance.",
     sensitivity: "internal",
+    tagIds: [],
     publishedVersion: 1,
     publishedAt: "2026-06-16T00:00:00.000Z",
     stale: false,
@@ -71,7 +72,7 @@ describe("ProjectItemUseCase", () => {
     await project.execute(ProjectItemCommand.of("item-1"));
 
     const search = new SemanticSearchUseCase(embedder, index);
-    const results = await search.execute(SemanticSearchCommand.of("company-1", "refund", null, null, 100));
+    const results = await search.execute(SemanticSearchCommand.of("company-1", "refund", null, null, null, 100));
     const seen = new Set(results.map((result) => result.itemId + ":" + String(result.chunkIndex)));
     assert.equal(seen.size, results.length);
   });

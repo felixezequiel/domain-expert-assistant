@@ -38,7 +38,7 @@ describe("EditKnowledgeItemUseCase", () => {
     const useCase = new EditKnowledgeItemUseCase(itemRepository, versionRepository, () => new Date("2026-06-16T00:00:00.000Z"));
 
     const result = await runWithActor(CURATOR, () =>
-      useCase.execute(EditKnowledgeItemCommand.of("i1", "New title", "New body", "confidential")),
+      useCase.execute(EditKnowledgeItemCommand.of("i1", "New title", "New body", "confidential", ["t1"])),
     );
 
     assert.equal(result.status, "draft");
@@ -52,7 +52,7 @@ describe("EditKnowledgeItemUseCase", () => {
   it("throws when the item is missing", async () => {
     const useCase = new EditKnowledgeItemUseCase(new FakeKnowledgeItemRepository(), new FakeKnowledgeVersionRepository());
     await assert.rejects(
-      () => runWithActor(CURATOR, () => useCase.execute(EditKnowledgeItemCommand.of("ghost", "T", "B", "internal"))),
+      () => runWithActor(CURATOR, () => useCase.execute(EditKnowledgeItemCommand.of("ghost", "T", "B", "internal", []))),
       /not found/,
     );
   });

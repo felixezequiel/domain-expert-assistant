@@ -53,6 +53,7 @@ Permitir que o conhecimento **entre** no sistema pelos dois caminhos da v1: **au
 ## 6. Domain Events
 `DocumentUploaded`, `IngestionStarted`, `TextExtracted`, `IngestionFailed`, `KnowledgeItemCreatedFromDocument`.
 > `KnowledgeItemCreatedFromDocument` é um evento de **ingestão** e **não substitui** o `KnowledgeItemDrafted` do PRD-2: a criação do item dispara `KnowledgeItemDrafted` (domínio Knowledge) e a ingestão marca a origem com `KnowledgeItemCreatedFromDocument`, os dois ligados por `causationId` (PRD-0). Eventos de indexação (chunking) são da PRD-4.
+> **Implementação v1 (2026-06-17):** a rastreabilidade upload→item já existe — o `KnowledgeItemDrafted` é carimbado com `causationId = jobId` (auditável por `causationId`), e o job guarda `createdItemId`. Os eventos dedicados `TextExtracted` e `KnowledgeItemCreatedFromDocument` ficam como melhoria futura; os emitidos hoje são `DocumentUploaded`/`IngestionStarted`/`IngestionCompleted`/`IngestionFailed`/`IngestionRequeued`.
 
 ## 7. Casos de uso
 | Caso de uso | Ator | Regra |

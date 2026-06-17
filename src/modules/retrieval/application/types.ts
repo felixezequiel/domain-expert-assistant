@@ -36,6 +36,7 @@ export interface ChunkItemMetadata {
   readonly collectionId: string;
   readonly sensitivity: string;
   readonly title: string;
+  readonly tagIds: ReadonlyArray<string>;
   readonly publishedVersion: number;
   readonly publishedAt: string;
   readonly stale: boolean;
@@ -50,6 +51,9 @@ export interface RetrievalScope {
   readonly companyId: string;
   readonly collectionIds: ReadonlyArray<string> | null;
   readonly sensitivityCeiling: string | null;
+  // When non-null, restricts results to chunks whose item carries at least one of these tags.
+  // Null/absent means no tag narrowing (the common case).
+  readonly tagIds: ReadonlyArray<string> | null;
 }
 
 export interface SearchResult {
@@ -98,6 +102,7 @@ export interface PublishedItem {
   readonly title: string;
   readonly body: string;
   readonly sensitivity: string;
+  readonly tagIds: ReadonlyArray<string>;
   readonly publishedVersion: number;
   readonly publishedAt: string;
   readonly stale: boolean;

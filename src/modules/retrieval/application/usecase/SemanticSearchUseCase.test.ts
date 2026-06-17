@@ -18,6 +18,7 @@ async function seededSearch(): Promise<{
     title: "Refund policy",
     body: "Customers may request a refund within 30 days of purchase.",
     sensitivity: "internal",
+    tagIds: [],
     publishedVersion: 1,
     publishedAt: "2026-06-16T00:00:00.000Z",
     stale: false,
@@ -42,7 +43,7 @@ describe("SemanticSearchUseCase", () => {
 
   it("honours the result limit", async () => {
     const { search } = await seededSearch();
-    const results = await search.execute(SemanticSearchCommand.of("company-1", "refund", null, null, 1));
+    const results = await search.execute(SemanticSearchCommand.of("company-1", "refund", null, null, null, 1));
     assert.ok(results.length <= 1);
   });
 
@@ -62,6 +63,7 @@ describe("SemanticSearchUseCase", () => {
       title: "Refund policy",
       body: "Customers may request a refund within 30 days of purchase.",
       sensitivity: "internal",
+      tagIds: [],
       publishedVersion: 1,
       publishedAt: "2026-06-16T00:00:00.000Z",
       stale: true,

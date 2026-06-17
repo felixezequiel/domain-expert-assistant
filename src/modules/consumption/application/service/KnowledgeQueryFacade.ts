@@ -83,16 +83,17 @@ export class KnowledgeQueryFacade {
       collectionIds: request.collectionIds,
     });
     const limit = request.k !== undefined && request.k > 0 ? request.k : DEFAULT_SEARCH_LIMIT;
+    const tagIds = KnowledgeQueryFacade.requestedTagIds(request.tags);
     const command = SemanticSearchCommand.of(
       companyId,
       request.query,
       [...effectiveScope.collectionIds],
       effectiveScope.sensitivityCeiling,
+      tagIds,
       limit,
     );
     const results = await this.executor.execute(this.useCases.semanticSearch, command);
-    const filtered = this.filterByTags(results, request.tags);
-    return { results: filtered, effectiveScope };
+    return { results, effectiveScope };
   }
 
   public async getItem(
@@ -170,16 +171,14 @@ export class KnowledgeQueryFacade {
     return summaries;
   }
 
-  private filterByTags(
-    results: ReadonlyArray<SearchResult>,
-    tags: ReadonlyArray<string> | undefined,
-  ): ReadonlyArray<SearchResult> {
+  // Normalises the requested tags into the search command's tag filter: an empty/omitted list
+  // means "no tag narrowing" (null), so behaviour is identical to a search without tags. A
+  // non-empty list pre-filters the index in-DB to chunks whose item carries one of the tags.
+  private static requestedTagIds(tags: ReadonlyArray<string> | undefined): ReadonlyArray<string> | null {
     if (tags === undefined || tags.length === 0) {
-      return results;
+      return null;
     }
-    // The chunk index does not carry tag ids, so a tag filter on search is a no-op narrowing
-    // hint in v1 (lookup is the tag-precise path). Kept explicit so the contract is honest.
-    return results;
+    return tags;
   }
 
   private static toConsumerItem(item: KnowledgeItemView): ConsumerItemView {

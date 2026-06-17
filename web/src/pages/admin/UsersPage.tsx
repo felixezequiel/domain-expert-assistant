@@ -245,9 +245,6 @@ export function UsersPage(): JSX.Element {
 
           {invited !== null ? (
             <div className="space-y-2 rounded-md border border-border bg-muted/30 px-3 py-3 text-sm">
-              <p>
-                User id: <code className="font-mono">{invited.userId}</code>
-              </p>
               <p className="break-all">
                 Invitation token:{" "}
                 <code className="font-mono" data-testid="invitation-token">

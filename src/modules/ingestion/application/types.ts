@@ -41,6 +41,9 @@ export interface CreateDraftFromDocumentInput {
   readonly title: string;
   readonly body: string;
   readonly createdBy: string;
+  // The originating ingestion job id, stamped as the draft's causation so the audit trail
+  // can correlate the created item back to its upload (PRD-3 audit linkage / ADR-024).
+  readonly causationId: string;
 }
 
 export interface KnowledgeDraftCreationPort {

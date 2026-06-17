@@ -67,6 +67,7 @@ export class ProjectItemUseCase implements UseCase<ProjectItemCommand, number> {
       collectionId: item.collectionId,
       sensitivity: item.sensitivity,
       title: item.title,
+      tagIds: item.tagIds,
       publishedVersion: item.publishedVersion,
       publishedAt: item.publishedAt,
       stale: item.stale,

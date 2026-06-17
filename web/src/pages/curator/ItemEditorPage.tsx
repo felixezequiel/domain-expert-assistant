@@ -23,17 +23,10 @@ import {
 } from "../../components/ui/select.tsx";
 import { toast } from "../../components/ui/sonner.tsx";
 
-function sameTagSet(a: ReadonlyArray<string>, b: ReadonlyArray<string>): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const other = new Set(b);
-  return a.every((value) => other.has(value));
-}
-
-// Create or edit a knowledge item. On edit the backend's PUT only accepts title/body/
-// sensitivity, so tag changes go through the dedicated retag endpoint — but ONLY when the
-// tags actually changed, otherwise every Save would spawn a redundant version (finding B1).
+// Create or edit a knowledge item. On edit, content + tags are sent together so one Save is
+// one version (the backend coalesces them and no-ops when nothing changed — findings B1/P2).
+// Changing the collection on Save additionally moves the item (finding B3). Save/Submit are
+// only offered for statuses where the transition is valid (finding P3).
 export function ItemEditorPage(): JSX.Element {
   const { itemId } = useParams<{ itemId: string }>();
   const isEdit = itemId !== undefined;
@@ -51,7 +44,7 @@ export function ItemEditorPage(): JSX.Element {
   const [body, setBody] = useState("");
   const [sensitivity, setSensitivity] = useState<string>("internal");
   const [selectedTags, setSelectedTags] = useState<ReadonlyArray<string>>([]);
-  const [savedTags, setSavedTags] = useState<ReadonlyArray<string>>([]);
+  const [savedCollectionId, setSavedCollectionId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -61,11 +54,11 @@ export function ItemEditorPage(): JSX.Element {
     const item = existing.data;
     if (item !== null) {
       setCollectionId(item.collectionId);
+      setSavedCollectionId(item.collectionId);
       setTitle(item.title);
       setBody(item.body);
       setSensitivity(item.sensitivity);
       setSelectedTags(item.tagIds);
-      setSavedTags(item.tagIds);
       setStatus(item.status);
       setRejectionReason(item.lastRejectionReason);
     }
@@ -82,10 +75,10 @@ export function ItemEditorPage(): JSX.Element {
     setBusy(true);
     try {
       if (isEdit) {
-        const result = await itemsApi.edit(itemId, { title, body, sensitivity });
-        if (!sameTagSet(selectedTags, savedTags)) {
-          await itemsApi.retag(itemId, selectedTags);
-          setSavedTags(selectedTags);
+        const result = await itemsApi.edit(itemId, { title, body, sensitivity, tagIds: selectedTags });
+        if (collectionId !== savedCollectionId) {
+          await itemsApi.move(itemId, collectionId);
+          setSavedCollectionId(collectionId);
         }
         setStatus(result.status);
         toast.success("Saved");
@@ -120,6 +113,9 @@ export function ItemEditorPage(): JSX.Element {
   };
 
   const badge = status !== null ? statusBadge(status) : null;
+  // The backend allows edit/move only from draft or published; submit only from draft.
+  const canEdit = !isEdit || status === "draft" || status === "published";
+  const canSubmit = isEdit && status === "draft";
 
   return (
     <div className="space-y-6">
@@ -149,7 +145,7 @@ export function ItemEditorPage(): JSX.Element {
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="item-collection">Collection</Label>
-                <Select value={collectionId} onValueChange={setCollectionId} disabled={isEdit}>
+                <Select value={collectionId} onValueChange={setCollectionId} disabled={!canEdit}>
                   <SelectTrigger id="item-collection">
                     <SelectValue placeholder="Select…" />
                   </SelectTrigger>
@@ -161,6 +157,9 @@ export function ItemEditorPage(): JSX.Element {
                     ))}
                   </SelectContent>
                 </Select>
+                {isEdit ? (
+                  <p className="text-xs text-muted-foreground">Changing the collection moves the item on Save.</p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="item-sensitivity">Sensitivity</Label>
@@ -202,17 +201,22 @@ export function ItemEditorPage(): JSX.Element {
             <MarkdownEditor value={body} onChange={setBody} />
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void save()} disabled={busy}>
+              <Button type="button" onClick={() => void save()} disabled={busy || !canEdit}>
                 {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 {isEdit ? "Save" : "Create"}
               </Button>
-              {isEdit ? (
+              {canSubmit ? (
                 <Button type="button" variant="secondary" onClick={() => void submitForReview()} disabled={busy}>
                   <Send className="mr-2 h-4 w-4" />
                   Submit for review
                 </Button>
               ) : null}
             </div>
+            {isEdit && !canEdit ? (
+              <p className="text-sm text-muted-foreground">
+                This item is {status} and can't be edited here. Roll back to a draft to make changes.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       </AsyncBoundary>

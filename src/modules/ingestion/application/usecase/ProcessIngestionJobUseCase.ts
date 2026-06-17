@@ -54,6 +54,7 @@ export class ProcessIngestionJobUseCase implements UseCase<ProcessIngestionJobCo
         title: ProcessIngestionJobUseCase.deriveTitle(text, job.filename),
         body: text,
         createdBy: job.createdBy,
+        causationId: job.id.value,
       });
       job.complete(createdItemId);
     } catch (error) {

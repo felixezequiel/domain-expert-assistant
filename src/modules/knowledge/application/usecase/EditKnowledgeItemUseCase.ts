@@ -38,8 +38,11 @@ export class EditKnowledgeItemUseCase implements UseCase<EditKnowledgeItemComman
       throw new Error("Knowledge item not found: " + command.itemId.value);
     }
 
-    item.edit(command.title, command.body, command.sensitivity, editorId);
-    await this.versionRepository.append(snapshotOf(item, editorId, this.clock()));
+    const changed = item.edit(command.title, command.body, command.sensitivity, command.tagIds, editorId);
+    // A no-op edit creates no new working version, so there is no snapshot to append (P2).
+    if (changed) {
+      await this.versionRepository.append(snapshotOf(item, editorId, this.clock()));
+    }
     return item;
   }
 }

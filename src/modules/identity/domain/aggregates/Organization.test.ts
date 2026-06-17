@@ -52,12 +52,12 @@ describe("Organization", () => {
     const org = Organization.reconstitute(
       new OrganizationId("org-1"),
       new OrganizationName("Acme"),
-      "suspended",
+      "active",
       OrganizationPolicy.of(false),
       new Date("2026-01-01T00:00:00.000Z"),
     );
 
-    assert.equal(org.status, "suspended");
+    assert.equal(org.status, "active");
     assert.equal(org.policy.requireSeparateReviewer, false);
     assert.equal(org.getDomainEvents().length, 0);
   });

@@ -43,6 +43,7 @@ describe("SpaController", () => {
 
     assert.ok(httpServer.rawRoutes.has("GET /"), "should serve /");
     assert.ok(httpServer.rawRoutes.has("GET /index.html"), "should serve /index.html");
+    assert.ok(httpServer.rawRoutes.has("GET /favicon.ico"), "should serve /favicon.ico");
     assert.equal(httpServer.staticRoutes.length, 1, "should mount one static route");
     assert.equal(httpServer.staticRoutes[0]!.urlPrefix, "/assets/");
     assert.ok(
@@ -63,6 +64,17 @@ describe("SpaController", () => {
     // no-cache so a rebuild's new hashed asset URLs are picked up immediately.
     assert.equal(response.headers["Cache-Control"], "no-cache");
     assert.ok(response.payload.length > 0, "should return some HTML");
+  });
+
+  it("answers /favicon.ico with 204 No Content when the build (and its favicon) is missing", () => {
+    const controller = new SpaController("/tmp/does-not-exist-spa-dist");
+    controller.register(httpServer as never);
+    const response = new FakeResponse();
+
+    httpServer.rawRoutes.get("GET /favicon.ico")!({} as never, response as never, {});
+
+    assert.equal(response.statusCode, 204);
+    assert.equal(response.payload, "");
   });
 
   it("falls back to a placeholder (never crashes) when the build is missing", () => {

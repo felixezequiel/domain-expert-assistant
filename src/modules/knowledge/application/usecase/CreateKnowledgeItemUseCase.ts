@@ -62,6 +62,7 @@ export class CreateKnowledgeItemUseCase implements UseCase<CreateKnowledgeItemCo
       command.tagIds,
       command.sensitivity,
       authorId,
+      command.causationId,
     );
     await this.versionRepository.append(snapshotOf(item, authorId, this.clock()));
     return item;

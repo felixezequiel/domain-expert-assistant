@@ -68,8 +68,8 @@ export class MikroOrmChunkIndexRepository implements ChunkIndexRepositoryPort {
       await entityManager.execute(
         `INSERT INTO chunks
            (id, company_id, item_id, chunk_index, title, collection_id, sensitivity,
-            content, embedding, published_version, published_at, stale)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::vector, ?, ?, ?)`,
+            tag_ids, content, embedding, published_version, published_at, stale)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?::text[], ?, ?::vector, ?, ?, ?)`,
         [
           randomUUID(),
           metadata.companyId,
@@ -78,6 +78,7 @@ export class MikroOrmChunkIndexRepository implements ChunkIndexRepositoryPort {
           metadata.title,
           metadata.collectionId,
           metadata.sensitivity,
+          MikroOrmChunkIndexRepository.toArrayLiteral(metadata.tagIds),
           chunk.content,
           MikroOrmChunkIndexRepository.toVectorLiteral(chunk.embedding),
           metadata.publishedVersion,
@@ -194,13 +195,37 @@ export class MikroOrmChunkIndexRepository implements ChunkIndexRepositoryPort {
       }
     }
     if (scope.sensitivityCeiling !== null) {
+      // Ordered low → high; a chunk passes when its level's position is at or below the
+      // ceiling's. The domain has exactly these three levels (public < internal <
+      // confidential), so the array mirrors the SensitivityLevel enum — no phantom entries.
       clauses.push(
-        " AND array_position(ARRAY['public','internal','confidential','restricted'], sensitivity)" +
-          " <= array_position(ARRAY['public','internal','confidential','restricted'], ?)",
+        " AND array_position(ARRAY['public','internal','confidential'], sensitivity)" +
+          " <= array_position(ARRAY['public','internal','confidential'], ?)",
       );
       params.push(scope.sensitivityCeiling);
     }
+    if (scope.tagIds !== null) {
+      if (scope.tagIds.length === 0) {
+        return { sql: " AND FALSE", params: [] };
+      }
+      // Array overlap: the chunk's item must carry at least one of the requested tags.
+      clauses.push(" AND tag_ids && ?::text[]");
+      params.push(MikroOrmChunkIndexRepository.toArrayLiteral(scope.tagIds));
+    }
     return { sql: clauses.join(""), params };
+  }
+
+  /**
+   * Renders a Postgres `text[]` literal (e.g. `{a,b}`) for a parameterised `?::text[]`. Each
+   * element is double-quoted with backslashes/quotes escaped so tag ids with commas, braces or
+   * quotes can never break out of the array literal.
+   */
+  private static toArrayLiteral(values: ReadonlyArray<string>): string {
+    const escaped = values.map((value) => {
+      const safe = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      return `"${safe}"`;
+    });
+    return `{${escaped.join(",")}}`;
   }
 
   private static toVectorLiteral(vector: ReadonlyArray<number>): string {

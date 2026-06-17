@@ -11,7 +11,7 @@ describe("OrganizationMapper", () => {
     const original = Organization.reconstitute(
       new OrganizationId("org-1"),
       new OrganizationName("Acme"),
-      "suspended",
+      "active",
       OrganizationPolicy.of(false),
       new Date("2026-01-02T03:04:05.000Z"),
     );
@@ -20,7 +20,7 @@ describe("OrganizationMapper", () => {
 
     assert.equal(domain.id.value, "org-1");
     assert.equal(domain.name.value, "Acme");
-    assert.equal(domain.status, "suspended");
+    assert.equal(domain.status, "active");
     assert.equal(domain.policy.requireSeparateReviewer, false);
     assert.equal(domain.createdAt.toISOString(), "2026-01-02T03:04:05.000Z");
   });

@@ -63,6 +63,7 @@ export class PublishedItemReaderAdapter implements PublishedItemReaderPort {
       title: view.title,
       body: view.body,
       sensitivity: view.sensitivity,
+      tagIds: view.tagIds,
       publishedVersion,
       publishedAt,
       stale: view.isStale,

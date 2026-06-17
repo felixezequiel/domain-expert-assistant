@@ -50,6 +50,7 @@ const META: ChunkItemMetadata = {
   collectionId: "col-1",
   sensitivity: "internal",
   title: "Refund policy",
+  tagIds: ["tag-billing"],
   publishedVersion: 1,
   publishedAt: "2026-06-16T00:00:00.000Z",
   stale: false,
@@ -73,7 +74,9 @@ describe("MikroOrmChunkIndexRepository", () => {
     assert.deepEqual(entityManager.executed[0]!.params, ["company-1", "item-1"]);
     assert.equal(entityManager.executed.length, 3);
     assert.ok(entityManager.executed[1]!.sql.includes("?::vector"));
+    assert.ok(entityManager.executed[1]!.sql.includes("?::text[]"));
     assert.ok(entityManager.executed[1]!.params.includes("[0.1,0.2]"));
+    assert.ok(entityManager.executed[1]!.params.includes('{"tag-billing"}'));
   });
 
   it("removeItem and markItemStale scope by company + item", async () => {
@@ -92,7 +95,12 @@ describe("MikroOrmChunkIndexRepository", () => {
   it("search filters by company first and fuses with RRF", async () => {
     const entityManager = new RecordingEntityManager();
     const repo = new MikroOrmChunkIndexRepository(providerFor(entityManager));
-    const scope: RetrievalScope = { companyId: "company-1", collectionIds: null, sensitivityCeiling: null };
+    const scope: RetrievalScope = {
+      companyId: "company-1",
+      collectionIds: null,
+      sensitivityCeiling: null,
+      tagIds: null,
+    };
 
     const results = await repo.search([0.1, 0.2], "refund", scope, 10);
 
@@ -110,7 +118,12 @@ describe("MikroOrmChunkIndexRepository", () => {
   it("search with an empty collection scope short-circuits to no rows (fail-closed)", async () => {
     const entityManager = new RecordingEntityManager();
     const repo = new MikroOrmChunkIndexRepository(providerFor(entityManager));
-    const scope: RetrievalScope = { companyId: "company-1", collectionIds: [], sensitivityCeiling: null };
+    const scope: RetrievalScope = {
+      companyId: "company-1",
+      collectionIds: [],
+      sensitivityCeiling: null,
+      tagIds: null,
+    };
 
     await repo.search([0.1], "refund", scope, 10);
 
@@ -124,6 +137,7 @@ describe("MikroOrmChunkIndexRepository", () => {
       companyId: "company-1",
       collectionIds: ["col-1", "col-2"],
       sensitivityCeiling: "internal",
+      tagIds: null,
     };
 
     await repo.search([0.1], "refund", scope, 10);
@@ -134,5 +148,54 @@ describe("MikroOrmChunkIndexRepository", () => {
     assert.ok(query.params.includes("col-1"));
     assert.ok(query.params.includes("col-2"));
     assert.ok(query.params.includes("internal"));
+  });
+
+  it("sensitivity ceiling uses only the real levels (no phantom 'restricted')", async () => {
+    const entityManager = new RecordingEntityManager();
+    const repo = new MikroOrmChunkIndexRepository(providerFor(entityManager));
+    const scope: RetrievalScope = {
+      companyId: "company-1",
+      collectionIds: null,
+      sensitivityCeiling: "confidential",
+      tagIds: null,
+    };
+
+    await repo.search([0.1], "refund", scope, 10);
+
+    const query = entityManager.executed[0]!;
+    assert.ok(query.sql.includes("ARRAY['public','internal','confidential']"));
+    assert.ok(!query.sql.includes("restricted"), "phantom 'restricted' level must be gone");
+  });
+
+  it("search narrows by tags with an array-overlap pre-filter", async () => {
+    const entityManager = new RecordingEntityManager();
+    const repo = new MikroOrmChunkIndexRepository(providerFor(entityManager));
+    const scope: RetrievalScope = {
+      companyId: "company-1",
+      collectionIds: null,
+      sensitivityCeiling: null,
+      tagIds: ["tag-billing", "tag-legal"],
+    };
+
+    await repo.search([0.1], "refund", scope, 10);
+
+    const query = entityManager.executed[0]!;
+    assert.ok(query.sql.includes("tag_ids && ?::text[]"));
+    assert.ok(query.params.includes('{"tag-billing","tag-legal"}'));
+  });
+
+  it("an empty tag scope short-circuits to no rows (fail-closed)", async () => {
+    const entityManager = new RecordingEntityManager();
+    const repo = new MikroOrmChunkIndexRepository(providerFor(entityManager));
+    const scope: RetrievalScope = {
+      companyId: "company-1",
+      collectionIds: null,
+      sensitivityCeiling: null,
+      tagIds: [],
+    };
+
+    await repo.search([0.1], "refund", scope, 10);
+
+    assert.ok(entityManager.executed[0]!.sql.includes("AND FALSE"));
   });
 });

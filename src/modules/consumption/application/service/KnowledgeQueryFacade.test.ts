@@ -109,6 +109,18 @@ describe("KnowledgeQueryFacade.search", () => {
     assert.deepEqual(search.lastCommand?.collectionIds, []);
     assert.deepEqual(response.effectiveScope.collectionIds, []);
   });
+
+  it("threads requested tags into the search command (the tag filter is real, not a no-op)", async () => {
+    const { facade, search } = buildFacade({ search: new StubSemanticSearch([searchResult("i1", "a")]) });
+    await facade.search(COMPANY, scope(["a"], "internal"), { query: "q", tags: ["t1", "t2"] });
+    assert.deepEqual(search.lastCommand?.tagIds, ["t1", "t2"]);
+  });
+
+  it("passes null tags when none are requested (behaviour identical to a tagless search)", async () => {
+    const { facade, search } = buildFacade({ search: new StubSemanticSearch([searchResult("i1", "a")]) });
+    await facade.search(COMPANY, scope(["a"], "internal"), { query: "q" });
+    assert.equal(search.lastCommand?.tagIds, null);
+  });
 });
 
 describe("KnowledgeQueryFacade.getItem", () => {

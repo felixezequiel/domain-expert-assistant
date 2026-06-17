@@ -22,11 +22,23 @@ import {
 const ALL_COLLECTIONS = "all";
 const ANY_SENSITIVITY = "all";
 const SNIPPET_LENGTH = 280;
+const SCORE_DECIMALS = 2;
+
+// Indexing prepends the item title to the chunk text (better recall), so the stored content
+// starts with the title — which we already render as the card heading. Strip that leading
+// title from the displayed snippet so it isn't duplicated under the heading.
+function stripLeadingTitle(text: string, title: string): string {
+  const trimmedTitle = title.trim();
+  if (trimmedTitle.length === 0 || !text.startsWith(trimmedTitle)) {
+    return text;
+  }
+  return text.slice(trimmedTitle.length).trimStart();
+}
 
 // Trim the plain-text snippet to a readable length without cutting mid-grapheme awkwardly,
 // adding an ellipsis when truncated (finding U7 — snippets are stripped of markdown markup).
-function snippetOf(content: string): string {
-  const text = stripMarkdown(content);
+function snippetOf(content: string, title: string): string {
+  const text = stripLeadingTitle(stripMarkdown(content), title);
   if (text.length <= SNIPPET_LENGTH) {
     return text;
   }
@@ -171,7 +183,7 @@ function SearchResults({
                       {result.title}
                     </Link>
                   </CardTitle>
-                  <Badge variant="secondary" title={`relevance score ${result.score}`}>
+                  <Badge variant="secondary" title={`relevance score ${result.score.toFixed(SCORE_DECIMALS)}`}>
                     match
                   </Badge>
                   {result.stale ? (
@@ -183,7 +195,7 @@ function SearchResults({
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">{snippetOf(result.content)}</p>
+                <p className="text-sm text-muted-foreground">{snippetOf(result.content, result.title)}</p>
                 <p className="text-xs text-muted-foreground">
                   {collectionName} · {result.sensitivity} · published {formatDate(result.publishedAt)}
                 </p>

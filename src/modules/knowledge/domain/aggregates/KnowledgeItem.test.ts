@@ -69,7 +69,7 @@ describe("KnowledgeItem lifecycle", () => {
     item.submitForReview();
     item.approve("reviewer-1", true); // published v1
 
-    item.edit(title("Refund policy v2"), body("New body"), INTERNAL, "author-1");
+    item.edit(title("Refund policy v2"), body("New body"), INTERNAL, [new TagId("tag-1")], "author-1");
 
     assert.equal(item.status, "draft"); // working version is a new draft
     assert.equal(item.currentVersionNumber, 2);
@@ -82,7 +82,7 @@ describe("KnowledgeItem lifecycle", () => {
     const item = draftItem();
     item.submitForReview();
     item.approve("reviewer-1", true);
-    item.edit(title("v2"), body("b2"), INTERNAL, "author-1");
+    item.edit(title("v2"), body("b2"), INTERNAL, [new TagId("tag-1")], "author-1");
     item.submitForReview();
     item.approve("reviewer-1", true);
 
@@ -143,7 +143,7 @@ describe("KnowledgeItem lifecycle", () => {
     const item = draftItem();
     item.submitForReview();
     item.approve("reviewer-1", true);
-    item.edit(title("bad edit"), body("oops"), INTERNAL, "author-1");
+    item.edit(title("bad edit"), body("oops"), INTERNAL, [new TagId("tag-1")], "author-1");
 
     item.rollbackTo(1, title("Refund policy"), body("Body content"), [new TagId("tag-1")], INTERNAL, "author-1");
 
@@ -151,6 +151,54 @@ describe("KnowledgeItem lifecycle", () => {
     assert.equal(item.currentVersionNumber, 3);
     assert.equal(item.title.value, "Refund policy");
     assert.equal(lastEvent(item), "KnowledgeItemRolledBack");
+  });
+
+  it("applies a combined content + tag change as a single version, one event (B1)", () => {
+    const item = draftItem();
+    const changed = item.edit(
+      title("New title"),
+      body("New body"),
+      INTERNAL,
+      [new TagId("tag-2"), new TagId("tag-3")],
+      "author-1",
+    );
+
+    assert.equal(changed, true);
+    assert.equal(item.currentVersionNumber, 2);
+    assert.deepEqual([...item.tagIds].map((tag) => tag.value).sort(), ["tag-2", "tag-3"]);
+    const editEvents = item.getDomainEvents().filter((event) => event.eventName === "KnowledgeItemEdited");
+    assert.equal(editEvents.length, 1);
+    assert.equal(item.getDomainEvents().some((event) => event.eventName === "KnowledgeItemRetagged"), false);
+  });
+
+  it("treats an edit that changes nothing as a no-op: no version, no event (P2)", () => {
+    const item = draftItem();
+    const versionBefore = item.currentVersionNumber;
+    const eventsBefore = item.getDomainEvents().length;
+
+    const changed = item.edit(title(), body(), INTERNAL, [new TagId("tag-1")], "author-1");
+
+    assert.equal(changed, false);
+    assert.equal(item.currentVersionNumber, versionBefore);
+    assert.equal(item.getDomainEvents().length, eventsBefore);
+  });
+
+  it("stamps the drafting event with a causation id when created from a document (S2)", () => {
+    const item = KnowledgeItem.create(
+      new KnowledgeItemId("item-2"),
+      "company-1",
+      new CollectionId("col-1"),
+      title(),
+      body(),
+      [],
+      INTERNAL,
+      "author-1",
+      "job-123",
+    );
+
+    const drafted = item.getDomainEvents()[0]!;
+    assert.equal(drafted.eventName, "KnowledgeItemDrafted");
+    assert.equal(drafted.causationId, "job-123");
   });
 
   describe("invalid transitions throw", () => {
@@ -174,7 +222,7 @@ describe("KnowledgeItem lifecycle", () => {
       item.submitForReview();
       item.approve("r", true);
       item.archive();
-      assert.throws(() => item.edit(title("x"), body("y"), INTERNAL, "a"), /Cannot edit/);
+      assert.throws(() => item.edit(title("x"), body("y"), INTERNAL, [new TagId("tag-1")], "a"), /Cannot edit/);
       assert.throws(() => item.moveToCollection(new CollectionId("c")), /archived/);
     });
   });

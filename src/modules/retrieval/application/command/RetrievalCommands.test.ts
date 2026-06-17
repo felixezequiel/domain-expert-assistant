@@ -35,13 +35,15 @@ describe("Retrieval commands", () => {
     assert.equal(command.query, "how to refund");
     assert.equal(command.collectionIds, null);
     assert.equal(command.sensitivityCeiling, null);
+    assert.equal(command.tagIds, null);
     assert.equal(command.limit, 10);
   });
 
-  it("SemanticSearchCommand keeps an explicit scope and limit", () => {
-    const command = SemanticSearchCommand.of("c1", "q", ["col-1"], "internal", 5);
+  it("SemanticSearchCommand keeps an explicit scope, tags and limit", () => {
+    const command = SemanticSearchCommand.of("c1", "q", ["col-1"], "internal", ["tag-1"], 5);
     assert.deepEqual(command.collectionIds, ["col-1"]);
     assert.equal(command.sensitivityCeiling, "internal");
+    assert.deepEqual(command.tagIds, ["tag-1"]);
     assert.equal(command.limit, 5);
   });
 });

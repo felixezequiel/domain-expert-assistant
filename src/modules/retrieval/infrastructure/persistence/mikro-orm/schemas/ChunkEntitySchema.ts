@@ -23,6 +23,7 @@ export const ChunkEntitySchema = new EntitySchema<ChunkEntity>({
     title: { type: "string" },
     collectionId: { type: "string", fieldName: "collection_id" },
     sensitivity: { type: "string" },
+    tagIds: { type: "string[]", fieldName: "tag_ids" },
     content: { type: "text" },
     publishedVersion: { type: "number", fieldName: "published_version" },
     publishedAt: { type: "string", fieldName: "published_at" },

@@ -30,6 +30,7 @@ export class CreateDraftFromDocumentAdapter implements KnowledgeDraftCreationPor
       input.body,
       [],
       DEFAULT_SENSITIVITY,
+      input.causationId,
     );
     const item = await this.createKnowledgeItem.execute(command);
     return item.id.value;

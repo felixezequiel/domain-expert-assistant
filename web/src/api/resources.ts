@@ -87,6 +87,8 @@ export interface EditItemInput {
   readonly title: string;
   readonly body: string;
   readonly sensitivity: string;
+  // Tags ride along with the content edit so one Save is one version (finding B1).
+  readonly tagIds: ReadonlyArray<string>;
 }
 
 export const itemsApi = {

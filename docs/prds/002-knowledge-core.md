@@ -68,6 +68,7 @@ Draft ──submit──► InReview ──approve──► Published ──depr
 ### Agregado `Collection`
 - `CollectionId`, `companyId`, `name`, `description?`, `createdBy`. Plana. Nome único por org.
 - Invariante: não pode ser apagada com itens dentro (ou exige realocação) — definir política.
+  - **Decisão v1 (2026-06-17): deleção de coleção fica fora de escopo.** A persistência é event-sourced/upsert (o UoW só faz upsert via tracking, sem caminho de remoção), então um delete guardado exigiria infraestrutura nova e arriscada. Renomear cobre a necessidade comum; coleções vazias são baratas de manter. Reabrir quando houver demanda real (com soft-delete + filtro, não hard-delete).
 
 ### Tags (taxonomia)
 - Dois tipos: **sistema** (vocabulário fixo do produto, imutável, compartilhado por todos os tenants) e **tenant** (facetas que a org cria/remove).
@@ -102,13 +103,14 @@ Draft ──submit──► InReview ──approve──► Published ──depr
 ## 8. Contratos
 Detalhe REST/MCP de **consumo** fica no PRD-5; aqui são endpoints de **curadoria** (humanos, ver PRD-6 para UI):
 ```
-POST   /items, PATCH /items/:id, POST /items/:id/submit
+POST   /items, PUT /items/:id, POST /items/:id/submit
 POST   /items/:id/approve, /items/:id/reject
-POST   /items/:id/deprecate, /items/:id/archive, /items/:id/rollback
+POST   /items/:id/deprecate, /items/:id/archive, /items/:id/rollback, /items/:id/retag, /items/:id/move
 GET    /items, GET /items/:id, GET /items/:id/versions
-POST   /collections, PATCH /collections/:id, GET /collections
+POST   /collections, PUT /collections/:id, GET /collections
 POST   /tags, DELETE /tags/:id, GET /tags
 ```
+> Updates use **PUT** (full-replace of the editable fields), not `PATCH` — the edit replaces title/body/sensitivity/tags as one revision (one version). Collection deletion is **out of scope for v1** (see §4 below), so there is no `DELETE /collections/:id`.
 
 ## 9. Persistência
 - Schemas `knowledge_items`, `collections`, `tags` — tenant-scoped (`company_id` + `CompanyFilter`). Versões são um store append-only à parte (ADR-012). Filtro de `tags` (incluindo as de sistema) → ADR-014.

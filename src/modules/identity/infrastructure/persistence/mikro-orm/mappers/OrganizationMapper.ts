@@ -1,4 +1,4 @@
-import { Organization, type OrganizationStatus } from "../../../../domain/aggregates/Organization.ts";
+import { Organization } from "../../../../domain/aggregates/Organization.ts";
 import { OrganizationId } from "../../../../domain/identifiers/OrganizationId.ts";
 import { OrganizationName } from "../../../../domain/valueObjects/OrganizationName.ts";
 import { OrganizationPolicy } from "../../../../domain/valueObjects/OrganizationPolicy.ts";
@@ -16,10 +16,12 @@ export class OrganizationMapper {
   }
 
   public static toDomain(entity: OrganizationEntity): Organization {
+    // v1 has a single org status (`active`); the persisted column is kept for forward
+    // extensibility but never produces another value (PRD-1 §2).
     return Organization.reconstitute(
       new OrganizationId(entity.id),
       new OrganizationName(entity.name),
-      entity.status as OrganizationStatus,
+      "active",
       OrganizationPolicy.of(entity.requireSeparateReviewer),
       new Date(entity.createdAt),
     );

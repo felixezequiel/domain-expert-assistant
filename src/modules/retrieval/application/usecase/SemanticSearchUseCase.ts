@@ -27,6 +27,7 @@ export class SemanticSearchUseCase implements UseCase<SemanticSearchCommand, Rea
       companyId: command.companyId,
       collectionIds: command.collectionIds,
       sensitivityCeiling: command.sensitivityCeiling,
+      tagIds: command.tagIds,
     };
     const [queryEmbedding] = await this.embedder.embed([query]);
     // Deprecated items stay in the served index flagged `stale` (ADR-020) so a consumer can

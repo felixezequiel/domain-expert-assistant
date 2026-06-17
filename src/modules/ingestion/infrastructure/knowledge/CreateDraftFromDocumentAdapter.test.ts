@@ -36,11 +36,13 @@ describe("CreateDraftFromDocumentAdapter", () => {
           title: "policy.md",
           body: "# Extracted body",
           createdBy: "system",
+          causationId: "job-1",
         }),
     );
 
     assert.equal(typeof itemId, "string");
     assert.equal(versionRepository.appended.length, 1);
     assert.equal(versionRepository.appended[0]!.body, "# Extracted body");
+    assert.equal(versionRepository.appended[0]!.itemId, itemId);
   });
 });

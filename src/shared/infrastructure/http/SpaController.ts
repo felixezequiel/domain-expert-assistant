@@ -5,6 +5,7 @@ import type { ServerResponse } from "node:http";
 import type { HttpServer, RawRouteHandler } from "./HttpServer.ts";
 
 const HTTP_OK = 200;
+const HTTP_NO_CONTENT = 204;
 
 // This file lives at src/shared/infrastructure/http/SpaController.ts, so the repo root is
 // four directories up. Resolving from import.meta.url keeps the dist path correct
@@ -32,8 +33,13 @@ const PLACEHOLDER_HTML = [
  * "/assets/*" (the hashed JS/CSS bundles) — there is no history fallback to implement.
  *
  * Registered LAST in the composition root so it cannot shadow API routes; it only claims
- * "/", "/index.html", and the "/assets/" static prefix. If the build is absent it returns a
- * 200 placeholder telling the operator to build — it never crashes the server.
+ * "/", "/index.html", "/favicon.ico", and the "/assets/" static prefix. If the build is
+ * absent it returns a 200 placeholder telling the operator to build — it never crashes the
+ * server.
+ *
+ * Browsers fetch "/favicon.ico" by convention regardless of the <link rel="icon"> in the
+ * HTML, so we serve the built favicon.svg there (a 404 otherwise litters the console). When
+ * the build is missing there is no icon to serve, so we answer 204 No Content.
  */
 export class SpaController {
   private readonly distPath: string;
@@ -54,8 +60,20 @@ export class SpaController {
       response.end(this.readIndexHtml());
     };
 
+    const serveFavicon: RawRouteHandler = (_request, response: ServerResponse): void => {
+      const svg = this.readFaviconSvg();
+      if (svg === null) {
+        response.writeHead(HTTP_NO_CONTENT);
+        response.end();
+        return;
+      }
+      response.writeHead(HTTP_OK, { "Content-Type": "image/svg+xml" });
+      response.end(svg);
+    };
+
     httpServer.rawGet("/", serveIndex);
     httpServer.rawGet("/index.html", serveIndex);
+    httpServer.rawGet("/favicon.ico", serveFavicon);
     httpServer.serveStatic("/assets/", join(this.distPath, "assets"));
   }
 
@@ -65,5 +83,13 @@ export class SpaController {
       return PLACEHOLDER_HTML;
     }
     return readFileSync(indexPath, "utf8");
+  }
+
+  private readFaviconSvg(): string | null {
+    const faviconPath = join(this.distPath, "favicon.svg");
+    if (!existsSync(faviconPath)) {
+      return null;
+    }
+    return readFileSync(faviconPath, "utf8");
   }
 }

@@ -38,6 +38,7 @@ function publishedItem(): PublishedItem {
     title: "Refund policy",
     body: "Customers may request a refund within 30 days.",
     sensitivity: "internal",
+    tagIds: [],
     publishedVersion: 1,
     publishedAt: "2026-06-16T00:00:00.000Z",
     stale: false,

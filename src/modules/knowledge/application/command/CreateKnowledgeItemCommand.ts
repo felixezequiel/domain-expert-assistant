@@ -12,6 +12,9 @@ export class CreateKnowledgeItemCommand {
   public readonly body: KnowledgeBody;
   public readonly tagIds: ReadonlyArray<TagId>;
   public readonly sensitivity: SensitivityLevel;
+  // Set when the item originates from an ingestion upload, to correlate its drafting event
+  // with the originating job in the audit trail (ADR-024 / PRD-3); null for a manual draft.
+  public readonly causationId: string | null;
 
   private constructor(
     itemId: KnowledgeItemId,
@@ -20,6 +23,7 @@ export class CreateKnowledgeItemCommand {
     body: KnowledgeBody,
     tagIds: ReadonlyArray<TagId>,
     sensitivity: SensitivityLevel,
+    causationId: string | null,
   ) {
     this.itemId = itemId;
     this.collectionId = collectionId;
@@ -27,6 +31,7 @@ export class CreateKnowledgeItemCommand {
     this.body = body;
     this.tagIds = tagIds;
     this.sensitivity = sensitivity;
+    this.causationId = causationId;
   }
 
   public static of(
@@ -36,6 +41,7 @@ export class CreateKnowledgeItemCommand {
     body: string,
     tagIds: ReadonlyArray<string>,
     sensitivity: string,
+    causationId: string | null = null,
   ): CreateKnowledgeItemCommand {
     const tags: Array<TagId> = [];
     for (const tagId of tagIds) {
@@ -48,6 +54,7 @@ export class CreateKnowledgeItemCommand {
       new KnowledgeBody(body),
       tags,
       SensitivityLevel.of(sensitivity),
+      causationId,
     );
   }
 }

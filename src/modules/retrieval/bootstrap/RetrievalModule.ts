@@ -111,9 +111,21 @@ export class RetrievalModule {
 
   private respondError(response: ServerResponse, error: unknown): void {
     const message = error instanceof Error ? error.message : "Internal Server Error";
-    const isClientError = message.includes("required") || message.startsWith("Forbidden");
-    const statusCode = isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
-    this.respond(response, { statusCode, body: { error: message } });
+    this.respond(response, { statusCode: RetrievalModule.statusForError(message), body: { error: message } });
+  }
+
+  private static statusForError(message: string): number {
+    // An authorization failure ("Forbidden: requires one of the roles […]", thrown by the
+    // ApplicationService's authorizer before execute) is a 403 — a real "you lack the role",
+    // not a server fault. Checked before the generic client-error branch because the message
+    // also contains the word "required" and would otherwise be mis-mapped to 400.
+    if (message.startsWith("Forbidden")) {
+      return HTTP_FORBIDDEN;
+    }
+    if (message.includes("required")) {
+      return HTTP_BAD_REQUEST;
+    }
+    return HTTP_INTERNAL_ERROR;
   }
 
   private static requireString(body: Record<string, unknown>, field: string): string {

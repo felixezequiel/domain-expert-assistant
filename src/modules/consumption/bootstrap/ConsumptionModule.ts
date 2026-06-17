@@ -158,7 +158,9 @@ export class ConsumptionModule {
 
   private async handleSearch(request: IncomingMessage, credential: ConsumerCredential): Promise<RouteResult> {
     const url = new URL(request.url ?? "/v1/search", "http://localhost");
-    const query = url.searchParams.get("q") ?? "";
+    // `q` is the documented param (PRD-5 §7); accept `query` as an alias so a caller using the
+    // longer name isn't silently handed an empty result set (finding P4).
+    const query = url.searchParams.get("q") ?? url.searchParams.get("query") ?? "";
     const collectionIds = ConsumptionModule.repeatedParam(url, "collection");
     const tags = ConsumptionModule.repeatedParam(url, "tag");
     const k = ConsumptionModule.optionalPositiveInt(url.searchParams.get("k"));
@@ -284,10 +286,14 @@ export class ConsumptionModule {
       return;
     }
     const message = error instanceof Error ? error.message : "Internal Server Error";
-    const isClientError =
-      message.includes("required") ||
-      message.includes("Unknown sensitivity") ||
-      message.startsWith("Forbidden");
+    // An authorization failure ("Forbidden: requires one of the roles […]") is a 403, not a
+    // bad request — mirror the other modules. Checked first because the message also contains
+    // "required" and would otherwise fall into the 400 client-error branch.
+    if (message.startsWith("Forbidden")) {
+      this.respond(response, { statusCode: HTTP_FORBIDDEN, body: { error: message } });
+      return;
+    }
+    const isClientError = message.includes("required") || message.includes("Unknown sensitivity");
     const statusCode = isClientError ? HTTP_BAD_REQUEST : HTTP_INTERNAL_ERROR;
     this.respond(response, { statusCode, body: { error: message } });
   }

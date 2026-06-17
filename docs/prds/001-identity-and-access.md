@@ -24,6 +24,7 @@ Definir **quem existe** no sistema e **o que cada um pode fazer**. Sustenta o mu
 - SSO/OAuth corporativo.
 - Signup self-service e billing/cotas.
 - OAuth2 client-credentials para consumidores (só API key na v1).
+- Suspensão de organização: a org nasce `active` e não há operação de suspender na v1 (o status fica como ponto de extensão futuro).
 
 ## 3. Personas
 - **Admin** — gerencia usuários, papéis, coleções (cria — ver PRD-2), credenciais de consumidor e a política da organização.
@@ -43,7 +44,7 @@ Definir **quem existe** no sistema e **o que cada um pode fazer**. Sustenta o mu
 ## 5. Modelo de domínio
 
 ### Agregado `Organization`
-- `OrganizationId`, `name`, `status` (`active|suspended`), `policy: { requireSeparateReviewer: boolean }`, `createdAt`.
+- `OrganizationId`, `name`, `status` (`active`; suspensão fora da v1 — ver §2), `policy: { requireSeparateReviewer: boolean }`, `createdAt`.
 - Invariante: nome único por instalação; política default `requireSeparateReviewer = true`.
 
 ### Agregado `User`
@@ -82,9 +83,9 @@ Definir **quem existe** no sistema e **o que cada um pode fazer**. Sustenta o mu
 POST /auth/login                          # email+senha → token
 POST /organizations/:orgId/users/invite   # Admin
 POST /invitations/:token/accept           # define senha
-PATCH /users/:userId/roles                # Admin
+PUT  /users/:userId/roles                 # Admin (full-replace of the role set, not PATCH)
 POST /users/:userId/disable               # Admin
-PATCH /organizations/:orgId/policy        # Admin
+PUT  /organizations/:orgId/policy         # Admin (full-replace of the policy, not PATCH)
 POST   /credentials                       # Admin — emite (retorna segredo 1x)
 POST   /credentials/:id/rotate            # Admin
 DELETE /credentials/:id                   # Admin — revoga

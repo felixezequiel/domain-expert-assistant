@@ -14,6 +14,7 @@ export class ChunkEntity extends PlainObject {
   public title!: string;
   public collectionId!: string;
   public sensitivity!: string;
+  public tagIds!: Array<string>;
   public content!: string;
   public publishedVersion!: number;
   public publishedAt!: string;

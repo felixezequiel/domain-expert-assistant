@@ -47,6 +47,7 @@ export class SemanticSearchCommand {
     public readonly query: string,
     public readonly collectionIds: ReadonlyArray<string> | null,
     public readonly sensitivityCeiling: string | null,
+    public readonly tagIds: ReadonlyArray<string> | null,
     public readonly limit: number,
   ) {}
 
@@ -55,8 +56,9 @@ export class SemanticSearchCommand {
     query: string,
     collectionIds: ReadonlyArray<string> | null = null,
     sensitivityCeiling: string | null = null,
+    tagIds: ReadonlyArray<string> | null = null,
     limit: number = DEFAULT_SEARCH_LIMIT,
   ): SemanticSearchCommand {
-    return new SemanticSearchCommand(companyId, query, collectionIds, sensitivityCeiling, limit);
+    return new SemanticSearchCommand(companyId, query, collectionIds, sensitivityCeiling, tagIds, limit);
   }
 }

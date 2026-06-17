@@ -51,6 +51,7 @@ const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const HTTP_INTERNAL_ERROR = 500;
 
 interface RouteResult {
@@ -215,6 +216,7 @@ export class KnowledgeModule {
       KnowledgeModule.requireString(body, "title"),
       KnowledgeModule.requireString(body, "body"),
       KnowledgeModule.requireString(body, "sensitivity"),
+      KnowledgeModule.requireStringArray(body, "tagIds"),
     );
     const item = await this.deps.applicationService.execute(this.deps.editKnowledgeItem, command);
     return { statusCode: HTTP_OK, body: { id: item.id.value, status: item.status } };
@@ -359,6 +361,11 @@ export class KnowledgeModule {
   }
 
   private static statusForError(message: string): number {
+    // A role-gated use case rejects with "Forbidden: requires one of the roles [...]"
+    // (ApplicationService/AuthorizerPort) — that is a 403, not a server error.
+    if (message.startsWith("Forbidden")) {
+      return HTTP_FORBIDDEN;
+    }
     if (
       message.includes("not found") ||
       message.includes("already") ||

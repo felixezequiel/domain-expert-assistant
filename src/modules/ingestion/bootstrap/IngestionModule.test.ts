@@ -97,4 +97,48 @@ describe("IngestionModule routes", () => {
     assert.equal(response.statusCode, 202);
     assert.deepEqual(JSON.parse(response.payload), { jobId: "job-1", status: "pending" });
   });
+
+  it("maps an authorization failure (Forbidden) to 403, not 500", async () => {
+    const resolveSession = {
+      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["reviewer"] }),
+    } as unknown as IngestionModuleDeps["resolveSession"];
+    const applicationService = {
+      execute: async () => {
+        throw new Error("Forbidden: requires one of the roles [curator].");
+      },
+    } as unknown as IngestionModuleDeps["applicationService"];
+    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+
+    const response = await invoke(
+      httpServer.routes.get("POST /ingestion/uploads")!,
+      fakeRequest({
+        cookie: SESSION_COOKIE_NAME + "=good",
+        body: { collectionId: "c", filename: "f.md", mimeType: "text/markdown", contentBase64: "aGk=" },
+      }),
+    );
+
+    assert.equal(response.statusCode, 403);
+  });
+
+  it("maps an oversize-upload rejection to 400", async () => {
+    const resolveSession = {
+      execute: async () => ({ companyId: "c1", actorId: "u1", actorType: "user", roles: ["curator"] }),
+    } as unknown as IngestionModuleDeps["resolveSession"];
+    const applicationService = {
+      execute: async () => {
+        throw new Error("Document content is too large: 11 bytes exceeds the limit of 4 bytes");
+      },
+    } as unknown as IngestionModuleDeps["applicationService"];
+    new IngestionModule(deps({ resolveSession, applicationService })).registerRoutes(httpServer as never);
+
+    const response = await invoke(
+      httpServer.routes.get("POST /ingestion/uploads")!,
+      fakeRequest({
+        cookie: SESSION_COOKIE_NAME + "=good",
+        body: { collectionId: "c", filename: "f.md", mimeType: "text/markdown", contentBase64: "aGVsbG8gd29ybGQ=" },
+      }),
+    );
+
+    assert.equal(response.statusCode, 400);
+  });
 });

@@ -127,6 +127,24 @@ describe("RetrievalModule routes", () => {
     assert.equal(response.statusCode, 400);
   });
 
+  it("maps a Forbidden authorization error to 403, not 500/400", async () => {
+    const semanticSearch = {
+      execute: async () => {
+        throw new Error("Forbidden: requires one of the roles [admin].");
+      },
+    } as unknown as RetrievalModuleDeps["semanticSearch"];
+    new RetrievalModule(deps({ resolveSession: principal(["curator"]), semanticSearch })).registerRoutes(
+      httpServer as never,
+    );
+
+    const response = await invoke(
+      httpServer.routes.get("POST /search")!,
+      fakeRequest({ cookie: SESSION_COOKIE_NAME + "=good", body: { query: "refund" } }),
+    );
+
+    assert.equal(response.statusCode, 403);
+  });
+
   it("forbids rebuild for a non-admin (403)", async () => {
     new RetrievalModule(deps({ resolveSession: principal(["curator"]) })).registerRoutes(httpServer as never);
     const response = await invoke(
