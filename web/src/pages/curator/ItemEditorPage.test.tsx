@@ -5,6 +5,14 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ItemEditorPage } from "./ItemEditorPage.tsx";
 import { mockFetchSequence, installFetch } from "../../test/index.ts";
 
+// The body editor lazy-loads Monaco (can't run in jsdom); this page test exercises the
+// page's save/submit wiring, not the editor, so stub it with a plain textarea.
+vi.mock("../../components/MarkdownEditor.tsx", () => ({
+  MarkdownEditor: ({ value, onChange }: { value: string; onChange(next: string): void }) => (
+    <textarea data-testid="md-body" value={value} onChange={(event) => onChange(event.target.value)} />
+  ),
+}));
+
 afterEach(() => {
   vi.restoreAllMocks();
 });

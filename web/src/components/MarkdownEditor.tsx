@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import Markdown from "react-markdown";
-import { Eye, Pencil } from "lucide-react";
+import { Eye, Loader2, Pencil } from "lucide-react";
 import { Button } from "./ui/button.tsx";
 import { Label } from "./ui/label.tsx";
-import { Textarea } from "./ui/textarea.tsx";
+
+// The write surface is Monaco (VS Code) so authors get familiar shortcuts; lazy-loaded so the
+// heavy Monaco bundle only reaches the item editor. The import/upload path is separate.
+const MonacoMarkdownEditor = lazy(() => import("./MonacoMarkdownEditor.tsx"));
 
 // Markdown body editor with a live preview toggle (ADR-023: the knowledge body is markdown).
 export function MarkdownEditor({
@@ -20,7 +23,7 @@ export function MarkdownEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label htmlFor="md-body">{label}</Label>
+        <Label>{label}</Label>
         <Button
           type="button"
           variant="outline"
@@ -40,13 +43,17 @@ export function MarkdownEditor({
           <Markdown>{value}</Markdown>
         </div>
       ) : (
-        <Textarea
-          id="md-body"
-          value={value}
-          rows={16}
-          className="font-mono text-sm"
-          onChange={(event) => onChange(event.target.value)}
-        />
+        <div className="overflow-hidden rounded-md border border-input" data-testid="md-editor">
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading editor…
+              </div>
+            }
+          >
+            <MonacoMarkdownEditor value={value} onChange={onChange} />
+          </Suspense>
+        </div>
       )}
     </div>
   );
