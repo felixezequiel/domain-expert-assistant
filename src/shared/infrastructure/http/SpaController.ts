@@ -44,7 +44,13 @@ export class SpaController {
 
   public register(httpServer: HttpServer): void {
     const serveIndex: RawRouteHandler = (_request, response: ServerResponse): void => {
-      response.writeHead(HTTP_OK, { "Content-Type": "text/html; charset=utf-8" });
+      // Always revalidate the entry document so that after a rebuild the browser picks up the
+      // new content-hashed asset URLs immediately (without no-cache, browsers heuristically
+      // cache index.html and keep loading stale bundles). The hashed /assets/* are immutable.
+      response.writeHead(HTTP_OK, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+      });
       response.end(this.readIndexHtml());
     };
 

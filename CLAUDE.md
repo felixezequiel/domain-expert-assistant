@@ -133,7 +133,7 @@ POST /users/:userId/addresses   # Add address to user
 
 ## Curation & Admin SPA (`web/`, ADR-023 + amendment)
 
-The human UI is a **React + Vite SPA** in `web/` — outside the hexagon, a pure REST client that never duplicates domain rules. Build it (`cd web && npm run build`) before serving; `SpaController` serves `web/dist` per request (no server restart needed for SPA-only changes).
+The human UI is a **React + Vite SPA** in `web/` — outside the hexagon, a pure REST client that never duplicates domain rules. Build it (`cd web && npm run build`) before serving; `SpaController` serves `web/dist` per request (no server restart needed for SPA-only changes). It serves `index.html` with `Cache-Control: no-cache` so a rebuild's content-hashed `/assets/*` are picked up on the next load (without it browsers cache the entry HTML and keep loading stale bundles).
 
 - **UI system:** shadcn/ui + Tailwind v3 + **design tokens** (HSL CSS vars in `web/src/styles.css`, mapped in `tailwind.config.js`). Primitives live in `web/src/components/ui/`; `cn()` in `lib/utils.ts`; icons `lucide-react`; toasts `sonner` (`toast.success/error` — not persistent inline notices). Import alias `@/ → web/src`. Dark theme + blue accent; retune the brand from `--primary`/`--ring`. Display serif (titles/brand), grotesk body, mono for IDs/keys.
 - **Auth/session:** httpOnly session cookie (ADR-010). On boot, `AuthContext` calls `GET /auth/me` to rehydrate the session from the cookie (a hard refresh stays signed in). Capabilities (`canAdminister/canAudit/canCurate/canReview`) are derived from the roles in `/auth/me` — a **UX hint only**; server authorization (ADR-011) is the real gate. `RequireCapability` guards admin/auditor routes; `Layout` tailors the nav.

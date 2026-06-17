@@ -60,6 +60,8 @@ describe("SpaController", () => {
 
     assert.equal(response.statusCode, 200);
     assert.equal(response.headers["Content-Type"], "text/html; charset=utf-8");
+    // no-cache so a rebuild's new hashed asset URLs are picked up immediately.
+    assert.equal(response.headers["Cache-Control"], "no-cache");
     assert.ok(response.payload.length > 0, "should return some HTML");
   });
 
