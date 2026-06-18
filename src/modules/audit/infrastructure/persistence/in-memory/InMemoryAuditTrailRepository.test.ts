@@ -16,6 +16,7 @@ function view(overrides: Partial<AuditEventRecord>): AuditEventRecord {
     actorId: "user-1",
     actorType: "user",
     causationId: null,
+    payload: {},
     ...overrides,
   };
 }

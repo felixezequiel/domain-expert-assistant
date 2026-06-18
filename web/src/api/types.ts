@@ -148,6 +148,9 @@ export interface AuditEventView {
   readonly actorName: string | null;
   readonly actorType: string | null;
   readonly causationId: string | null;
+  // The deserialized domain event the store recorded — what actually happened, beyond the
+  // envelope. Rendered as a friendly key/value table in the event-details dialog.
+  readonly payload: Record<string, unknown>;
 }
 
 export interface InvitedUser {

@@ -15,7 +15,21 @@
     "event": "Evento",
     "aggregate": "Agregado",
     "actor": "Ator",
-    "type": "Tipo"
+    "type": "Tipo",
+    "details": "Detalhes"
+  },
+  "details": {
+    "title": "Detalhes do evento",
+    "open": "Ver detalhes",
+    "payload": "Dados do evento",
+    "empty": "Este evento não possui dados adicionais.",
+    "fields": {
+      "eventId": "ID do evento",
+      "aggregateId": "Agregado",
+      "actor": "Ator",
+      "actorType": "Tipo",
+      "causationId": "Causado por"
+    }
   },
   "system": "sistema",
   "dateRange": {

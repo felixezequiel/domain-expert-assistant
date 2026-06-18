@@ -24,6 +24,13 @@ const auditEvent: AuditEventView = {
   actorName: "Ada Lovelace",
   actorType: "user",
   causationId: null,
+  payload: {
+    eventName: "KnowledgeItemPublished",
+    aggregateId: "agg-1234567890",
+    occurredAt: "2026-01-01T00:00:00.000Z",
+    version: 4,
+    sensitivityCeiling: "internal",
+  },
 };
 
 beforeEach(() => {
@@ -54,6 +61,28 @@ describe("AuditTrailPage", () => {
     // formatted, not raw ISO (U2)
     expect(screen.queryByText(auditEvent.occurredAt)).not.toBeInTheDocument();
     expect(screen.getByText(formatDateTime(auditEvent.occurredAt))).toBeInTheDocument();
+  });
+
+  it("opens an event-details dialog rendering the payload as a friendly table, not raw JSON", async () => {
+    events.mockResolvedValue({ events: [auditEvent] });
+    render(
+      <MemoryRouter>
+        <AuditTrailPage />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await waitFor(() => expect(screen.getByText("KnowledgeItemPublished")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: "View details" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Event details")).toBeInTheDocument();
+    // Business payload rendered as labelled, humanized rows — envelope fields are stripped.
+    expect(screen.getByText("Sensitivity ceiling")).toBeInTheDocument();
+    expect(screen.getByText("internal")).toBeInTheDocument();
+    expect(screen.getByText("Version")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
   it("shows an empty state when no events match", async () => {

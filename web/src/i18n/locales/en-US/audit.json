@@ -15,7 +15,21 @@
     "event": "Event",
     "aggregate": "Aggregate",
     "actor": "Actor",
-    "type": "Type"
+    "type": "Type",
+    "details": "Details"
+  },
+  "details": {
+    "title": "Event details",
+    "open": "View details",
+    "payload": "Event data",
+    "empty": "This event carries no additional data.",
+    "fields": {
+      "eventId": "Event id",
+      "aggregateId": "Aggregate",
+      "actor": "Actor",
+      "actorType": "Type",
+      "causationId": "Caused by"
+    }
   },
   "system": "system",
   "dateRange": {

@@ -40,6 +40,7 @@ const SAMPLE_RECORD: AuditEventRecord = {
   actorId: "user-1",
   actorType: "user",
   causationId: null,
+  payload: { eventName: "Sample", aggregateId: "agg-1" },
 };
 
 describe("ListAuditTrailUseCase", () => {

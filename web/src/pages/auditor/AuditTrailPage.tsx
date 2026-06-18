@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { type DateRange } from "react-day-picker";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
 import type { AuditEventView } from "../../api/types.ts";
@@ -12,6 +12,13 @@ import { formatDateTime } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent } from "../../components/ui/card.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog.tsx";
 import { Input } from "../../components/ui/input.tsx";
 import { Label } from "../../components/ui/label.tsx";
 import {
@@ -23,6 +30,7 @@ import {
   TableRow,
 } from "../../components/ui/table.tsx";
 import i18n from "../../i18n/index.ts";
+import { EventPayloadTable } from "./EventPayloadTable.tsx";
 
 const DEFAULT_LIMIT = 100;
 
@@ -34,6 +42,29 @@ function actorLabel(event: AuditEventView): string {
     return event.actorName;
   }
   return event.actorId ?? i18n.t("audit.system");
+}
+
+// Envelope fields are already shown in the details header (when / actor / aggregate / …), so
+// strip them from the payload table — it then shows only what is specific to the event.
+const ENVELOPE_KEYS = new Set([
+  "eventId",
+  "eventName",
+  "occurredAt",
+  "aggregateId",
+  "causationId",
+  "companyId",
+  "actorId",
+  "actorType",
+]);
+
+function businessPayload(event: AuditEventView): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(event.payload)) {
+    if (!ENVELOPE_KEYS.has(key)) {
+      result[key] = value;
+    }
+  }
+  return result;
 }
 
 // Read-only audit trail (Auditor persona). Filters by aggregate / actor / event name /
@@ -51,6 +82,7 @@ export function AuditTrailPage(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [searched, setSearched] = useState(false);
+  const [selected, setSelected] = useState<AuditEventView | null>(null);
 
   const runSearch = async (aggregateOverride?: string): Promise<void> => {
     setLoading(true);
@@ -99,7 +131,7 @@ export function AuditTrailPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const COLUMN_COUNT = 5;
+  const COLUMN_COUNT = 6;
   let tableBody: ReactNode;
   if (loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
@@ -128,6 +160,16 @@ export function AuditTrailPage(): JSX.Element {
         </TableCell>
         <TableCell>{actorLabel(event)}</TableCell>
         <TableCell>{event.actorType ?? t("audit.system")}</TableCell>
+        <TableCell className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("audit.details.open")}
+            onClick={() => setSelected(event)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </TableCell>
       </TableRow>
     ));
   }
@@ -196,12 +238,73 @@ export function AuditTrailPage(): JSX.Element {
                 <TableHead>{t("audit.columns.aggregate")}</TableHead>
                 <TableHead>{t("audit.columns.actor")}</TableHead>
                 <TableHead>{t("audit.columns.type")}</TableHead>
+                <TableHead className="w-0 text-right">{t("audit.columns.details")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>{tableBody}</TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelected(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          {selected !== null ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("audit.details.title")}</DialogTitle>
+                <DialogDescription>{formatDateTime(selected.occurredAt)}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-1">
+                <DetailRow label={t("audit.columns.event")}>
+                  <Badge variant="outline" className="font-mono">
+                    {selected.eventName}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label={t("audit.details.fields.aggregateId")}>
+                  <code className="break-all font-mono text-xs">{selected.aggregateId}</code>
+                </DetailRow>
+                <DetailRow label={t("audit.details.fields.actor")}>{actorLabel(selected)}</DetailRow>
+                <DetailRow label={t("audit.details.fields.actorType")}>
+                  {selected.actorType ?? t("audit.system")}
+                </DetailRow>
+                <DetailRow label={t("audit.details.fields.eventId")}>
+                  <code className="break-all font-mono text-xs">{selected.eventId}</code>
+                </DetailRow>
+                {selected.causationId !== null ? (
+                  <DetailRow label={t("audit.details.fields.causationId")}>
+                    <code className="break-all font-mono text-xs">{selected.causationId}</code>
+                  </DetailRow>
+                ) : null}
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="text-sm font-semibold">{t("audit.details.payload")}</h3>
+                <EventPayloadTable
+                  data={businessPayload(selected)}
+                  emptyLabel={t("audit.details.empty")}
+                />
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DetailRow({ label, children }: { label: string; children: ReactNode }): JSX.Element {
+  return (
+    <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:gap-4">
+      <div className="text-sm font-medium text-muted-foreground">{label}</div>
+      <div className="text-sm">{children}</div>
     </div>
   );
 }

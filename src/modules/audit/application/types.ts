@@ -4,7 +4,13 @@
  * fail-closed by the repository from the actor context (ADR-009) — privileged
  * operator/system events (companyId null) are captured but invisible to tenant auditors.
  */
-/** An event exactly as the read port returns it from the event store (the raw envelope). */
+/**
+ * An event exactly as the read port returns it from the event store (the raw envelope).
+ * `payload` is the deserialized domain event the store persisted (`JSON.stringify(event)`),
+ * so the Auditor surface can render *what* happened — the event's own fields — not just the
+ * envelope. It is `{}` when the stored JSON is somehow unparseable (never expected, but the
+ * read model must not throw on a single bad row).
+ */
 export interface AuditEventRecord {
   readonly eventId: string;
   readonly eventName: string;
@@ -14,6 +20,7 @@ export interface AuditEventRecord {
   readonly actorId: string | null;
   readonly actorType: string | null;
   readonly causationId: string | null;
+  readonly payload: Record<string, unknown>;
 }
 
 /**

@@ -77,6 +77,7 @@ class AuditSeedingEventStore implements EventStorePort {
         actorId: event.actorId ?? null,
         actorType: event.actorType ?? null,
         causationId: event.causationId,
+        payload: JSON.parse(JSON.stringify(event)) as Record<string, unknown>,
       });
     }
   }

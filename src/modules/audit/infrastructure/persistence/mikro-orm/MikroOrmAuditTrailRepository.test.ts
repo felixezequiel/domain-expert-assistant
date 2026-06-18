@@ -50,7 +50,7 @@ describe("MikroOrmAuditTrailRepository", () => {
         actorId: "user-1",
         actorType: "user",
         causationId: "cmd-1",
-        payload: "{}",
+        payload: JSON.stringify({ eventName: "KnowledgeItemPublished", version: 3 }),
       },
     ]);
     const repo = new MikroOrmAuditTrailRepository(provider);
@@ -64,7 +64,18 @@ describe("MikroOrmAuditTrailRepository", () => {
       actorId: "user-1",
       actorType: "user",
       causationId: "cmd-1",
+      payload: { eventName: "KnowledgeItemPublished", version: 3 },
     });
+  });
+
+  it("degrades a malformed or non-object payload to an empty object instead of throwing", async () => {
+    const { provider } = emProviderReturning([
+      { id: "a", eventName: "X", aggregateId: "g", occurredAt: "t", companyId: null, actorId: null, actorType: null, causationId: null, payload: "not json" },
+      { id: "b", eventName: "X", aggregateId: "g", occurredAt: "t", companyId: null, actorId: null, actorType: null, causationId: null, payload: "[1,2,3]" },
+    ]);
+    const records = await new MikroOrmAuditTrailRepository(provider).findEvents(NO_FILTER);
+    assert.deepEqual(records[0]!.payload, {});
+    assert.deepEqual(records[1]!.payload, {});
   });
 
   it("orders by occurredAt desc and applies the limit", async () => {

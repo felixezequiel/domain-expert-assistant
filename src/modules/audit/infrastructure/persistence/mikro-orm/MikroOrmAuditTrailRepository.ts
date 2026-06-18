@@ -66,6 +66,22 @@ export class MikroOrmAuditTrailRepository implements AuditTrailReadPort {
       actorId: entity.actorId,
       actorType: entity.actorType,
       causationId: entity.causationId,
+      payload: MikroOrmAuditTrailRepository.parsePayload(entity.payload),
     };
+  }
+
+  // The store always writes a JSON object (`JSON.stringify(event)`). We still parse
+  // defensively: a single malformed/legacy row must degrade to an empty payload rather
+  // than break the whole trail read.
+  private static parsePayload(raw: string): Record<string, unknown> {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return {};
+    } catch {
+      return {};
+    }
   }
 }
