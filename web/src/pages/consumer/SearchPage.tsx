@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, BookOpen, Search } from "lucide-react";
 import { collectionsApi, searchApi } from "../../api/resources.ts";
 import { SENSITIVITY_LEVELS, type SearchResult } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { ErrorNotice, Loading } from "../../components/AsyncBoundary.tsx";
+import { PageHeader } from "../../components/PageHeader.tsx";
 import { formatDate, stripMarkdown } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
@@ -86,10 +87,18 @@ export function SearchPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("consumer.search.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("consumer.search.subtitle")}</p>
-      </div>
+      <PageHeader
+        title={t("consumer.search.title")}
+        description={t("consumer.search.subtitle")}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/catalog">
+              <BookOpen className="mr-2 h-4 w-4" />
+              {t("consumer.search.browseCatalog")}
+            </Link>
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="pt-6">

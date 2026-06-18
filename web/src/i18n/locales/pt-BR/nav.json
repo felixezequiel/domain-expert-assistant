@@ -21,7 +21,13 @@
     "noMatches": "Nenhum resultado.",
     "groupGoTo": "Ir para",
     "groupCreate": "Criar",
+    "groupItems": "Itens",
     "newItem": "Novo item"
+  },
+  "create": {
+    "button": "Criar",
+    "newItem": "Novo item",
+    "uploadDocument": "Enviar documento"
   },
   "notPermitted": {
     "title": "Sem permissão",

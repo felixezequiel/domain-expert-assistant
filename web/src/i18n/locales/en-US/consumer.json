@@ -2,6 +2,7 @@
   "search": {
     "title": "Search",
     "subtitle": "Search the published knowledge base your session is allowed to see.",
+    "browseCatalog": "Browse catalog",
     "queryLabel": "Query",
     "placeholder": "Search the knowledge base…",
     "collectionLabel": "Collection",
@@ -17,6 +18,7 @@
   "catalog": {
     "title": "Catalog",
     "subtitle": "Browse published and still-served knowledge items.",
+    "openSearch": "Search",
     "collectionLabel": "Collection",
     "allCollections": "All collections",
     "tagLabel": "Tag",

@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import { type DateRange } from "react-day-picker";
 import { auditApi, type AuditFilter } from "../../api/resources.ts";
@@ -40,6 +41,7 @@ function actorLabel(event: AuditEventView): string {
 // "not permitted" via ErrorNotice (the router also gates this page by capability).
 export function AuditTrailPage(): JSX.Element {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [aggregateId, setAggregateId] = useState("");
   const [actorId, setActorId] = useState("");
   const [eventName, setEventName] = useState("");
@@ -50,12 +52,13 @@ export function AuditTrailPage(): JSX.Element {
   const [error, setError] = useState<unknown>(null);
   const [searched, setSearched] = useState(false);
 
-  const runSearch = async (): Promise<void> => {
+  const runSearch = async (aggregateOverride?: string): Promise<void> => {
     setLoading(true);
     setError(null);
+    const effectiveAggregateId = aggregateOverride ?? aggregateId;
     const filter: Mutable<AuditFilter> = { limit: DEFAULT_LIMIT };
-    if (aggregateId !== "") {
-      filter.aggregateId = aggregateId;
+    if (effectiveAggregateId !== "") {
+      filter.aggregateId = effectiveAggregateId;
     }
     if (actorId !== "") {
       filter.actorId = actorId;
@@ -83,6 +86,18 @@ export function AuditTrailPage(): JSX.Element {
       setLoading(false);
     }
   };
+
+  // Deep-link: a "View audit trail" link elsewhere (e.g. an item) navigates to
+  // /audit?aggregateId=<id>; prefill the filter and run the search immediately.
+  useEffect(() => {
+    const preset = searchParams.get("aggregateId");
+    if (preset !== null && preset !== "") {
+      setAggregateId(preset);
+      void runSearch(preset);
+    }
+    // Intentionally run once on mount for the initial deep-link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const COLUMN_COUNT = 5;
   let tableBody: ReactNode;

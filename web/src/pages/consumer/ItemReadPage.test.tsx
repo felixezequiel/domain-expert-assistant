@@ -22,15 +22,26 @@ vi.mock("../../api/resources.ts", () => ({
 }));
 
 import { ItemReadPage } from "./ItemReadPage.tsx";
+import { AuthContext, type Session } from "../../auth/AuthContext.tsx";
+import { capabilitiesForRoles } from "../../auth/capabilities.ts";
+
+const consumerSession: Session = {
+  user: { userId: "u1", companyId: "c1", email: "c@e2e.test", displayName: "Reader", roles: ["consumer"], status: "active" },
+  capabilities: capabilitiesForRoles(["consumer"]),
+};
 
 describe("ItemReadPage", () => {
   it("renders the heading, markdown body, status badge and a deprecated badge", async () => {
     render(
-      <MemoryRouter initialEntries={["/catalog/i1"]}>
-        <Routes>
-          <Route path="/catalog/:itemId" element={<ItemReadPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <AuthContext.Provider
+        value={{ session: consumerSession, isAuthenticated: true, loading: false, login: async () => undefined, logout: async () => undefined }}
+      >
+        <MemoryRouter initialEntries={["/catalog/i1"]}>
+          <Routes>
+            <Route path="/catalog/:itemId" element={<ItemReadPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
     );
 
     await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Read me" })).toBeInTheDocument());

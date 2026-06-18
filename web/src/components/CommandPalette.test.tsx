@@ -7,6 +7,7 @@ import { CommandPalette } from "./CommandPalette.tsx";
 import { AuthContext, type Session } from "../auth/AuthContext.tsx";
 import { capabilitiesForRoles } from "../auth/capabilities.ts";
 import type { Role } from "../api/types.ts";
+import { installFetch, mockFetchSequence } from "../test/index.ts";
 
 beforeAll(() => {
   // cmdk calls scrollIntoView on the active item; jsdom doesn't implement it.
@@ -38,5 +39,38 @@ describe("CommandPalette", () => {
     expect(screen.getByText("New item")).toBeInTheDocument();
     // ...admin-only command is not.
     expect(screen.queryByText("Settings")).toBeNull();
+  });
+
+  it("lets you jump straight to an item by name", async () => {
+    installFetch(
+      mockFetchSequence([
+        {
+          status: 200,
+          body: {
+            items: [
+              {
+                id: "i1",
+                title: "Refund Policy",
+                status: "published",
+                collectionId: "c1",
+                body: "",
+                tagIds: [],
+                sensitivity: "internal",
+                currentVersionNumber: 1,
+                publishedVersionNumber: 1,
+                isServed: true,
+                isStale: false,
+                lastRejectionReason: null,
+              },
+            ],
+          },
+        },
+      ]),
+    );
+    renderPalette(["curator"]);
+
+    await userEvent.click(screen.getByRole("button", { name: /Search or jump to/ }));
+
+    await waitFor(() => expect(screen.getByText("Refund Policy")).toBeInTheDocument());
   });
 });

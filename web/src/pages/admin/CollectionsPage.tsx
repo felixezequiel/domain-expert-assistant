@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
-import { collectionsApi } from "../../api/resources.ts";
+import { collectionsApi, itemsApi } from "../../api/resources.ts";
 import type { CollectionView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
@@ -39,6 +39,9 @@ interface RenameTarget {
 export function CollectionsPage(): JSX.Element {
   const { t } = useTranslation();
   const state = useAsync(() => collectionsApi.list(), []);
+  // Item counts give an admin a sense of which collections are actually in use (derived
+  // client-side — no dedicated endpoint).
+  const items = useAsync(() => itemsApi.list(), []);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
@@ -76,8 +79,10 @@ export function CollectionsPage(): JSX.Element {
   };
 
   const collections = state.data?.collections ?? [];
+  const itemCountFor = (collectionId: string): number =>
+    (items.data?.items ?? []).filter((item) => item.collectionId === collectionId).length;
 
-  const COLUMN_COUNT = 4;
+  const COLUMN_COUNT = 5;
   let tableBody: ReactNode;
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
@@ -88,6 +93,7 @@ export function CollectionsPage(): JSX.Element {
       <TableRow key={collection.id}>
         <TableCell className="font-medium">{collection.name}</TableCell>
         <TableCell>{collection.description ?? "—"}</TableCell>
+        <TableCell className="tabular-nums text-muted-foreground">{itemCountFor(collection.id)}</TableCell>
         <TableCell>
           <code
             className="block max-w-[12rem] truncate font-mono text-xs text-muted-foreground"
@@ -143,6 +149,7 @@ export function CollectionsPage(): JSX.Element {
               <TableRow>
                 <TableHead>{t("admin.collections.columns.name")}</TableHead>
                 <TableHead>{t("admin.collections.columns.description")}</TableHead>
+                <TableHead>{t("admin.collections.columns.items")}</TableHead>
                 <TableHead>{t("admin.collections.columns.id")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>

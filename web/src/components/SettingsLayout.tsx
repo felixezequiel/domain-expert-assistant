@@ -6,6 +6,7 @@ import { cn } from "../lib/utils.ts";
 // links: members, taxonomy, API access and governance are all the same behaviour ("configure
 // my org"), so they're grouped on one screen with a sub-tab bar (finding: semantic IA).
 const TABS: ReadonlyArray<{ readonly to: string; readonly labelKey: string }> = [
+  { to: "/settings/overview", labelKey: "admin.settings.tabs.overview" },
   { to: "/settings/members", labelKey: "admin.settings.tabs.members" },
   { to: "/settings/collections", labelKey: "admin.settings.tabs.collections" },
   { to: "/settings/tags", labelKey: "admin.settings.tabs.tags" },

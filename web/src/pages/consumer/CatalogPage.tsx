@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, BookOpen, Search } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
 import type { KnowledgeItemView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
+import { EmptyState } from "../../components/EmptyState.tsx";
+import { PageHeader } from "../../components/PageHeader.tsx";
 import { statusBadge } from "../../lib/format.ts";
 import { Badge } from "../../components/ui/badge.tsx";
+import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent } from "../../components/ui/card.tsx";
 import { Label } from "../../components/ui/label.tsx";
 import {
@@ -62,10 +65,18 @@ export function CatalogPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("consumer.catalog.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("consumer.catalog.subtitle")}</p>
-      </div>
+      <PageHeader
+        title={t("consumer.catalog.title")}
+        description={t("consumer.catalog.subtitle")}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/search">
+              <Search className="mr-2 h-4 w-4" />
+              {t("consumer.catalog.openSearch")}
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -118,13 +129,7 @@ function CatalogList({
 }): JSX.Element {
   const { t } = useTranslation();
   if (items.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          {t("consumer.catalog.noItems")}
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState icon={BookOpen} title={t("consumer.catalog.noItems")} />;
   }
 
   return (
@@ -132,7 +137,9 @@ function CatalogList({
       {items.map((item) => {
         const badge = statusBadge(item.status);
         const collectionName = collectionNames.get(item.collectionId) ?? item.collectionId;
-        const showDeprecated = item.status === "deprecated" || item.isStale;
+        // Only flag staleness when the status badge doesn't already say "deprecated", so the
+        // same word never shows twice on one card.
+        const showStaleWarning = item.isStale && item.status !== "deprecated";
         return (
           <li key={item.id}>
             <Card>
@@ -142,7 +149,7 @@ function CatalogList({
                     {item.title}
                   </Link>
                   <Badge variant={badge.variant}>{t("common.status." + item.status)}</Badge>
-                  {showDeprecated ? (
+                  {showStaleWarning ? (
                     <Badge variant="warning">
                       <AlertTriangle className="mr-1 h-3 w-3" />
                       {t("consumer.catalog.deprecated")}

@@ -3,12 +3,48 @@
     "title": "Configurações",
     "subtitle": "Gerencie sua organização — membros, taxonomia, acesso à API e governança.",
     "tabs": {
+      "overview": "Visão geral",
       "members": "Membros",
       "collections": "Coleções",
       "tags": "Tags",
       "credentials": "Credenciais de API",
       "policy": "Política"
     }
+  },
+  "overview": {
+    "metrics": {
+      "members": "Membros",
+      "collections": "Coleções",
+      "tags": "Tags",
+      "credentials": "Credenciais ativas"
+    },
+    "separation": {
+      "label": "Separação de funções",
+      "statusOn": "Ativada",
+      "statusOff": "Desativada",
+      "on": "Autores não podem revisar os próprios itens — um revisor diferente precisa aprovar.",
+      "off": "Autores podem revisar e aprovar os próprios itens."
+    },
+    "roles": {
+      "heading": "Papéis e o que cada um pode fazer",
+      "memberCount_one": "{{count}} membro",
+      "memberCount_other": "{{count}} membros",
+      "descriptions": {
+        "admin": "Gerencia membros, taxonomia, credenciais de API e a política de governança.",
+        "curator": "Cria e edita itens de conhecimento e os envia para revisão.",
+        "reviewer": "Aprova ou rejeita itens em revisão; descontinua e arquiva.",
+        "auditor": "Lê a trilha de auditoria completa de cada alteração.",
+        "consumer": "Busca e lê o conhecimento publicado via API / MCP."
+      }
+    },
+    "sensitivity": {
+      "heading": "Níveis de sensibilidade",
+      "intro": "Cada item tem uma sensibilidade. As credenciais de API definem um limite que restringe o que podem ler.",
+      "public": "Legível por qualquer um que a credencial ou sessão permita.",
+      "internal": "Para membros da organização.",
+      "confidential": "O nível mais restrito — servido de forma mais limitada."
+    },
+    "manage": "Gerenciar"
   },
   "users": {
     "title": "Usuários e papéis",
@@ -52,6 +88,7 @@
     "columns": {
       "name": "Nome",
       "description": "Descrição",
+      "items": "Itens",
       "id": "Id"
     },
     "rename": "Renomear",
@@ -69,7 +106,8 @@
     "columns": {
       "label": "Rótulo",
       "slug": "Slug",
-      "scope": "Escopo"
+      "scope": "Escopo",
+      "items": "Itens"
     },
     "remove": "Remover",
     "removeTitle": "Remover esta tag?",

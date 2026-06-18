@@ -10,13 +10,7 @@ import { FileDropzone } from "../../components/FileDropzone.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
 import { Label } from "../../components/ui/label.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select.tsx";
+import { TaxonomyCombobox, type TaxonomyOption } from "../../components/TaxonomyCombobox.tsx";
 import { Skeleton } from "../../components/ui/skeleton.tsx";
 
 // Ingestion job lifecycle is pending -> processing -> done | failed (IngestionJob aggregate).
@@ -46,6 +40,7 @@ export function UploadPage(): JSX.Element {
   const { t } = useTranslation();
   const collections = useAsync(() => collectionsApi.list(), []);
   const [collectionId, setCollectionId] = useState("");
+  const [createdCollections, setCreatedCollections] = useState<ReadonlyArray<TaxonomyOption>>([]);
   const [file, setFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<IngestionJobView | null>(null);
@@ -53,6 +48,18 @@ export function UploadPage(): JSX.Element {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const processing = jobId !== null && (job === null || !TERMINAL_STATUSES.includes(job.status));
+
+  const collectionOptions: ReadonlyArray<TaxonomyOption> = [
+    ...(collections.data?.collections ?? []).map((collection) => ({ value: collection.id, label: collection.name })),
+    ...createdCollections,
+  ];
+
+  const createCollection = async (name: string): Promise<TaxonomyOption> => {
+    const created = await collectionsApi.create(name);
+    const option = { value: created.id, label: created.name };
+    setCreatedCollections((current) => [...current, option]);
+    return option;
+  };
 
   const upload = async (): Promise<void> => {
     setError(null);
@@ -117,18 +124,19 @@ export function UploadPage(): JSX.Element {
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="upload-collection">{t("knowledge.upload.collectionLabel")}</Label>
-            <Select value={collectionId} onValueChange={setCollectionId}>
-              <SelectTrigger id="upload-collection" className="w-full sm:w-72">
-                <SelectValue placeholder={t("knowledge.upload.collectionPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {(collections.data?.collections ?? []).map((collection) => (
-                  <SelectItem key={collection.id} value={collection.id}>
-                    {collection.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="sm:w-72">
+              <TaxonomyCombobox
+                id="upload-collection"
+                ariaLabel={t("knowledge.upload.collectionLabel")}
+                options={collectionOptions}
+                value={collectionId}
+                onChange={setCollectionId}
+                onCreate={createCollection}
+                disabled={processing}
+                placeholder={t("knowledge.upload.collectionPlaceholder")}
+                searchPlaceholder={t("knowledge.editor.collectionSearch")}
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">

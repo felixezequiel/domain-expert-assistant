@@ -3,12 +3,48 @@
     "title": "Settings",
     "subtitle": "Manage your organization — members, taxonomy, API access and governance.",
     "tabs": {
+      "overview": "Overview",
       "members": "Members",
       "collections": "Collections",
       "tags": "Tags",
       "credentials": "API credentials",
       "policy": "Policy"
     }
+  },
+  "overview": {
+    "metrics": {
+      "members": "Members",
+      "collections": "Collections",
+      "tags": "Tags",
+      "credentials": "Active credentials"
+    },
+    "separation": {
+      "label": "Separation of duties",
+      "statusOn": "On",
+      "statusOff": "Off",
+      "on": "Authors cannot review their own items — a different reviewer must approve.",
+      "off": "Authors may review and approve their own items."
+    },
+    "roles": {
+      "heading": "Roles & what they can do",
+      "memberCount_one": "{{count}} member",
+      "memberCount_other": "{{count}} members",
+      "descriptions": {
+        "admin": "Manages members, taxonomy, API credentials and governance policy.",
+        "curator": "Creates and edits knowledge items and submits them for review.",
+        "reviewer": "Approves or rejects items in review; deprecates and archives them.",
+        "auditor": "Reads the full audit trail of every change.",
+        "consumer": "Searches and reads published knowledge through the API / MCP."
+      }
+    },
+    "sensitivity": {
+      "heading": "Sensitivity levels",
+      "intro": "Every item carries a sensitivity. API credentials set a ceiling that caps what they can read.",
+      "public": "Readable by anyone the credential or session allows.",
+      "internal": "For members of the organization.",
+      "confidential": "The most restricted tier — served the least widely."
+    },
+    "manage": "Manage"
   },
   "users": {
     "title": "Users & roles",
@@ -52,6 +88,7 @@
     "columns": {
       "name": "Name",
       "description": "Description",
+      "items": "Items",
       "id": "Id"
     },
     "rename": "Rename",
@@ -69,7 +106,8 @@
     "columns": {
       "label": "Label",
       "slug": "Slug",
-      "scope": "Scope"
+      "scope": "Scope",
+      "items": "Items"
     },
     "remove": "Remove",
     "removeTitle": "Remove this tag?",

@@ -13,6 +13,7 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react";
+import { itemsApi } from "../api/resources.ts";
 import { useCapabilities } from "../auth/AuthContext.tsx";
 import { Button } from "./ui/button.tsx";
 import {
@@ -36,8 +37,16 @@ const GROUP_ORDER = ["Go to", "Create"] as const;
 // A ⌘K / Ctrl+K command palette for fast navigation across the console. Commands are filtered
 // by the session's capabilities (same UX-hint contract as the nav). Rendered once, in the
 // top bar, so it is available on every authenticated screen.
+interface JumpItem {
+  readonly id: string;
+  readonly title: string;
+  readonly status: string;
+}
+
 export function CommandPalette(): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<ReadonlyArray<JumpItem>>([]);
+  const [itemsLoaded, setItemsLoaded] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const capabilities = useCapabilities();
@@ -52,6 +61,33 @@ export function CommandPalette(): JSX.Element {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Items power "jump straight to a doc by name" — what distinguishes ⌘K (navigate anywhere)
+  // from the Search page (full-text over published content). Fetched lazily the first time the
+  // palette opens so a page load doesn't pay for it; failures degrade to no item rows.
+  useEffect(() => {
+    if (!open || itemsLoaded) {
+      return;
+    }
+    let cancelled = false;
+    void itemsApi
+      .list()
+      .then((response) => {
+        if (!cancelled) {
+          setItems(response.items.map((item) => ({ id: item.id, title: item.title, status: item.status })));
+          setItemsLoaded(true);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, itemsLoaded]);
+
+  const openItem = (id: string): void => {
+    setOpen(false);
+    navigate(capabilities.canCurate ? `/items/${id}` : `/catalog/${id}`);
+  };
 
   const commands = useMemo<ReadonlyArray<PaletteCommand>>(() => {
     const list: Array<PaletteCommand> = [
@@ -121,6 +157,17 @@ export function CommandPalette(): JSX.Element {
               </CommandGroup>
             );
           })}
+          {items.length > 0 ? (
+            <CommandGroup heading={t("nav.search.groupItems")}>
+              {items.map((item) => (
+                <CommandItem key={item.id} value={item.title} onSelect={() => openItem(item.id)}>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 truncate">{item.title}</span>
+                  <span className="text-xs text-muted-foreground">{t("common.status." + item.status)}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
         </CommandList>
       </CommandDialog>
     </>

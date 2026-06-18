@@ -37,5 +37,17 @@
     "sessionExpired": "Sua sessão expirou. Faça login novamente.",
     "generic": "Algo deu errado."
   },
-  "loading": "Carregando…"
+  "loading": "Carregando…",
+  "combobox": {
+    "empty": "Nenhum resultado.",
+    "search": "Buscar…",
+    "create": "Criar “{{query}}”"
+  },
+  "tagPicker": {
+    "add": "Adicionar tag",
+    "placeholder": "Buscar ou criar uma tag…",
+    "create": "Criar tag “{{query}}”",
+    "empty": "Nenhuma tag ainda. Digite para criar uma.",
+    "remove": "Remover {{label}}"
+  }
 }

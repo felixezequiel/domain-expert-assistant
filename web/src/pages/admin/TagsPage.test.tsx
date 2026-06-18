@@ -5,12 +5,16 @@ import userEvent from "@testing-library/user-event";
 const list = vi.fn();
 const create = vi.fn();
 const remove = vi.fn();
+const itemsList = vi.fn(async () => ({ items: [] }));
 
 vi.mock("../../api/resources.ts", () => ({
   tagsApi: {
     list: () => list(),
     create: (label: string) => create(label),
     remove: (id: string) => remove(id),
+  },
+  itemsApi: {
+    list: () => itemsList(),
   },
 }));
 

@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Plus,
   ScrollText,
   Search,
   Settings,
@@ -151,11 +152,48 @@ export function Layout(): JSX.Element {
     </div>
   );
 
+  // A persistent primary "Create" entry so authoring is always one click from anywhere —
+  // it consolidates the two ways to create an item (write / upload a document) that used to
+  // be separate nav links. Curators only (UX hint; the server still authorizes).
+  const createNav = capabilities.canCurate ? (
+    <div className="px-3 pt-4">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="w-full justify-start gap-2 shadow-sm">
+            <Plus className="h-4 w-4" />
+            {t("nav.create.button")}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuItem
+            onClick={() => {
+              setMobileOpen(false);
+              navigate("/items/new");
+            }}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            {t("nav.create.newItem")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              setMobileOpen(false);
+              navigate("/upload");
+            }}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t("nav.create.uploadDocument")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  ) : null;
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         {brand}
+        {createNav}
         {nav}
       </aside>
 
@@ -173,6 +211,7 @@ export function Layout(): JSX.Element {
                 <SheetTitle>{t("nav.navigation")}</SheetTitle>
               </SheetHeader>
               {brand}
+              {createNav}
               {nav}
             </SheetContent>
           </Sheet>

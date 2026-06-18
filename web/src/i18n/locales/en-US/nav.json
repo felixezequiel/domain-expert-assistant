@@ -21,7 +21,13 @@
     "noMatches": "No matches.",
     "groupGoTo": "Go to",
     "groupCreate": "Create",
+    "groupItems": "Items",
     "newItem": "New item"
+  },
+  "create": {
+    "button": "Create",
+    "newItem": "New item",
+    "uploadDocument": "Upload document"
   },
   "notPermitted": {
     "title": "Not permitted",

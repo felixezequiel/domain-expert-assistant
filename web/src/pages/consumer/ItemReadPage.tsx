@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { AlertTriangle, ArrowLeft, History, Pencil } from "lucide-react";
 import Markdown from "react-markdown";
 import { itemsApi } from "../../api/resources.ts";
+import { useCapabilities } from "../../auth/AuthContext.tsx";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary } from "../../components/AsyncBoundary.tsx";
 import { Breadcrumbs } from "../../components/Breadcrumbs.tsx";
@@ -17,6 +18,7 @@ export function ItemReadPage(): JSX.Element {
   const { t } = useTranslation();
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
+  const capabilities = useCapabilities();
   const state = useAsync(
     () => (itemId === undefined ? Promise.reject(new Error("Missing item id")) : itemsApi.get(itemId)),
     [itemId],
@@ -34,10 +36,28 @@ export function ItemReadPage(): JSX.Element {
       />
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{item?.title ?? t("consumer.item.fallbackTitle")}</h1>
-        <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t("common.actions.back")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {capabilities.canCurate && itemId !== undefined ? (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/items/${itemId}`}>
+                  <Pencil className="mr-1.5 h-4 w-4" />
+                  {t("common.actions.edit")}
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/items/${itemId}/versions`}>
+                  <History className="mr-1.5 h-4 w-4" />
+                  {t("knowledge.editor.openVersions")}
+                </Link>
+              </Button>
+            </>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            {t("common.actions.back")}
+          </Button>
+        </div>
       </div>
 
       <AsyncBoundary loading={state.loading} error={state.error}>

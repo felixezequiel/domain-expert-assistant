@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, Loader2, Save, Send } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { AlertTriangle, BookOpen, History, Loader2, Save, ScrollText, Send } from "lucide-react";
 import { collectionsApi, itemsApi, tagsApi } from "../../api/resources.ts";
+import { useCapabilities } from "../../auth/AuthContext.tsx";
 import { SENSITIVITY_LEVELS } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { AsyncBoundary, ErrorNotice } from "../../components/AsyncBoundary.tsx";
 import { MarkdownEditor } from "../../components/MarkdownEditor.tsx";
+import { TaxonomyCombobox, type TaxonomyOption } from "../../components/TaxonomyCombobox.tsx";
+import { TagPicker, type TagOption } from "../../components/TagPicker.tsx";
 import { statusBadge } from "../../lib/format.ts";
 import { Breadcrumbs } from "../../components/Breadcrumbs.tsx";
 import { Badge } from "../../components/ui/badge.tsx";
 import { Button } from "../../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx";
-import { Checkbox } from "../../components/ui/checkbox.tsx";
 import { Input } from "../../components/ui/input.tsx";
 import { Label } from "../../components/ui/label.tsx";
 import {
@@ -33,6 +35,7 @@ export function ItemEditorPage(): JSX.Element {
   const { itemId } = useParams<{ itemId: string }>();
   const isEdit = itemId !== undefined;
   const navigate = useNavigate();
+  const capabilities = useCapabilities();
 
   const collections = useAsync(() => collectionsApi.list(), []);
   const tags = useAsync(() => tagsApi.list(), []);
@@ -46,6 +49,10 @@ export function ItemEditorPage(): JSX.Element {
   const [body, setBody] = useState("");
   const [sensitivity, setSensitivity] = useState<string>("internal");
   const [selectedTags, setSelectedTags] = useState<ReadonlyArray<string>>([]);
+  // Options created inline are appended locally so the new collection/tag is selectable
+  // immediately, with no detour to Settings and no refetch.
+  const [createdCollections, setCreatedCollections] = useState<ReadonlyArray<TaxonomyOption>>([]);
+  const [createdTags, setCreatedTags] = useState<ReadonlyArray<TagOption>>([]);
   const [savedCollectionId, setSavedCollectionId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
@@ -66,10 +73,27 @@ export function ItemEditorPage(): JSX.Element {
     }
   }, [existing.data]);
 
-  const toggleTag = (id: string): void => {
-    setSelectedTags((current) =>
-      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
-    );
+  const collectionOptions: ReadonlyArray<TaxonomyOption> = [
+    ...(collections.data?.collections ?? []).map((collection) => ({ value: collection.id, label: collection.name })),
+    ...createdCollections,
+  ];
+  const tagOptions: ReadonlyArray<TagOption> = [
+    ...(tags.data?.tags ?? []).map((tag) => ({ id: tag.id, label: tag.label })),
+    ...createdTags,
+  ];
+
+  const createCollection = async (name: string): Promise<TaxonomyOption> => {
+    const created = await collectionsApi.create(name);
+    const option = { value: created.id, label: created.name };
+    setCreatedCollections((current) => [...current, option]);
+    return option;
+  };
+
+  const createTag = async (label: string): Promise<TagOption> => {
+    const created = await tagsApi.create(label);
+    const option = { id: created.id, label: created.label };
+    setCreatedTags((current) => [...current, option]);
+    return option;
   };
 
   const save = async (): Promise<void> => {
@@ -127,12 +151,40 @@ export function ItemEditorPage(): JSX.Element {
           { label: isEdit ? t("knowledge.editor.editTitle") : t("knowledge.editor.newTitle") },
         ]}
       />
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isEdit ? t("knowledge.editor.editTitle") : t("knowledge.editor.newTitle")}
-        </h1>
-        {badge !== null && status !== null ? (
-          <Badge variant={badge.variant}>{t("common.status." + status)}</Badge>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isEdit ? t("knowledge.editor.editTitle") : t("knowledge.editor.newTitle")}
+          </h1>
+          {badge !== null && status !== null ? (
+            <Badge variant={badge.variant}>{t("common.status." + status)}</Badge>
+          ) : null}
+        </div>
+        {isEdit && itemId !== undefined ? (
+          <nav className="flex flex-wrap items-center gap-1">
+            <Button asChild variant="ghost" size="sm">
+              <Link to={`/items/${itemId}/versions`}>
+                <History className="mr-1.5 h-4 w-4" />
+                {t("knowledge.editor.openVersions")}
+              </Link>
+            </Button>
+            {status === "published" ? (
+              <Button asChild variant="ghost" size="sm">
+                <Link to={`/catalog/${itemId}`}>
+                  <BookOpen className="mr-1.5 h-4 w-4" />
+                  {t("knowledge.editor.openRead")}
+                </Link>
+              </Button>
+            ) : null}
+            {capabilities.canAudit ? (
+              <Button asChild variant="ghost" size="sm">
+                <Link to={`/audit?aggregateId=${itemId}`}>
+                  <ScrollText className="mr-1.5 h-4 w-4" />
+                  {t("knowledge.editor.openAudit")}
+                </Link>
+              </Button>
+            ) : null}
+          </nav>
         ) : null}
       </div>
 
@@ -156,18 +208,17 @@ export function ItemEditorPage(): JSX.Element {
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="item-collection">{t("knowledge.editor.collectionLabel")}</Label>
-                <Select value={collectionId} onValueChange={setCollectionId} disabled={!canEdit}>
-                  <SelectTrigger id="item-collection">
-                    <SelectValue placeholder={t("knowledge.editor.collectionPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(collections.data?.collections ?? []).map((collection) => (
-                      <SelectItem key={collection.id} value={collection.id}>
-                        {collection.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TaxonomyCombobox
+                  id="item-collection"
+                  ariaLabel={t("knowledge.editor.collectionLabel")}
+                  options={collectionOptions}
+                  value={collectionId}
+                  onChange={setCollectionId}
+                  onCreate={canEdit ? createCollection : undefined}
+                  disabled={!canEdit}
+                  placeholder={t("knowledge.editor.collectionPlaceholder")}
+                  searchPlaceholder={t("knowledge.editor.collectionSearch")}
+                />
                 {isEdit ? (
                   <p className="text-xs text-muted-foreground">{t("knowledge.editor.moveHint")}</p>
                 ) : null}
@@ -196,17 +247,13 @@ export function ItemEditorPage(): JSX.Element {
 
             <div className="space-y-2">
               <Label>{t("knowledge.editor.tagsLabel")}</Label>
-              <div className="flex flex-wrap gap-x-5 gap-y-2">
-                {(tags.data?.tags ?? []).map((tag) => (
-                  <label key={tag.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={selectedTags.includes(tag.id)}
-                      onCheckedChange={() => toggleTag(tag.id)}
-                    />
-                    {tag.label}
-                  </label>
-                ))}
-              </div>
+              <TagPicker
+                options={tagOptions}
+                value={selectedTags}
+                onChange={setSelectedTags}
+                onCreate={canEdit ? createTag : undefined}
+                disabled={!canEdit}
+              />
             </div>
 
             <MarkdownEditor value={body} onChange={setBody} />

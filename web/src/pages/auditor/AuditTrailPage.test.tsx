@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { ApiError } from "../../api/ApiError.ts";
 import { formatDateTime } from "../../lib/format.ts";
 import type { AuditEventView } from "../../api/types.ts";
@@ -32,7 +33,11 @@ beforeEach(() => {
 describe("AuditTrailPage", () => {
   it("lists audit events after searching with filters", async () => {
     events.mockResolvedValue({ events: [auditEvent] });
-    render(<AuditTrailPage />);
+    render(
+      <MemoryRouter>
+        <AuditTrailPage />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByRole("heading", { name: "Audit trail" })).toBeInTheDocument();
 
@@ -53,7 +58,11 @@ describe("AuditTrailPage", () => {
 
   it("shows an empty state when no events match", async () => {
     events.mockResolvedValue({ events: [] });
-    render(<AuditTrailPage />);
+    render(
+      <MemoryRouter>
+        <AuditTrailPage />
+      </MemoryRouter>,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
     await waitFor(() => expect(screen.getByText(/No events match these filters/i)).toBeInTheDocument());
@@ -61,7 +70,11 @@ describe("AuditTrailPage", () => {
 
   it("shows a not-permitted notice on 403", async () => {
     events.mockRejectedValue(new ApiError(403, "Forbidden"));
-    render(<AuditTrailPage />);
+    render(
+      <MemoryRouter>
+        <AuditTrailPage />
+      </MemoryRouter>,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
     await waitFor(() => expect(screen.getByText(/not permitted/i)).toBeInTheDocument());

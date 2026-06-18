@@ -4,6 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ItemEditorPage } from "./ItemEditorPage.tsx";
 import { mockFetchSequence, installFetch } from "../../test/index.ts";
+import { AuthContext, type Session } from "../../auth/AuthContext.tsx";
+import { capabilitiesForRoles } from "../../auth/capabilities.ts";
+
+const curatorSession: Session = {
+  user: { userId: "u1", companyId: "c1", email: "carl@e2e.test", displayName: "Carl", roles: ["curator"], status: "active" },
+  capabilities: capabilitiesForRoles(["curator"]),
+};
 
 // The body editor lazy-loads Monaco (can't run in jsdom); this page test exercises the
 // page's save/submit wiring, not the editor, so stub it with a plain textarea.
@@ -44,11 +51,15 @@ describe("ItemEditorPage", () => {
     installFetch(fetchFn);
 
     render(
-      <MemoryRouter initialEntries={["/items/i1"]}>
-        <Routes>
-          <Route path="/items/:itemId" element={<ItemEditorPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <AuthContext.Provider
+        value={{ session: curatorSession, isAuthenticated: true, loading: false, login: async () => undefined, logout: async () => undefined }}
+      >
+        <MemoryRouter initialEntries={["/items/i1"]}>
+          <Routes>
+            <Route path="/items/:itemId" element={<ItemEditorPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
     );
 
     await waitFor(() => expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Existing"));
@@ -85,11 +96,15 @@ describe("ItemEditorPage", () => {
     installFetch(fetchFn);
 
     render(
-      <MemoryRouter initialEntries={["/items/i1"]}>
-        <Routes>
-          <Route path="/items/:itemId" element={<ItemEditorPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <AuthContext.Provider
+        value={{ session: curatorSession, isAuthenticated: true, loading: false, login: async () => undefined, logout: async () => undefined }}
+      >
+        <MemoryRouter initialEntries={["/items/i1"]}>
+          <Routes>
+            <Route path="/items/:itemId" element={<ItemEditorPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
     );
 
     await waitFor(() => expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Existing"));

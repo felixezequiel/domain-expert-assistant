@@ -5,12 +5,16 @@ import userEvent from "@testing-library/user-event";
 const list = vi.fn();
 const create = vi.fn();
 const rename = vi.fn();
+const itemsList = vi.fn(async () => ({ items: [] }));
 
 vi.mock("../../api/resources.ts", () => ({
   collectionsApi: {
     list: () => list(),
     create: (name: string, description?: string) => create(name, description),
     rename: (id: string, name: string) => rename(id, name),
+  },
+  itemsApi: {
+    list: () => itemsList(),
   },
 }));
 

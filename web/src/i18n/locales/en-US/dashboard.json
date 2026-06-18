@@ -27,5 +27,12 @@
   "attention": {
     "heading": "Needs your attention",
     "rejected": "Rejected: {{reason}}"
+  },
+  "lanes": {
+    "publishedHeading": "Published knowledge",
+    "publishedEmpty": "Nothing published yet.",
+    "awaitingHeading": "Awaiting your review",
+    "awaitingEmpty": "The review queue is empty.",
+    "viewAll": "View all"
   }
 }

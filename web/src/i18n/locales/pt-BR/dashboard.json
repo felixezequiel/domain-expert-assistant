@@ -27,5 +27,12 @@
   "attention": {
     "heading": "Precisa da sua atenção",
     "rejected": "Rejeitado: {{reason}}"
+  },
+  "lanes": {
+    "publishedHeading": "Conhecimento publicado",
+    "publishedEmpty": "Nada publicado ainda.",
+    "awaitingHeading": "Aguardando sua revisão",
+    "awaitingEmpty": "A fila de revisão está vazia.",
+    "viewAll": "Ver todos"
   }
 }

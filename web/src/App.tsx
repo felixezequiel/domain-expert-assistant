@@ -8,6 +8,7 @@ import { Toaster } from "./components/ui/sonner.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage.tsx";
+import { SettingsOverviewPage } from "./pages/admin/SettingsOverviewPage.tsx";
 import { UsersPage } from "./pages/admin/UsersPage.tsx";
 import { CollectionsPage } from "./pages/admin/CollectionsPage.tsx";
 import { TagsPage } from "./pages/admin/TagsPage.tsx";
@@ -69,7 +70,8 @@ export function App(): JSX.Element {
               element={<RequireCapability capability="canAdminister"><Outlet /></RequireCapability>}
             >
               <Route path="/settings" element={<SettingsLayout />}>
-                <Route index element={<Navigate to="/settings/members" replace />} />
+                <Route index element={<Navigate to="/settings/overview" replace />} />
+                <Route path="overview" element={<SettingsOverviewPage />} />
                 <Route path="members" element={<UsersPage />} />
                 <Route path="collections" element={<CollectionsPage />} />
                 <Route path="tags" element={<TagsPage />} />

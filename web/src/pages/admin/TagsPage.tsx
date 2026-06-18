@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
-import { tagsApi } from "../../api/resources.ts";
+import { itemsApi, tagsApi } from "../../api/resources.ts";
 import type { TagView } from "../../api/types.ts";
 import { useAsync } from "../../hooks/useAsync.ts";
 import { ErrorNotice } from "../../components/AsyncBoundary.tsx";
@@ -54,6 +54,8 @@ function scopeBadgeVariant(scope: string): "secondary" | "outline" {
 export function TagsPage(): JSX.Element {
   const { t } = useTranslation();
   const state = useAsync(() => tagsApi.list(), []);
+  // Item counts surface which tags are actually applied (derived client-side).
+  const items = useAsync(() => itemsApi.list(), []);
   const [label, setLabel] = useState("");
   const [removeTarget, setRemoveTarget] = useState<TagView | null>(null);
 
@@ -84,8 +86,10 @@ export function TagsPage(): JSX.Element {
   };
 
   const tags = state.data?.tags ?? [];
+  const itemCountFor = (tagId: string): number =>
+    (items.data?.items ?? []).filter((item) => item.tagIds.includes(tagId)).length;
 
-  const COLUMN_COUNT = 4;
+  const COLUMN_COUNT = 5;
   let tableBody: ReactNode;
   if (state.loading) {
     tableBody = <TableSkeletonRows columns={COLUMN_COUNT} />;
@@ -99,6 +103,7 @@ export function TagsPage(): JSX.Element {
         <TableCell>
           <Badge variant={scopeBadgeVariant(tag.scope)}>{t("admin.tags.scope." + tag.scope)}</Badge>
         </TableCell>
+        <TableCell className="tabular-nums text-muted-foreground">{itemCountFor(tag.id)}</TableCell>
         <TableCell>
           <TagAction tag={tag} onRemove={setRemoveTarget} />
         </TableCell>
@@ -136,6 +141,7 @@ export function TagsPage(): JSX.Element {
                 <TableHead>{t("admin.tags.columns.label")}</TableHead>
                 <TableHead>{t("admin.tags.columns.slug")}</TableHead>
                 <TableHead>{t("admin.tags.columns.scope")}</TableHead>
+                <TableHead>{t("admin.tags.columns.items")}</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
